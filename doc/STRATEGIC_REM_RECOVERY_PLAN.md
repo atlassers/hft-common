@@ -97,6 +97,10 @@ L'obiettivo finale di questo piano e' arrivare a stato `PAPER_READY`, cioe':
     quel documento appena diventa vincolante e riutilizzabile. Gli avanzamenti di sessione e gli snapshot live stanno nel
     current context o in checklist/sessioni dedicate, non nell'handoff.
 14. Dal 2026-06-21 ogni nuova run SHADOW o PAPER usata come evidenza sulla baseline `98` deve essere una `FORWARD_AB_98`: nella stessa finestra realtime devono essere raccolti e confrontati il braccio A `A_BASELINE_98_CONTRACT` e il braccio B `B_CURRENT_ROLLING_PIPELINE`. Una run SHADOW/PAPER non marcata e documentata come forward A/B e' ammessa solo come test tecnico/infrastrutturale e non puo' promuovere, bocciare o modificare la baseline.
+15. Dal 2026-06-26 le soglie economiche che decidono l'eleggibilita' runtime devono essere candidate/advice-specific.
+    ACDC non puo' ricostruire un floor globale da `entry_friction + buffer` o da config live runtime per trasformarlo in
+    gate PAPER. DocBrown deve pubblicare il contratto economico nell'advice; ACDC lo consuma fail-closed se incoerente,
+    ma non inventa soglie fuori dal payload ML.
 
 ## Diagnosi Vincolante
 

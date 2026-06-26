@@ -78,6 +78,13 @@ Se una procedura qui descritta confligge con il piano strategico, va fermata e c
   `scripts/check-operational-contracts.mjs`; ACDC mantiene i contract shell in `scripts/lib/rem_contracts.sh` e verifica
   i wrapper con `python3 scripts/check-script-contracts.py`. Lo scanner comune `check_operational_strings.py` riconosce
   i file `*contract*`, `*contracts*`, `*constants*` anche in `.sh` e rileva anche key operative in `Map.of`/`Map.entry`
+  quando rappresentano identificatori di protocollo.
+- Contratto economico advice/WATCH: DocBrown deve scrivere nell'advice live i campi
+  `min_economic_safe_net_return`, `safe_net_return`, `max_net_return`, `pre_buy_watch_required` e
+  `pre_buy_watch_timeout_seconds`. ACDC deve consumare questi campi e non ricostruire soglie economiche fisse da
+  config runtime globale. Se `min_economic_safe_net_return` manca, ACDC non inventa un floor; il gate economico minimo
+  resta `safe_net_return > 0` piu' eventuale min advice-specific rispettato. La WATCH operativa si attiva tramite
+  `pre_buy_watch_required=true` o timeout positivo nel payload advice.
   multilinea. Le nuove key JSON/protocollo Java condivise devono essere aggiunte in
   `it.mbc.hft.common.rem.constants.RemConstants`; eventuali registry locali (`ManagementString`, `OperationalString`)
   sono ammessi solo come shim verso `hft-common`.

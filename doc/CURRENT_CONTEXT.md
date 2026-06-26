@@ -1,6 +1,6 @@
 # Current Context
 
-Ultimo aggiornamento: 2026-06-26 21:20 CEST.
+Ultimo aggiornamento: 2026-06-26 23:13 CEST.
 
 Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
@@ -29,85 +29,84 @@ TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
 
 ## Stato Ultima Attivita'
 
-Obiettivo in corso: verificare selezione ML con severita' configurabile, arrivare a una PAPER `FORWARD_AB_98` pulita e
-capire il comportamento della WATCH/runtime prima di nuovo tuning.
+Obiettivo eseguito: eliminare il residuo di soglia economica fissa nel contratto live advice, attivare la
+`REM_PRE_BUY_WATCH_V1` da advice ML e verificare una nuova RUN `FORWARD_AB_98` da FE `/management`.
 
-Implementato e verificato:
+Implementato e deployato:
 
-- `hft-common`: aggiunte costanti `selectionStrictnessPercent`, `selectionFilterProfile`,
-  `SELECTION_FILTERS_MIN`, `SELECTION_FILTERS_50`, `SELECTION_FILTERS_100` e action id
-  `APPLY_SELECTION_FILTERS_MIN/50/100`.
-- `docbrown`: rolling validation accetta `selectionStrictnessPercent`; default `100` preserva il comportamento storico.
-  La severita' scala solo i filtri di selezione ML, non WATCH, BUY o SELL runtime.
-- `kenshiro`: action management per applicare i tre profili, inoltro della severita' nei payload rolling validation e
-  fix query freshness/promotion preflight su `profile_id + batch_id`.
-- `hft-fe`: contract TypeScript aggiornati per le nuove action/costanti.
-- `acdc`: fix runtime SHADOW per evitare query Influx dentro transazioni e ridurre il drain SHADOW in buy-stop ai soli
-  simboli con posizione aperta.
+- `hft-common`: centralizzate costanti operative per advice payload e WATCH:
+  `safe_net_return`, `max_net_return`, `loss_cap_net_return`, `min_economic_safe_net_return`,
+  `pre_buy_watch_required`, `pre_buy_watch_timeout_seconds`, `watch_required`, `watch_timeout_seconds` e relativi
+  campi `ml_advice_*`.
+- `acdc`: `OutcomeQualityModelService` non calcola piu' `ml_advice_min_economic_safe_net_return` da
+  `entry_friction + buffer`. ACDC consuma il valore scritto dall'advice; se assente non inventa un floor globale.
+  `ml_advice_economic_safe_pass` richiede solo `safe_net_return > 0`, eventuale min advice-specific rispettato e
+  `max_net_return >= safe_net_return`.
+- `acdc`: `PreBuyWatchService` usa costanti centralizzate per advice id, rule id, generation e timeout fallback.
+- `docbrown`: `LiveMlAdviceScoringService` scrive sempre nel live advice il contratto
+  `pre_buy_watch_required=true`, `pre_buy_watch_timeout_seconds=max_buy_age_seconds` e
+  `min_economic_safe_net_return` advice-specific. Rimosso il filtro live fisso
+  `rem.ml.live_advice.min_expected_net_return` come gate preliminare.
+- `docbrown`: rolling validation/promotion non usa piu' il floor economico fisso `friction + buffer = 0.003`.
+  Il minimo economico e' candidate/advice-specific: `min(q10PositiveMaxNetReturn, worstWindowAvgEndReturn)` quando
+  entrambi sono positivi, altrimenti `0`.
 
 Verifiche completate:
 
-- Documentazione REM/HFT centralizzata sotto `/home/mbc/Documenti/ws/java/hft/hft-common/doc`.
-- Skill `acdc-rem` aggiornata ai nuovi path e alla gerarchia `Recovery Plan -> Current Context -> Handoff`.
-- `hft-common`: `mvn install -DskipTests` OK.
-- `docbrown`: test OK.
-- `kenshiro`: string scanner OK; package OK; redeploy Docker OK; `/management/state` tornato veloce dopo fix freshness.
-- `hft-fe`: `npm run check` e `npm run build` OK.
-- `acdc`: string scanner OK, compile/package OK; test completo non concluso entro timeout per startup Quarkus
-  Testcontainers/H2, quindi non conteggiato come validazione operativa.
-- `acdc-vpn` e `kenshiro-local` redeployati e validati su MySQL/container.
+- `hft-common`: `mvn -q install -DskipTests` OK.
+- `acdc`: `mvn -q test` OK come regressione, ma usa H2/Testcontainers e non vale come validazione operativa.
+- `docbrown`: `mvn -q test` OK.
+- `acdc-vpn` redeployato da immagine `acdc:latest`; log startup su MySQL 8.0 OK.
+- `docbrown` redeployato da immagine `docbrown:latest`; log startup su MySQL 8.0 OK.
+- Validazione operativa eseguita su MySQL/container tramite FE proxy `/backoffice/management/actions/AUTO_FORWARD_AB_CYCLE_START`.
 
-Run effettuate:
+RUN verificata:
 
-- Profilo `SELECTION_FILTERS_MIN` (`selectionStrictnessPercent=0`) ha avviato Forward A/B 98.
-- PAPER B execution `89`: `STOPPED`, 0 posizioni.
-- SHADOW A execution `90`: dopo fix ACDC ha drenato 3 posizioni ed e' `COMPLETED`, PnL netto `-0.0336245338892`.
-- Profilo `SELECTION_FILTERS_50` applicato; rolling validation batch `management-rolling-20260626T132119Z` ha prodotto
-  `INCONCLUSIVE`, nessun simbolo selezionato, nessuna PAPER avviata.
-- Profilo `SELECTION_FILTERS_100` applicato dopo redeploy Kenshiro; batch `management-rolling-20260626T183915Z` terminato
-  `NO_PROMOTABLE_CANDIDATE`, nessuna PAPER.
-- Profilo `SELECTION_FILTERS_MIN` riapplicato:
-  - batch `management-rolling-20260626T185119Z`: selezionato `XPLUSDC`, ma terminato fail-closed
-    `LIFECYCLE_CAPTURE_REQUIRES_SHADOW_PREFLIGHT`; non e' stato bypassato perche' il piano strategico non autorizza
-    PAPER da lifecycle-capture.
-  - batch successivo ha avviato Forward A/B 98 group `ab98-20260626T190239Z`.
-  - PAPER B execution `91`: `STOPPED`, 0 posizioni, PnL `0`.
-  - SHADOW A execution `92`: `COMPLETED`, 4 posizioni, PnL netto `-0.1236832028357`.
-    Trade SHADOW: `KMNOUSDC +0.0355308219028`, `REUSDC +0.0684080952972`, `HEIUSDC -0.267173912616`,
-    `LDOUSDC +0.0395517925803`.
+- Action FE/Kenshiro: `AUTO_FORWARD_AB_CYCLE_START`.
+- Validation batch: `management-rolling-20260626T205700Z`, `strategicStatus=PASS_CANDIDATE_REQUIRES_PAPER_PREFLIGHT`.
+- Live advice generation: `live-1782507433`, 5 advice salvate:
+  `ICPUSDC`, `BCHUSDC`, `FETUSDC`, `HEIUSDC`, `PENDLEUSDC`.
+- DB advice check: tutte le 5 advice hanno `pre_buy_watch_required=true`, `pre_buy_watch_timeout_seconds=20`,
+  `min_economic_safe_net_return=0`, safe positivo.
+- Forward A/B group: `ab98-20260626T205718Z`.
+- PAPER B execution `93`: `STOPPED`, PnL netto `-0.0920963975765`.
+  - `ICPUSDC`: `-0.129321679812`, max net return `0`.
+  - `HEIUSDC`: `+0.2048469385215`, max net return `0.008193877551020408`.
+  - `PENDLEUSDC`: `-0.167621656286`, max net return `0.000352433281004710`.
+- SHADOW A execution `94`: `COMPLETED`, PnL netto `-0.3971208329067`.
+  - `FETUSDC`: `-0.2081606207067`, max net return `0.000300518134715026`.
+  - `BCHUSDC`: `-0.1889602122`, max net return `0`.
+- WATCH evidence:
+  - PAPER: `BUY_OPENED=3`, `BUY_REJECTED_RUNTIME=8`, `EXPIRED=4`.
+  - SHADOW: `BUY_OPENED=2`, `EXPIRED=3`.
+
+Interpretazione del Consiglio:
+
+- Fix confermata: il residuo `economic safe return=0.003` non deve piu' essere generato come floor globale runtime/live.
+- WATCH e' entrata nel giro runtime reale e ha filtrato segnali tramite scadenza, ma non ha ancora dimostrato di
+  rendere profittevole la configurazione.
+- La perdita PAPER non e' dovuta a mancata attivazione WATCH: 3 BUY sono state aperte per contratto confermato; 2 sono
+  poi degradate durante SELL/hold. Il prossimo problema scientifico e' SELL/hold decay, non accesso alla PAPER.
 
 Stato live dopo monitor:
 
-- `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`.
-- `mlReady=false`.
-- `paperRunning=false`.
-- `openPositions=0`.
-- Automazione fermata via FE proxy `AUTO_AB_STOP` dopo completamento drain per evitare cicli non supervisionati:
-  `automationEnabled=false`, `automationStatus=STOPPED`, `automationLastStopReason=USER_STOP`.
-- Config persistita: `rem.ml.management.selection.strictness_percent=0`.
-
-Problemi rilevati:
-
-- La card/step FE/Kenshiro continua a esporre `selectionStrictnessPercent=100` in alcuni dati di step anche quando la
-  config MySQL effettiva e' `0`. La RUN ha usato la config minima, ma il dato UI e' fuorviante e va corretto.
-- PAPER B `91` ha ricevuto advice fresche ma non ha aperto posizioni; SHADOW A `92` ha aperto e perso nel complesso.
-  Serve diagnosticare la divergenza B-vs-A: freshness contract, Pre-BUY Watch, live revalidation e differenza fra
-  baseline A e current pipeline B.
-- Il ramo `LIFECYCLE_CAPTURE_REQUIRES_SHADOW_PREFLIGHT` e' ancora attivo come fail-closed strategico. Non va confuso con
-  il vecchio `REVERSAL_WATCH_SHADOW_PREFLIGHT` rimosso/ritirato: non autorizza PAPER e non va bypassato senza modifica
-  esplicita del piano strategico.
+- PAPER execution `93` chiusa.
+- SHADOW execution `94` chiusa.
+- Nessuna REAL avviata.
+- Lo stato aggregato FE continua a mostrare `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE` e `mlReady=false`
+  anche mentre una RUN e' partita/completata: e' un problema di esposizione stato/Kenshiro da correggere, non di DB run.
 
 ## Stato Repo
 
-Repo attesi puliti salvo questo aggiornamento di `CURRENT_CONTEXT.md`.
+Repo modificati da committare: `hft-common`, `acdc`, `docbrown`.
 
 ## Prossimo TODO
 
-1. Diagnosticare perche' PAPER B execution `91` non ha aperto posizioni mentre SHADOW A execution `92` ha aperto 4 trade.
-2. Correggere l'esposizione UI/Kenshiro della severita' selection quando la config effettiva e' diversa dal dato stale.
-3. Prima di ulteriori tuning o ricerca binaria, produrre report su:
-   - advice generation `live-1782500554`;
-   - motivi di rifiuto PAPER B / WATCH;
-   - trade SHADOW A e cause della loss `HEIUSDC`;
-   - se il profilo minimo e' utile solo come esplorazione o se deve restare bloccato finche' WATCH non dimostra di
-     filtrare le loss.
+1. Correggere stato aggregato FE/Kenshiro: `mlReady`, `paperRunning`, `shadowRunning`, `openPositions` non devono restare
+   null/false quando `acdc_run_execution` contiene run attive o appena concluse.
+2. Diagnosticare SELL/hold decay su execution `93`:
+   - perche' `ICPUSDC` e `PENDLEUSDC` sono rimaste aperte fino a loss;
+   - se serve trailing/timeout advice-specific piu' corto;
+   - se WATCH deve richiedere anche conferma di momentum post-open o solo pre-BUY.
+3. Eseguire forensics post-run su `93` con endpoint diagnostici ACDC e aggiornare il piano di tuning prima della prossima
+   ricerca binaria delle soglie di selezione.
