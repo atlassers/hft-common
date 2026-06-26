@@ -1,6 +1,6 @@
 # Current Context
 
-Ultimo aggiornamento: 2026-06-26 15:47 CEST.
+Ultimo aggiornamento: 2026-06-26 21:20 CEST.
 
 Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
@@ -29,17 +29,18 @@ TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
 
 ## Stato Ultima Attivita'
 
-Obiettivo in corso: rendere configurabile la severita' dei filtri di selezione ML e provare tre profili operativi
-`0%`, `50%`, `100%`, poi ricerca binaria.
+Obiettivo in corso: verificare selezione ML con severita' configurabile, arrivare a una PAPER `FORWARD_AB_98` pulita e
+capire il comportamento della WATCH/runtime prima di nuovo tuning.
 
-Implementato e verificato prima dell'interruzione:
+Implementato e verificato:
 
 - `hft-common`: aggiunte costanti `selectionStrictnessPercent`, `selectionFilterProfile`,
   `SELECTION_FILTERS_MIN`, `SELECTION_FILTERS_50`, `SELECTION_FILTERS_100` e action id
   `APPLY_SELECTION_FILTERS_MIN/50/100`.
 - `docbrown`: rolling validation accetta `selectionStrictnessPercent`; default `100` preserva il comportamento storico.
   La severita' scala solo i filtri di selezione ML, non WATCH, BUY o SELL runtime.
-- `kenshiro`: action management per applicare i tre profili e inoltro della severita' nei payload rolling validation.
+- `kenshiro`: action management per applicare i tre profili, inoltro della severita' nei payload rolling validation e
+  fix query freshness/promotion preflight su `profile_id + batch_id`.
 - `hft-fe`: contract TypeScript aggiornati per le nuove action/costanti.
 - `acdc`: fix runtime SHADOW per evitare query Influx dentro transazioni e ridurre il drain SHADOW in buy-stop ai soli
   simboli con posizione aperta.
@@ -50,11 +51,11 @@ Verifiche completate:
 - Skill `acdc-rem` aggiornata ai nuovi path e alla gerarchia `Recovery Plan -> Current Context -> Handoff`.
 - `hft-common`: `mvn install -DskipTests` OK.
 - `docbrown`: test OK.
-- `kenshiro`: string scanner OK; fix successiva su query freshness ancora da ricompilare/deployare.
+- `kenshiro`: string scanner OK; package OK; redeploy Docker OK; `/management/state` tornato veloce dopo fix freshness.
 - `hft-fe`: `npm run check` e `npm run build` OK.
 - `acdc`: string scanner OK, compile/package OK; test completo non concluso entro timeout per startup Quarkus
   Testcontainers/H2, quindi non conteggiato come validazione operativa.
-- `acdc-vpn` redeployato e validato su MySQL/container.
+- `acdc-vpn` e `kenshiro-local` redeployati e validati su MySQL/container.
 
 Run effettuate:
 
@@ -63,30 +64,50 @@ Run effettuate:
 - SHADOW A execution `90`: dopo fix ACDC ha drenato 3 posizioni ed e' `COMPLETED`, PnL netto `-0.0336245338892`.
 - Profilo `SELECTION_FILTERS_50` applicato; rolling validation batch `management-rolling-20260626T132119Z` ha prodotto
   `INCONCLUSIVE`, nessun simbolo selezionato, nessuna PAPER avviata.
+- Profilo `SELECTION_FILTERS_100` applicato dopo redeploy Kenshiro; batch `management-rolling-20260626T183915Z` terminato
+  `NO_PROMOTABLE_CANDIDATE`, nessuna PAPER.
+- Profilo `SELECTION_FILTERS_MIN` riapplicato:
+  - batch `management-rolling-20260626T185119Z`: selezionato `XPLUSDC`, ma terminato fail-closed
+    `LIFECYCLE_CAPTURE_REQUIRES_SHADOW_PREFLIGHT`; non e' stato bypassato perche' il piano strategico non autorizza
+    PAPER da lifecycle-capture.
+  - batch successivo ha avviato Forward A/B 98 group `ab98-20260626T190239Z`.
+  - PAPER B execution `91`: `STOPPED`, 0 posizioni, PnL `0`.
+  - SHADOW A execution `92`: `COMPLETED`, 4 posizioni, PnL netto `-0.1236832028357`.
+    Trade SHADOW: `KMNOUSDC +0.0355308219028`, `REUSDC +0.0684080952972`, `HEIUSDC -0.267173912616`,
+    `LDOUSDC +0.0395517925803`.
 
-Problema rilevato:
+Stato live dopo monitor:
 
-- Kenshiro `/management/state` puo' diventare lento su query freshness batch perche' alcune query su
-  `acdc_rem_observation_candidate` filtrano solo `batch_id` invece di usare anche `profile_id`, nonostante l'indice
-  disponibile sia `(profile_id, batch_id, ...)`.
-- Patch locale gia' applicata in `kenshiro/ManagementService.java` per filtrare `signalFreshness` e
-  `persistPromotionPreflight` anche per profilo. La patch e' da ricompilare, testare, deployare e verificare.
+- `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`.
+- `mlReady=false`.
+- `paperRunning=false`.
+- `openPositions=0`.
+- Automazione fermata via FE proxy `AUTO_AB_STOP` dopo completamento drain per evitare cicli non supervisionati:
+  `automationEnabled=false`, `automationStatus=STOPPED`, `automationLastStopReason=USER_STOP`.
+- Config persistita: `rem.ml.management.selection.strictness_percent=0`.
+
+Problemi rilevati:
+
+- La card/step FE/Kenshiro continua a esporre `selectionStrictnessPercent=100` in alcuni dati di step anche quando la
+  config MySQL effettiva e' `0`. La RUN ha usato la config minima, ma il dato UI e' fuorviante e va corretto.
+- PAPER B `91` ha ricevuto advice fresche ma non ha aperto posizioni; SHADOW A `92` ha aperto e perso nel complesso.
+  Serve diagnosticare la divergenza B-vs-A: freshness contract, Pre-BUY Watch, live revalidation e differenza fra
+  baseline A e current pipeline B.
+- Il ramo `LIFECYCLE_CAPTURE_REQUIRES_SHADOW_PREFLIGHT` e' ancora attivo come fail-closed strategico. Non va confuso con
+  il vecchio `REVERSAL_WATCH_SHADOW_PREFLIGHT` rimosso/ritirato: non autorizza PAPER e non va bypassato senza modifica
+  esplicita del piano strategico.
 
 ## Stato Repo
 
-Worktree attesi sporchi per lavoro in corso:
-
-- `hft-common`: contract selection + nuova documentazione centralizzata.
-- `docbrown`: selection strictness.
-- `kenshiro`: selection profile + fix query freshness.
-- `hft-fe`: contract selection.
-- `acdc`: fix transazione Influx/SHADOW drain.
-
-Non committare finche' la documentazione non e' spostata e la fix Kenshiro non e' validata o dichiarata separatamente.
+Repo attesi puliti salvo questo aggiornamento di `CURRENT_CONTEXT.md`.
 
 ## Prossimo TODO
 
-1. Ricompilare/testare/deployare Kenshiro con la fix freshness.
-2. Riprendere dal FE `/management`:
-   - se runtime pulito, applicare `SELECTION_FILTERS_100` e avviare `AUTO_FORWARD_AB_CYCLE_START`;
-   - poi valutare ricerca binaria dalle evidenze raccolte.
+1. Diagnosticare perche' PAPER B execution `91` non ha aperto posizioni mentre SHADOW A execution `92` ha aperto 4 trade.
+2. Correggere l'esposizione UI/Kenshiro della severita' selection quando la config effettiva e' diversa dal dato stale.
+3. Prima di ulteriori tuning o ricerca binaria, produrre report su:
+   - advice generation `live-1782500554`;
+   - motivi di rifiuto PAPER B / WATCH;
+   - trade SHADOW A e cause della loss `HEIUSDC`;
+   - se il profilo minimo e' utile solo come esplorazione o se deve restare bloccato finche' WATCH non dimostra di
+     filtrare le loss.
