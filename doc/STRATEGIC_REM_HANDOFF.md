@@ -297,6 +297,11 @@ Regole:
 - Dopo evidenza PAPER execution `36` (`XAIUSDC`) con MFE sopra safe (`maxNetReturn=0.007271`, safe `0.003`) ma SELL
   finale negativa, il guard `exit_ml_advice_take_profit` deve restare `ACTIVE` con priorita' precedente al dynamic
   trailing. Il dynamic trailing resta fallback; il safe target deve essere catturato appena osservato.
+- Il dynamic trailing ML advice deve usare lo stesso calcolo in runtime e diagnostics. `trailingArmed` indica arming
+  reale della policy, non semplice `maxNetReturn > 0`. Il default operativo e' coerente con V67: se il metadata non
+  impone `require_safe_for_trailing=true`, l'arming usa `min_arm_net_return`/`safe_arm_ratio`; inoltre
+  `protect_positive_mfe=true` permette di uscire quando un trade ha avuto MFE netto positivo e poi rientra sotto
+  `break_even_floor`, senza aspettare il timeout.
 - Se l'automazione non e' abilitata, gli step manuali restano eseguibili secondo current-step gating.
 - REAL resta vietata dal piano strategico: il cockpit puo' mostrare readiness/eligibility, ma `REAL_RUN` deve restare
   bloccata finche' il vincolo strategico non viene modificato esplicitamente.

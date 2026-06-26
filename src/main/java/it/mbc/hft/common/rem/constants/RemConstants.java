@@ -180,6 +180,12 @@ public final class RemConstants {
     public static final String ML_ADVICE_WATCH_REQUIRED = "ml_advice_watch_required";
     public static final String ML_ADVICE_WATCH_TIMEOUT_SECONDS = "ml_advice_watch_timeout_seconds";
     public static final String ML_ADVICE_LIVE_TARGET_CAP = "ml_advice_live_target_cap";
+    public static final String ML_ADVICE_TRAILING_MIN_ARM_NET_RETURN = "min_arm_net_return";
+    public static final String ML_ADVICE_TRAILING_SAFE_ARM_RATIO = "safe_arm_ratio";
+    public static final String ML_ADVICE_TRAILING_RETENTION_RATIO = "retention_ratio";
+    public static final String ML_ADVICE_TRAILING_BREAK_EVEN_FLOOR = "break_even_floor";
+    public static final String ML_ADVICE_TRAILING_REQUIRE_SAFE_FOR_TRAILING = "require_safe_for_trailing";
+    public static final String ML_ADVICE_TRAILING_PROTECT_POSITIVE_MFE = "protect_positive_mfe";
 
     public static final String MOMENTUM5 = "momentum5";
     public static final String CAUSAL_CLASSIFICATION_AVAILABLE = "causalClassificationAvailable";

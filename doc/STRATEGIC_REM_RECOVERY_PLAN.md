@@ -101,6 +101,10 @@ L'obiettivo finale di questo piano e' arrivare a stato `PAPER_READY`, cioe':
     ACDC non puo' ricostruire un floor globale da `entry_friction + buffer` o da config live runtime per trasformarlo in
     gate PAPER. DocBrown deve pubblicare il contratto economico nell'advice; ACDC lo consuma fail-closed se incoerente,
     ma non inventa soglie fuori dal payload ML.
+16. Dal 2026-06-26 il SELL risk-control puo' proteggere un MFE netto positivo gia' osservato senza considerarlo
+    allargamento gate. Se un trade rientra sotto break-even dopo MFE positivo, il dynamic trailing puo' chiudere prima
+    del timeout; questa regola riduce decay/loss e non autorizza PAPER con `ML_READY=false`, non cambia BUY eligibility
+    e non sostituisce evidenza Forward A/B.
 
 ## Diagnosi Vincolante
 
