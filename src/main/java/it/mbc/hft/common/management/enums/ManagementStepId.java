@@ -12,8 +12,10 @@ public enum ManagementStepId {
     ML_HEAVY_RESEARCH("ml-heavy-research"),
     ML_ROUND_ROBIN("ml-round-robin"),
     PROMOTION("promotion"),
+    WATCH("watch"),
     SHADOW("shadow"),
-    PAPER("paper");
+    PAPER("paper"),
+    REAL("real");
 
     private final String value;
 
