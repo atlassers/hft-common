@@ -56,6 +56,11 @@ public final class RemConstants {
     public static final String SUCCESS = "success";
     public static final String MESSAGE = "message";
     public static final String STATE = "state";
+    public static final String SELECTION_STRICTNESS_PERCENT = "selectionStrictnessPercent";
+    public static final String SELECTION_FILTER_PROFILE = "selectionFilterProfile";
+    public static final String SELECTION_FILTERS_MIN = "SELECTION_FILTERS_MIN";
+    public static final String SELECTION_FILTERS_50 = "SELECTION_FILTERS_50";
+    public static final String SELECTION_FILTERS_100 = "SELECTION_FILTERS_100";
     public static final String ACCEPTED_BUY_EVENTS = "acceptedBuyEvents";
     public static final String ACCEPTED_SELL_EVENTS = "acceptedSellEvents";
     public static final String ACTIVE_ADVICE = "activeAdvice";
