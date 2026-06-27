@@ -88,6 +88,12 @@ Se una procedura qui descritta confligge con il piano strategico, va fermata e c
   multilinea. Le nuove key JSON/protocollo Java condivise devono essere aggiunte in
   `it.mbc.hft.common.rem.constants.RemConstants`; eventuali registry locali (`ManagementString`, `OperationalString`)
   sono ammessi solo come shim verso `hft-common`.
+- Contratto advice separato: DocBrown live-score non deve modificare semanticamente i campi ML storici dell'advice.
+  Deve produrre un blocco `history_*` copiato dal contratto ML/promozione storico e un blocco `live_*` speculare,
+  valorizzato con il live-score corrente. ACDC consuma `live_*` per valorizzare i campi canonici `ml_advice_*` usati
+  dalle guardie runtime, ma conserva `history_*` per audit. Al BUY ACDC scrive `entry_*` nel `policy_json`; alla SELL
+  PAPER/SHADOW aggiunge `exit_*` nel feature snapshot di uscita. La SELL deve propagare `history_*`, `live_*` ed
+  `entry_*` dal `policy_json`, non ricalcolarli dai live feature di uscita.
 - Autonomia operativa: eseguire la checklist `hft-common/doc/acdc/session/2026-06-21/session-148-autonomous-to-paper-checklist.md` senza chiedere go per ogni microtest, fermandosi solo sulle stop condition dichiarate.
 - Budget/cadenza orchestratore: non sostituisce il lifecycle SHADOW/PAPER ACDC. Ogni ciclo autonomo esterno fino alla PAPER ha budget massimo `25m`; dopo `FAIL_SELECTION_BIAS` attendere `10m` prima del ciclo successivo; dopo `6` cicli senza candidate promuovibili classificare `NO_PROMOTABLE_SIGNAL_WINDOW` e chiedere rivalutazione del Consiglio.
 - Nuovo cockpit operativo: il prossimo ciclo REM deve partire da FE `/management`, che chiama Kenshiro

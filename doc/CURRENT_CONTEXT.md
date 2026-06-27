@@ -1,6 +1,6 @@
 # Current Context
 
-Ultimo aggiornamento: 2026-06-27 15:36 CEST.
+Ultimo aggiornamento: 2026-06-27 16:45 CEST.
 
 Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
@@ -29,8 +29,8 @@ TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
 
 ## Stato Ultima Attivita'
 
-Obiettivo eseguito: correzione contratto end-to-end SELL no-MFE e validazione operativa WATCH/no-MFE dopo refactor
-stringhe/contract. Nuovo monitoraggio FORWARD_AB_98 completato da FE `/management` su advice fresche.
+Obiettivo eseguito: correzione contratto end-to-end SELL no-MFE, validazione operativa WATCH/no-MFE dopo refactor
+stringhe/contract e separazione esplicita dei blocchi `history_*`, `live_*`, `entry_*`, `exit_*`.
 
 Diagnosi corretta:
 
@@ -49,21 +49,30 @@ Diagnosi del Consiglio:
 - Scienziato severo: nessun fallback su timeout no-MFE; se il campo manca, la guardia deve restare fail-closed.
 - Mediano pragmatico: correggere anche il live-score producer e aggiungere un guardrail ACDC di entry/readiness per non
   avviare PAPER con advice prive del campo.
-- Decisione unica: no-MFE usa solo `ml_advice_no_mfe_timeout_seconds` pubblicato dall'ML/advice. ACDC deve considerare
-  non contract-active e respingere PAPER ENTRY se il campo manca.
+- Decisione unica: no-MFE runtime usa solo il timeout pubblicato dall'advice live (`live_no_mfe_timeout_seconds`,
+  mappato in ACDC nel campo canonico `ml_advice_no_mfe_timeout_seconds` per le guardie). ACDC deve considerare non
+  contract-active e respingere PAPER ENTRY se il campo manca.
 
 Implementato e verificato:
 
 - `hft-common`: centralizzata la chiave `ml_advice_no_mfe_timeout_seconds`; rimosse le costanti di fallback ratio/min-hold.
+- `hft-common`: aggiunte le chiavi condivise `history_*`, `live_*`, `entry_*`, `exit_*` per separare contratto storico
+  ML, contratto live-score, fotografia BUY e fotografia SELL.
 - `docbrown`: `SignaturePaperAdvicePromotionService` e `ReversalMlRuleMiningService` pubblicano
   `ml_advice_no_mfe_timeout_seconds` nell'advice usando `entryValiditySeconds` candidate-specific.
 - `docbrown`: source/validity source literal dei due `ruleJson` toccati sono stati portati in `OperationalString`.
-- `docbrown`: `LiveMlAdviceScoringService.liveAdvice(...)` garantisce `ml_advice_no_mfe_timeout_seconds`; per regole
-  storiche lo deriva una tantum da `entry_validity_seconds` nel producer live, non in ACDC.
-- `acdc`: `MlAdviceFeatures.ADVICE_KEYS` include `ml_advice_no_mfe_timeout_seconds`.
-- `acdc`: `OutcomeQualityModelService` copia il timeout no-MFE da advice/rule_json alle feature SELL.
-- `acdc`: `MlReadinessDiagnosticsService` conta `paperEligibleContractActiveAdvice` solo se
-  `ml_advice_no_mfe_timeout_seconds > 0` e il contratto temporale BUY e' ancora valido.
+- `docbrown`: `LiveMlAdviceScoringService.liveAdvice(...)` non modifica piu' semanticamente i campi ML originari
+  dell'advice. Produce un blocco `history_*` copiato dal contratto storico e un blocco `live_*` speculare/valorizzato
+  dal live-score. Il timeout no-MFE runtime ora e' `live_no_mfe_timeout_seconds`; per regole storiche viene derivato
+  una tantum da `entry_validity_seconds` nel producer live, non in ACDC.
+- `acdc`: `OutcomeQualityModelService` copia `history_*` e `live_*`, usa `live_*` per valorizzare i campi canonici
+  `ml_advice_*` consumati dalle guardie runtime, e scrive `entry_*` al momento della decisione BUY.
+- `acdc`: `MlAdviceFeatures.exitFeatures(...)` propaga da `policy_json` i blocchi `history_*`, `live_*` ed `entry_*`
+  verso la SELL, evitando che i live feature ricalcolati in uscita sovrascrivano la fotografia di ingresso.
+- `acdc`: `PaperRunService` e `ShadowRunService` aggiungono `exit_*` nei feature snapshot di uscita mantenendo i campi
+  legacy usati dalle guardie.
+- `acdc`: `MlReadinessDiagnosticsService` considera contract-active le advice PAPER solo se il blocco live contiene
+  `live_no_mfe_timeout_seconds > 0` e la freschezza live e' ancora valida.
 - `acdc`: `PaperRunService` respinge PAPER ENTRY con `PAPER_ADVICE_NO_MFE_TIMEOUT_MISSING` se la feature no-MFE manca
   o non e' positiva.
 - `acdc`: `GuardEvaluator` non calcola piu' fallback da durata/ratio; senza timeout esplicito la guardia no-MFE resta
@@ -80,11 +89,14 @@ Verifiche completate:
 - `hft-common`: `mvn -q install` OK.
 - `docbrown`: `mvn -q test` OK.
 - `docbrown`: `./mvnw -q -DskipTests package` OK.
-- `docbrown`: container `docbrown` rebuildato/ricreato dopo il fix live-score, startup prod OK su MySQL 8.0.
+- `docbrown`: container `docbrown` rebuildato/ricreato dopo la separazione `history_*`/`live_*`, startup prod OK su MySQL
+  8.0.
 - `acdc`: `mvn -q test` OK; Flyway test valida/applica 75 migration.
+- `acdc`: `mvn -q -Dtest=MlAdviceFeaturesTest test` OK con copertura specifica della propagazione
+  `history_*`/`live_*`/`entry_*` verso SELL.
 - `acdc`: `./mvnw -q -DskipTests package` OK.
-- `acdc`: container `acdc-vpn` rebuildato/ricreato dopo il guardrail no-MFE.
-- ACDC log prod: MySQL 8.0, schema operativo da `74` a `75`, startup OK.
+- `acdc`: container `acdc-vpn` rebuildato/ricreato dopo la separazione contract block, startup prod OK su MySQL 8.0.
+- ACDC log prod: MySQL 8.0, schema operativo up to date, startup OK.
 - MySQL operativo: `acdc_flyway_schema_history` ultimo `version=75`, `success=1`.
 - MySQL operativo: guardia `exit_ml_advice_no_mfe_decay` ha `min_threshold=0`, `max_threshold=0`, metadata senza ratio/min-hold.
 - MySQL operativo: generation `live-1782565383` e `live-1782565442` hanno 5/5 advice con
@@ -111,8 +123,9 @@ Verifiche completate:
   - Tutte le posizioni PAPER/SHADOW `115`-`122` hanno `ml_advice_no_mfe_timeout_seconds` valorizzato nel `policy_json`
     (`120` o `175`) e `ml_advice_pre_buy_watch_timeout_seconds=20`; PAPER `115`, `117`, `119`, `121` hanno generation
     source rispettivamente `live-1782566372`, `live-1782566582`, `live-1782566795`, `live-1782567005`.
-- FE/Kenshiro finale post-monitoraggio: `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `paperRunning=false`,
-  `openPositions=0`, `activeAdvice=0`, `paperEligibleActiveAdvice=0`, `paperEligibleContractActiveAdvice=0`.
+- FE/Kenshiro finale post-deploy: `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `mlReady=false`,
+  `paperRunning=false`, `openPositions=0`, `activeAdvice=0`, `paperEligibleActiveAdvice=0`,
+  `paperEligibleContractActiveAdvice=0`.
 - Automazione finale: `automationEnabled=false`, `automationStopRequested=true`, last stop reason `USER_STOP`.
 - Interpretazione: WATCH/no-MFE e contract runtime sono operativi; performance non promossa. Le PAPER `115`, `117`, `119`,
   `121` sono `STOPPED` e quindi non sono evidenza scientifica pristine per `PASS_BASELINE`, anche se tutte le posizioni
@@ -120,12 +133,11 @@ Verifiche completate:
 
 ## Stato Repo
 
-Repo verificati puliti/sincronizzati prima del monitoraggio: `hft-common`, `acdc`, `docbrown`.
-Modifiche correnti da committare: solo questo aggiornamento documentale in `hft-common`.
+Repo con modifiche coerenti da committare/pushare con lo stesso MS: `hft-common`, `docbrown`, `acdc`.
 
 ## Prossimo TODO
 
-1. Committare e pushare l'aggiornamento documentale `hft-common` con MS successivo.
+1. Committare e pushare la separazione contract block `history_*`/`live_*`/`entry_*`/`exit_*` nei repo coinvolti.
 2. Non usare `107`/`108`, `109`/`110` o `113`/`114` come evidenza baseline pulita; sono contaminati rispettivamente da
    contratto no-MFE mancante o stop/abandon SHADOW.
 3. Usare `111`/`112` e `115`-`122` come evidenza tecnica positiva del contratto WATCH/no-MFE, ma non ancora come
