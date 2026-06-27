@@ -204,6 +204,18 @@ Aggiornamento MS890 del 2026-06-27:
   e' corretto. WATCH observer e scadenza contratto sono operativi. Trading non promosso: evidenza PnL ancora negativa o
   assente, quindi serve nuova FORWARD_AB_98 pulita prima di qualsiasi promozione.
 
+Aggiornamento finale MS891 del 2026-06-27:
+
+- Durante commit/push una race del worker ha avviato `5`/`6`, group `ab98-20260627T203918Z`, nonostante
+  `automationStopRequested=true`.
+- Sono stati inviati `PAPER_STOP_BUY` e `SHADOW_STOP_BUY`; la run e' drenata senza posizioni aperte finali.
+- `5` PAPER: `STOPPED`, 0 posizioni, 0 trade, budget invariato.
+- `6` SHADOW: `COMPLETED`, 1 posizione runtime chiusa, realized `+0.0239148305291`; le diagnostiche paper non la
+  contano come trade PAPER B.
+- `AUTO_AB_STOP` reinviato a stato drenato per riallineare la diagnostica: finale
+  `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `mlReady=false`, `paperRunning=false`, `openPositions=0`,
+  `activeAdvice=0`, `automationEnabled=false`, `automationStatus=STOPPED`.
+
 ## Prossimo TODO
 
 1. Committare e pushare l'allineamento endpoint diagnostici/management ai blocchi `history_*`/`live_*`/`entry_*`/`exit_*`.
