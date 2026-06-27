@@ -1312,3 +1312,14 @@ Per giudicare WATCH separare sempre due piani:
 
 Le nuove decisioni WATCH espongono `pre_buy_watch_trigger_checked`, `pre_buy_watch_trigger_failed` e
 `pre_buy_watch_trigger_passed`; `acdc_pre_buy_watch.source_generation_id` deve essere valorizzato per le nuove WATCH.
+
+## Nota MS893
+
+Il caso `7`/`8` ha mostrato che PAPER rispettava il trigger WATCH, ma SHADOW poteva confermare BUY con
+`pre_buy_watch_trigger_passed=0` per effetto dei profili exploration. La regola runtime aggiornata e':
+
+- `entryDecision.accepted=true` e' necessario ma non sufficiente;
+- se il trigger audit WATCH ha failure, la WATCH resta `WATCH_WAITING_BUY_CONTRACT`;
+- nessun profilo SHADOW/exploration puo' bypassare il contratto WATCH.
+
+Questa correzione non rende il contratto profittevole; impedisce solo BUY semanticamente incoerenti.

@@ -234,6 +234,23 @@ Aggiornamento MS892 del 2026-06-27:
 - Stato finale runtime post deploy: `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `mlReady=false`,
   `paperRunning=false`, `openPositions=0`, `activeAdvice=0`, automazione `STOPPED`.
 
+Aggiornamento MS893 del 2026-06-27:
+
+- RUN audit `7`/`8`, group `ab98-20260627T212331Z`, source generation `management-rolling-20260627T212315Z`:
+  - PAPER `7`: WATCH `OPNUSDC` e' rimasta in attesa con `pre_buy_watch_trigger_passed=0` e failure `5/6`, quindi non
+    ha comprato. Questo e' il comportamento corretto.
+  - SHADOW `8`: ha confermato BUY su `OPNUSDC` pur avendo `pre_buy_watch_trigger_passed=0` e failure `5`. Causa:
+    path SHADOW/exploration poteva rendere `entryDecision.accepted=true` prima della WATCH.
+  - Run fermata con `PAPER_STOP_BUY`, `SHADOW_STOP_BUY`, `AUTO_AB_STOP`; finale senza posizioni aperte.
+- Fix ACDC: `PreBuyWatchService` ora considera `entryDecision.accepted()` necessario ma non sufficiente. Se il trigger
+  audit non passa, la WATCH resta `WATCH_WAITING_BUY_CONTRACT` e non conferma BUY. Questo vale anche per SHADOW.
+- Fix diagnostico ACDC: `markBuyOpened`/`markBuyRejected` non sovrascrivono piu' `last_feature_json` con lo snapshot
+  nudo, preservando i contatori `pre_buy_watch_trigger_*`.
+- Verifiche: `acdc mvn -q -Dtest=AcdcRunServiceTest test` OK, `acdc mvn -q test` OK,
+  `acdc ./mvnw -q -DskipTests package` OK. Container `acdc-vpn` rebuildato e riavviato, startup prod OK.
+- Stato finale runtime post deploy: `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `mlReady=false`,
+  `paperRunning=false`, `openPositions=0`, `activeAdvice=0`, automazione `STOPPED`.
+
 ## Prossimo TODO
 
 1. Committare e pushare l'allineamento endpoint diagnostici/management ai blocchi `history_*`/`live_*`/`entry_*`/`exit_*`.
