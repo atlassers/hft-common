@@ -1,6 +1,6 @@
 # Current Context
 
-Ultimo aggiornamento: 2026-06-27 10:57 CEST.
+Ultimo aggiornamento: 2026-06-27 15:13 CEST.
 
 Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
@@ -29,26 +29,28 @@ TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
 
 ## Stato Ultima Attivita'
 
-Obiettivo eseguito: correzione contratto end-to-end SELL no-MFE dopo diagnosi di fallback non autorizzato.
+Obiettivo eseguito: correzione contratto end-to-end SELL no-MFE e validazione operativa WATCH/no-MFE dopo refactor
+stringhe/contract.
 
 Diagnosi corretta:
 
 - Le posizioni PAPER `99`-`105` avevano `policy_json.ml_advice_no_mfe_timeout_seconds = NULL`.
-- ACDC usava un fallback non autorizzato `ml_advice_duration_seconds * 0.25` per il timeout no-MFE.
-- DocBrown non pubblicava ancora `ml_advice_no_mfe_timeout_seconds` nell'advice.
-- ACDC non propagava il campo nella whitelist `MlAdviceFeatures.ADVICE_KEYS`.
-- Le RUN `99`-`105` restano storiche ma sono contaminate per valutare no-MFE/WATCH: non misurano un timeout deciso
-  dall'ML/advice.
-- Il concetto WATCH non e' bocciato da queste run; il contratto pipeline era incompleto.
+- Dopo il primo fix, DocBrown pubblicava la key nei `ruleJson` di mining/promotion, ma non nel path effettivo
+  `LiveMlAdviceScoringService.liveAdvice(...)` usato dal ciclo management.
+- Le RUN `107`/`108` e `109`/`110` del 2026-06-27 restano contaminate per no-MFE: la generation live non conteneva
+  `ml_advice_no_mfe_timeout_seconds`; SHADOW `110` e' anche lifecycle-contaminata per stop/abandon.
+- I reject `PAPER_BUDGET_OR_EXCHANGE_RULES_REJECTED` osservati non erano exchange filter: con budget PAPER 100,
+  `min_trade_quote=25` e fee, dopo 3 posizioni restavano circa 24.925 quote, sotto il minimo per un quarto BUY.
+- WATCH non e' bocciata: nelle run pulite successive ha aperto, confermato BUY e alimentato SELL no-MFE correttamente.
 
 Diagnosi del Consiglio:
 
 - Saggio ascoltatore: fermare ogni inferenza di performance sulle run contaminate e ripartire da un contratto pulito.
 - Scienziato severo: nessun fallback su timeout no-MFE; se il campo manca, la guardia deve restare fail-closed.
-- Mediano pragmatico: correggere DocBrown, propagazione ACDC, DB operativo e advice residue prima di riprendere il ciclo
-  da FE `/management`.
-- Decisione unica: no-MFE usa solo `ml_advice_no_mfe_timeout_seconds` pubblicato dall'ML/advice. Nessuna PAPER valida
-  puo' partire con advice vecchie o senza quel campo.
+- Mediano pragmatico: correggere anche il live-score producer e aggiungere un guardrail ACDC di entry/readiness per non
+  avviare PAPER con advice prive del campo.
+- Decisione unica: no-MFE usa solo `ml_advice_no_mfe_timeout_seconds` pubblicato dall'ML/advice. ACDC deve considerare
+  non contract-active e respingere PAPER ENTRY se il campo manca.
 
 Implementato e verificato:
 
@@ -56,8 +58,14 @@ Implementato e verificato:
 - `docbrown`: `SignaturePaperAdvicePromotionService` e `ReversalMlRuleMiningService` pubblicano
   `ml_advice_no_mfe_timeout_seconds` nell'advice usando `entryValiditySeconds` candidate-specific.
 - `docbrown`: source/validity source literal dei due `ruleJson` toccati sono stati portati in `OperationalString`.
+- `docbrown`: `LiveMlAdviceScoringService.liveAdvice(...)` garantisce `ml_advice_no_mfe_timeout_seconds`; per regole
+  storiche lo deriva una tantum da `entry_validity_seconds` nel producer live, non in ACDC.
 - `acdc`: `MlAdviceFeatures.ADVICE_KEYS` include `ml_advice_no_mfe_timeout_seconds`.
 - `acdc`: `OutcomeQualityModelService` copia il timeout no-MFE da advice/rule_json alle feature SELL.
+- `acdc`: `MlReadinessDiagnosticsService` conta `paperEligibleContractActiveAdvice` solo se
+  `ml_advice_no_mfe_timeout_seconds > 0` e il contratto temporale BUY e' ancora valido.
+- `acdc`: `PaperRunService` respinge PAPER ENTRY con `PAPER_ADVICE_NO_MFE_TIMEOUT_MISSING` se la feature no-MFE manca
+  o non e' positiva.
 - `acdc`: `GuardEvaluator` non calcola piu' fallback da durata/ratio; senza timeout esplicito la guardia no-MFE resta
   `EXIT_HOLD`.
 - `acdc`: `V74__remove_no_mfe_timeout_fallback_metadata.sql` rimuove ratio/min-hold dal metadata operativo della guardia
@@ -72,16 +80,21 @@ Verifiche completate:
 - `hft-common`: `mvn -q install` OK.
 - `docbrown`: `mvn -q test` OK.
 - `docbrown`: `./mvnw -q -DskipTests package` OK.
-- `docbrown`: container `docbrown` rebuildato/ricreato, startup prod OK su MySQL 8.0.
+- `docbrown`: container `docbrown` rebuildato/ricreato dopo il fix live-score, startup prod OK su MySQL 8.0.
 - `acdc`: `mvn -q test` OK; Flyway test valida/applica 75 migration.
 - `acdc`: `./mvnw -q -DskipTests package` OK.
-- `acdc`: container `acdc-vpn` rebuildato/ricreato.
+- `acdc`: container `acdc-vpn` rebuildato/ricreato dopo il guardrail no-MFE.
 - ACDC log prod: MySQL 8.0, schema operativo da `74` a `75`, startup OK.
 - MySQL operativo: `acdc_flyway_schema_history` ultimo `version=75`, `success=1`.
 - MySQL operativo: guardia `exit_ml_advice_no_mfe_decay` ha `min_threshold=0`, `max_threshold=0`, metadata senza ratio/min-hold.
-- MySQL operativo: `acdc_live_ml_advice` ha solo righe `EXPIRED`; `ACTIVE=0`.
+- MySQL operativo: generation `live-1782565383` e `live-1782565442` hanno 5/5 advice con
+  `ml_advice_no_mfe_timeout_seconds`.
+- RUN pulita `111`/`112`, group `ab98-20260627T130406Z`: PAPER `111` ha 3 posizioni chiuse con
+  `EXIT_ML_ADVICE_NO_MFE_DECAY`; SHADOW `112` ha `ALGOUSDC` chiusa take-profit e `HBARUSDC` chiusa no-MFE.
+- RUN successiva `113`/`114`, group `ab98-20260627T130751Z`: PAPER `113` ha 2 posizioni chiuse no-MFE e 1 dynamic
+  trailing; SHADOW `114` e' stata stoppata/abbandonata dopo `AUTO_AB_STOP`, quindi non e' evidenza Forward A/B pulita.
 - FE/Kenshiro finale: `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `paperRunning=false`, `openPositions=0`,
-  `activeAdvice=0`, `paperEligibleActiveAdvice=0`.
+  `activeAdvice=0`, `paperEligibleActiveAdvice=0`, automazione `STOPPED`.
 
 ## Stato Repo
 
@@ -89,12 +102,14 @@ Repo modificati da committare: `hft-common`, `acdc`, `docbrown`.
 
 ## Prossimo TODO
 
-1. Committare e pushare `hft-common`, `acdc`, `docbrown` con stesso MS826.
-2. Non avviare PAPER su advice vecchie: serve live score/promotion nuova da FE `/management`, con advice contenenti
-   `ml_advice_no_mfe_timeout_seconds`.
-3. Prossimo piano operativo: riprendere da FE `/management`, generare advice fresche e solo se `ML_READY=true` portare
-   a `PAPER_FORWARD_AB_98`.
-4. Prossimo piano scientifico: valutare WATCH/no-MFE su run pulita, mantenendo:
+1. Committare e pushare i repo modificati con stesso MS successivo.
+2. Non usare `107`/`108`, `109`/`110` o `113`/`114` come evidenza baseline pulita; sono contaminati rispettivamente da
+   contratto no-MFE mancante o stop/abandon SHADOW.
+3. Usare `111`/`112` come evidenza tecnica positiva del contratto WATCH/no-MFE, ma non ancora come promozione baseline:
+   serve forensics A/B completa prima di `PASS_BASELINE`.
+4. Prossimo piano operativo: generare una nuova `FORWARD_AB_98` da FE `/management` solo dopo nuove advice
+   contract-active, lasciando chiudere entrambi i bracci senza stop/abandon SHADOW se si vuole evidenza scientifica.
+5. Prossimo piano scientifico: valutare WATCH/no-MFE su run pulita, mantenendo:
    - WATCH pre-BUY runtime;
    - take-profit prioritario;
    - no-MFE decay;
