@@ -183,6 +183,27 @@ Nuovo avanzamento post MS881:
 
 Repo con modifiche coerenti da committare/pushare con lo stesso MS: `hft-common`, `acdc`, `kenshiro`.
 
+Aggiornamento MS890 del 2026-06-27:
+
+- `acdc`: `MlReadinessDiagnosticsService` e' stato allineato al path rolling advice-driven. Se esistono advice
+  `PAPER_ELIGIBLE` attive, `ML_RULES_MISSING` e `ML_PROMOTED_RULES_MISSING` non bloccano piu' `ML_READY`; restano
+  warning diagnostici. Le guardie su advice attive, advice paper-eligible, contratto attivo e posizioni aperte restano
+  bloccanti.
+- Deploy runtime: container `acdc-vpn` rebuildato e riavviato, startup prod OK su MySQL 8.0.
+- Verifica: `acdc mvn -q test` OK e `./mvnw -q -DskipTests package` OK.
+- RUN runtime dopo fix:
+  - `1`/`2`, group `ab98-20260627T203315Z`: PAPER B partita da generation
+    `management-rolling-20260627T203248Z`; WATCH ha aperto `JTOUSDC`, sell
+    `EXIT_ML_ADVICE_NO_MFE_DECAY`, net `-0.1047430562718`; una WATCH PAPER e una WATCH SHADOW sono scadute senza BUY.
+  - `3`/`4`, group `ab98-20260627T203619Z`: PAPER B partita da generation
+    `management-rolling-20260627T203556Z`; nessuna WATCH PAPER ha confermato il BUY, PAPER chiusa con 0 trade; SHADOW
+    baseline completata con PnL runtime negativo.
+- Stato finale post stop automazione: `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `mlReady=false`,
+  `paperRunning=false`, `openPositions=0`, nessuna advice attiva. Automazione fermata con `AUTO_AB_STOP`.
+- Interpretazione: il blocco readiness che impediva lo start PAPER era un mismatch ACDC legacy vs rolling advice-driven ed
+  e' corretto. WATCH observer e scadenza contratto sono operativi. Trading non promosso: evidenza PnL ancora negativa o
+  assente, quindi serve nuova FORWARD_AB_98 pulita prima di qualsiasi promozione.
+
 ## Prossimo TODO
 
 1. Committare e pushare l'allineamento endpoint diagnostici/management ai blocchi `history_*`/`live_*`/`entry_*`/`exit_*`.

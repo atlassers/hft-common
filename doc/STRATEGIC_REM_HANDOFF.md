@@ -1293,3 +1293,10 @@ jq '{totalBlockedAdvice,goodBlocks,badBlocks,ambiguousBlocks}' "$OUT/counterfact
 - `INCONCLUSIVE`: nessun trade, dati granulari assenti, infrastruttura parziale.
 - `FAIL_BASELINE`: run pulita, trade sufficienti, PnL negativo o zero-MFE/loss-cap dominanti.
 - `PASS_BASELINE`: run pulita, PnL positivo, flusso advice->BUY->SELL completo, capture accettabile, forensics non smentisce SELL, counterfactual non mostra opportunity bloccate sistematicamente.
+
+## Nota MS890
+
+Nel path rolling advice-driven, ACDC non deve pretendere righe legacy in `acdc_reversal_ml_rule` per dichiarare
+`ML_READY` quando sono presenti advice `PAPER_ELIGIBLE` attive e contrattualmente valide. `ML_RULES_MISSING` e
+`ML_PROMOTED_RULES_MISSING` restano warning diagnostici; non sono blocker se il contratto rolling e' fresco. Restano
+blocker: assenza advice live, assenza advice paper-eligible, contratto scaduto/incompleto e posizioni PAPER aperte.
