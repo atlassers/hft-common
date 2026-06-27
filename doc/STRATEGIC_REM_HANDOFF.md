@@ -85,7 +85,12 @@ Se una procedura qui descritta confligge con il piano strategico, va fermata e c
   config runtime globale. Se `min_economic_safe_net_return` manca, ACDC non inventa un floor; il gate economico minimo
   resta `safe_net_return > 0` piu' eventuale min advice-specific rispettato. La WATCH operativa si attiva tramite
   `pre_buy_watch_required=true` o timeout positivo nel payload advice.
-  multilinea. Le nuove key JSON/protocollo Java condivise devono essere aggiunte in
+- Contratto temporale advice/WATCH: `max_buy_age_seconds` misura solo la freschezza del live-score/advice. Non deve
+  essere usato come durata della WATCH. La finestra `pre_buy_watch_timeout_seconds` deve derivare dalla durata storica
+  della firma (`entry_validity_seconds`, `duration_seconds` o timeout no-MFE esplicito). La live revalidation puo'
+  essere falsa al momento della promozione: in quel caso DocBrown deve comunque pubblicare l'advice WATCH-eligible,
+  ACDC apre la WATCH e compra solo se il contratto BUY diventa vero prima della scadenza.
+- Le nuove key JSON/protocollo Java condivise devono essere aggiunte in
   `it.mbc.hft.common.rem.constants.RemConstants`; eventuali registry locali (`ManagementString`, `OperationalString`)
   sono ammessi solo come shim verso `hft-common`.
 - Contratto advice separato: DocBrown live-score non deve modificare semanticamente i campi ML storici dell'advice.
@@ -233,12 +238,15 @@ Regole:
   ramo auto (`auto-prefilter`) invece di saltare al ramo manuale `ml-round-robin`; il cooldown e' parte del ciclo
   automatico e deve essere rappresentato come tale.
 - Dopo il live score post-validazione dell'autociclo, Kenshiro non deve saltare la rolling promotion: deve promuovere
-  il candidato rolling selezionato, scadere le advice PAPER precedenti e avviare `PAPER_FORWARD_AB_START` solo se la
-  promozione rolling ha creato advice `PAPER_ELIGIBLE` contract-active. Questo evita di consumare advice tecniche
-  `PROMOTED_RULE` non attribuite al batch rolling appena validato.
+  il batch rolling validato, scadere le advice PAPER precedenti e avviare `PAPER_FORWARD_AB_START` solo se la promozione
+  rolling ha creato advice `PAPER_ELIGIBLE` WATCH-eligible. La BUY resta fail-closed finche' ACDC non vede vero il
+  contratto live della stessa advice. Questo evita di consumare advice tecniche `PROMOTED_RULE` non attribuite al batch
+  rolling appena validato e impedisce che una live revalidation istantanea negativa cancelli l'osservazione WATCH.
 - `ROLLING_PROMOTION` deve usare `expireExisting=true` di default, non deve ricevere una short-list operativa di
   simboli e deve passare a DocBrown il `maxBuyAgeSeconds` runtime corrente. La selection rolling resta diagnostica/ranking:
-  DocBrown promuove dal batch validato e scarta ogni simbolo che non passa promotability o live revalidation.
+  DocBrown promuove dal batch validato e scarta solo i simboli non promotable. La live revalidation istantanea viene
+  riportata in diagnostica ma non delimita la promozione: e' la WATCH ACDC a rivalutare lo stesso contratto fino a BUY o
+  scadenza.
 - Un batch rolling con status promotable non deve mantenere il cockpit su `auto-promotion` se
   `latestRollingBatchAgeSeconds` supera `rem.ml.live_advice.max_buy_age_seconds`. In quel caso Kenshiro deve tornare a
   `auto-prefilter`: promuovere un batch stale genererebbe advice gia' fuori finestra e contaminerebbe il ciclo

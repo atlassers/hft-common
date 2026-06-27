@@ -1,6 +1,6 @@
 # Current Context
 
-Ultimo aggiornamento: 2026-06-27 17:56 CEST.
+Ultimo aggiornamento: 2026-06-27 22:24 CEST.
 
 Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
@@ -28,6 +28,19 @@ TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
 - FE e script devono mantenere mapping 1:1 con i contract/payload comuni quando esistono.
 
 ## Stato Ultima Attivita'
+
+Aggiornamento operativo in corso:
+
+- `docbrown`: separato il significato temporale di `max_buy_age_seconds` e `pre_buy_watch_timeout_seconds`. Il primo
+  resta freschezza del live-score/advice; il secondo deriva dalla durata storica della firma (`entry_validity_seconds`,
+  `duration_seconds` o timeout no-MFE).
+- `docbrown`: la rolling promotion non scarta piu' advice solo per live revalidation istantanea negativa. Se il batch e'
+  promotable, pubblica advice `PAPER_ELIGIBLE` WATCH-eligible e riporta eventuali rejection live come diagnostica della
+  riga. ACDC resta responsabile di comprare solo quando il contratto BUY diventa vero durante la WATCH.
+- `hft-fe`: `/management` mostra la WATCH come osservatore con conteggio attivo e finestra, e la mappa runtime distingue
+  freschezza live, contratto BUY e finestra storica WATCH.
+- Verifiche locali completate: `docbrown mvn -q test`, `docbrown ./mvnw -q -DskipTests package`,
+  `hft-fe npm run check`, `hft-fe npm run build`.
 
 Aggiornamento operativo MS884:
 
