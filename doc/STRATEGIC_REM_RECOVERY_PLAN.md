@@ -105,6 +105,10 @@ L'obiettivo finale di questo piano e' arrivare a stato `PAPER_READY`, cioe':
     allargamento gate. Se un trade rientra sotto break-even dopo MFE positivo, il dynamic trailing puo' chiudere prima
     del timeout; questa regola riduce decay/loss e non autorizza PAPER con `ML_READY=false`, non cambia BUY eligibility
     e non sostituisce evidenza Forward A/B.
+17. Dal 2026-06-27 il SELL risk-control puo' chiudere prima del timeout pieno un trade BUY-confirmed che resta a
+    zero-MFE e decade sotto break-even. La durata deve arrivare dal contratto ML/advice quando disponibile e, in
+    fallback, derivare dalla durata ML dell'advice tramite metadata DB esplicito. Questa regola non e' una soglia di
+    selection, non allarga gate/live/PAPER e non sostituisce WATCH o Forward A/B evidence.
 
 ## Diagnosi Vincolante
 

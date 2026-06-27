@@ -1,6 +1,6 @@
 # Current Context
 
-Ultimo aggiornamento: 2026-06-27 09:24 CEST.
+Ultimo aggiornamento: 2026-06-27 09:58 CEST.
 
 Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
@@ -29,80 +29,63 @@ TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
 
 ## Stato Ultima Attivita'
 
-Obiettivo eseguito: check operativo post fix SELL, correzione cockpit Kenshiro su batch rolling stale e verifica
-runtime pulito.
+Obiettivo eseguito: RUN Forward A/B dopo fix SELL MS822/MS823, diagnosi zero-MFE e aggiunta guardia no-MFE decay.
 
 RUN analizzata:
 
-- PAPER B execution `93`: `STOPPED`, PnL netto `-0.0920963975765`.
-  - `HEIUSDC`: chiusa in profitto con `EXIT_ML_ADVICE_TAKE_PROFIT`, hold circa 154s, max net return
-    `0.008193877551020408`.
-  - `PENDLEUSDC`: entrata in piccolo MFE netto positivo `0.000352433281004710`, poi decaduta e chiusa solo a timeout
-    con net return circa `-0.006704866562009419`.
-  - `ICPUSDC`: mai positiva nello stream decisionale ACDC, chiusa a timeout con net return circa
-    `-0.005172867513611615`.
-- SHADOW A execution `94`: `COMPLETED`, PnL netto `-0.3971208329067`.
-- WATCH evidence presente: PAPER `BUY_OPENED=3`, `BUY_REJECTED_RUNTIME=8`, `EXPIRED=4`; SHADOW `BUY_OPENED=2`,
-  `EXPIRED=3`.
+- PAPER B execution `95`: `STOPPED`, PnL netto `-0.164842310168994`.
+  - `AIGENSYNUSDC`: `EXIT_ML_ADVICE_TIMEOUT`, net `-0.11765237014504`, `maxNetReturn=0`.
+  - `KMNOUSDC`: `EXIT_ML_ADVICE_TIMEOUT`, net `-0.01316371680981`, `maxNetReturn=0`.
+  - `PENGUUSDC`: `EXIT_ML_ADVICE_TIMEOUT`, net `-0.034026223214144`, `maxNetReturn=0`.
+- SHADOW A execution `96`: `COMPLETED`.
+- WATCH evidence presente: PAPER `BUY WATCH_CONFIRMED_BUY=3`; la WATCH ha autorizzato BUY runtime, ma tutti i BUY
+  PAPER sono rimasti a zero MFE fino al timeout.
+- Post-sell forensics: `INCONCLUSIVE_GRANULARITY` su tutti i simboli; KMNO e PENGU hanno recuperato dopo il SELL, ma
+  con gap 25-60s, quindi non e' prova sufficiente per trattenere la posizione in runtime second-level.
 
 Diagnosi del Consiglio:
 
-- Il problema osservato non e' l'ingresso WATCH: la WATCH e' entrata nel runtime e ha autorizzato BUY reali.
-- Il problema principale e' SELL/hold decay: i simboli che non chiudono vicino all'ingresso tendono a degradare.
-- `PENDLEUSDC` mostra il pattern critico: piccolo MFE netto positivo, rientro sotto break-even, nessuna uscita dinamica
-  prima del timeout.
-- `ICPUSDC` e' caso diverso: nessun MFE positivo; servira' una regola separata no-MFE/decay se il pattern si ripete.
-- Il diagnostic `trailingArmed` era fuorviante: indicava `maxNetReturn > 0`, non l'arming reale del guard di trailing.
-- Il guard V67 a DB dichiarava arming su `min_arm_net_return`, ma il codice defaultava a `require_safe_for_trailing=true`
-  quando il metadata era assente, quindi poteva pretendere il `safeNetReturn` pieno invece del minimo eseguibile.
+- MS822 e' deployata ma non poteva attivarsi nella RUN 95: la protezione positive-MFE richiede MFE netto positivo, mentre
+  tutti e tre i PAPER sono rimasti a `maxNetReturn=0`.
+- Il problema osservato e' no-MFE/decay: trade BUY-confirmed che non partono mai devono poter uscire prima del timeout
+  completo dell'advice.
+- La correzione va nel SELL runtime come risk-control, non nella selection e non nei gate PAPER.
+- La durata no-MFE deve essere agganciata al contratto ML/advice quando presente (`ml_advice_no_mfe_timeout_seconds`) e,
+  in fallback, derivata da `ml_advice_duration_seconds` tramite metadata DB esplicito.
 
 Implementato e verificato:
 
-- `hft-common`: centralizzate le chiavi metadata del trailing ML advice:
-  `min_arm_net_return`, `safe_arm_ratio`, `retention_ratio`, `break_even_floor`,
-  `require_safe_for_trailing`, `protect_positive_mfe`.
-- `acdc`: estratta `MlAdviceTrailingPolicy`, usata sia dal runtime SELL (`GuardEvaluator`) sia dai diagnostics
-  (`PaperRunService`).
-- `acdc`: il trailing ML advice ora defaulta a `require_safe_for_trailing=false`, coerente con metadata V67
-  `min_arm_net_return=0.0005` e `safe_arm_ratio=0.00`.
-- `acdc`: aggiunta protezione risk-control `protect_positive_mfe=true` di default: se un trade ha avuto MFE netto
-  positivo e poi rientra sotto `break_even_floor`, puo' uscire senza aspettare il timeout.
-- `acdc`: `trailingArmed` nei nuovi diagnostics riflette l'arming reale della policy, non il semplice `maxNetReturn > 0`.
-- `acdc`: link Telegram chart reso anchor HTML sulla URL visibile; `TelegramNotifier` usava gia' `ParseMode.HTML`.
-- `acdc-vpn`: immagine `acdc:latest` rebuildata e container ricreato su MySQL/prod.
-- `kenshiro`: il current step non propone piu' `auto-promotion` se il batch rolling candidato e' gia' piu' vecchio del
-  contratto `rem.ml.live_advice.max_buy_age_seconds`. In quel caso torna ad `auto-prefilter` per generare una finestra
-  fresca, evitando promotion/advice contaminate da stale batch.
-- `kenshiro-local`: immagine `kenshiro:local` rebuildata e container ricreato su MySQL/prod.
+- `hft-common`: aggiunto `GuardOperator.ML_ADVICE_NO_MFE_DECAY_EXIT` e centralizzate le chiavi:
+  `ml_advice_no_mfe_timeout_seconds`, `no_mfe_timeout_ratio`, `no_mfe_min_hold_seconds`,
+  `no_mfe_max_net_return_ceiling`, `no_mfe_exit_net_return_ceiling`.
+- `acdc`: `GuardEvaluator` valuta `ML_ADVICE_NO_MFE_DECAY_EXIT`.
+- `acdc`: migration `V73__rem_no_mfe_decay_exit.sql` aggiunge guardia active `exit_ml_advice_no_mfe_decay`, priority 18,
+  fra dynamic trailing/take-profit e loss-cap/timeout.
+- `acdc`: la guardia vende solo se `hold_seconds` supera il timeout no-MFE, `max_net_return` resta sotto/uguale al ceiling
+  e `net_return` resta sotto/uguale al ceiling di uscita.
+- `acdc-vpn`: immagine rebuildata e container ricreato; Flyway MySQL ha applicato `V73`, schema operativo ora `v73`.
 
 Verifiche completate:
 
-- `hft-common`: `mvn -q install -DskipTests` OK.
-- `acdc`: `mvn -q test` OK, incluso nuovo test `MlAdviceTrailingPolicyTest`.
+- `hft-common`: `mvn -q test` OK.
+- `hft-common`: `mvn -q install` OK.
+- `acdc`: `mvn -q test` OK; Flyway test valida/applica 73 migration.
 - `acdc`: `./mvnw -q -DskipTests package` OK.
-- `acdc`: `docker build -f docker/Dockerfile.jvm -t acdc:latest .` OK.
 - `acdc`: `docker compose --env-file docker/vpn/.env -f docker/vpn/compose.yml up -d --build --force-recreate acdc` OK.
-- `acdc`: startup container su MySQL 8.0 OK; `paper_running=0`, `paper_open=0`, `shadow_open=0`.
-- `acdc`: smoke HTTP `GET /diagnostics/acdc/paper/scoring?executionIds=93` OK.
-- `kenshiro`: `mvn -q test` OK.
-- `kenshiro`: `./mvnw -q -DskipTests package` OK.
-- `kenshiro`: `docker compose --env-file /home/mbc/Documenti/ws/java/hft/acdc/docker/vpn/.env up -d --build --force-recreate kenshiro` OK.
-- `FE proxy /backoffice/management/state`: current step ora `auto-prefilter`; `mlReady=false`; `paperRunning=false`;
-  `openPositions=0`; `activeAdvice=0`; `paperEligibleContractActiveAdvice=0`.
-- Durante i test ACDC, Vault Testcontainers `hashicorp/vault:1.15.2` e' partito correttamente; eventuali problemi Vault
-  operativi vanno cercati in compose/config mount, non nella compatibilita' immagine base.
+- ACDC log prod: MySQL 8.0, schema da `72` a `73`, startup OK.
+- MySQL operativo: guardie EXIT active in ordine: take-profit, dynamic trailing, no-MFE decay, loss-cap, timeout.
+- FE proxy: `paperRunning=false`, `openPositions=0`, `activeAdvice=0`, `paperEligibleContractActiveAdvice=0`.
 
 ## Stato Repo
 
-Repo modificati da committare: `hft-common`, `kenshiro`.
+Repo modificati da committare: `hft-common`, `acdc`.
 
 ## Prossimo TODO
 
-1. Committare e pushare `hft-common` e `kenshiro` con stesso MS.
-2. Dal FE `/management`, ripartire da `auto-prefilter`/`AUTO_AB_START` o equivalente percorso autorizzato; non usare
-   `/pipelines` e non promuovere batch rolling stale.
+1. Committare e pushare `hft-common` e `acdc` con stesso MS.
+2. Dal FE `/management`, ripartire con `AUTO_AB_START`; non usare `/pipelines`.
 3. Avviare PAPER solo se `ML_READY=true` e solo `FORWARD_AB_98`.
 4. Nella prossima RUN monitorare:
-   - quante uscite avvengono per `EXIT_ML_ADVICE_DYNAMIC_TRAILING`;
-   - se casi tipo `PENDLEUSDC` escono al rientro sotto break-even;
-   - se casi tipo `ICPUSDC` senza MFE richiedono un guard no-MFE/decay advice-specific.
+   - quante uscite avvengono per `EXIT_ML_ADVICE_NO_MFE_DECAY`;
+   - se MS822 intercetta eventuali rientri sotto break-even dopo MFE positivo;
+   - se WATCH conferma BUY e riduce le BUY non meritevoli senza bloccare segnali profittevoli.

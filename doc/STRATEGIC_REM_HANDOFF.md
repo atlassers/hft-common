@@ -306,6 +306,11 @@ Regole:
   impone `require_safe_for_trailing=true`, l'arming usa `min_arm_net_return`/`safe_arm_ratio`; inoltre
   `protect_positive_mfe=true` permette di uscire quando un trade ha avuto MFE netto positivo e poi rientra sotto
   `break_even_floor`, senza aspettare il timeout.
+- Dopo evidenza PAPER execution `95` con tre BUY confermati da WATCH ma `maxNetReturn=0` fino a timeout, il guard
+  `exit_ml_advice_no_mfe_decay` deve restare `ACTIVE` tra dynamic trailing/take-profit e loss-cap/timeout. Operatore:
+  `ML_ADVICE_NO_MFE_DECAY_EXIT`; reason: `EXIT_ML_ADVICE_NO_MFE_DECAY`. Il timeout no-MFE usa prima
+  `ml_advice_no_mfe_timeout_seconds` se pubblicato dall'ML, altrimenti `ml_advice_duration_seconds * no_mfe_timeout_ratio`
+  con `no_mfe_min_hold_seconds` da metadata DB. Non usare questa guardia per allargare selection o PAPER.
 - Se l'automazione non e' abilitata, gli step manuali restano eseguibili secondo current-step gating.
 - REAL resta vietata dal piano strategico: il cockpit puo' mostrare readiness/eligibility, ma `REAL_RUN` deve restare
   bloccata finche' il vincolo strategico non viene modificato esplicitamente.

@@ -186,6 +186,11 @@ public final class RemConstants {
     public static final String ML_ADVICE_TRAILING_BREAK_EVEN_FLOOR = "break_even_floor";
     public static final String ML_ADVICE_TRAILING_REQUIRE_SAFE_FOR_TRAILING = "require_safe_for_trailing";
     public static final String ML_ADVICE_TRAILING_PROTECT_POSITIVE_MFE = "protect_positive_mfe";
+    public static final String ML_ADVICE_NO_MFE_TIMEOUT_SECONDS = "ml_advice_no_mfe_timeout_seconds";
+    public static final String ML_ADVICE_NO_MFE_TIMEOUT_RATIO = "no_mfe_timeout_ratio";
+    public static final String ML_ADVICE_NO_MFE_MIN_HOLD_SECONDS = "no_mfe_min_hold_seconds";
+    public static final String ML_ADVICE_NO_MFE_MAX_NET_RETURN_CEILING = "no_mfe_max_net_return_ceiling";
+    public static final String ML_ADVICE_NO_MFE_EXIT_NET_RETURN_CEILING = "no_mfe_exit_net_return_ceiling";
 
     public static final String MOMENTUM5 = "momentum5";
     public static final String CAUSAL_CLASSIFICATION_AVAILABLE = "causalClassificationAvailable";
