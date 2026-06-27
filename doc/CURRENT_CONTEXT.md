@@ -1,6 +1,6 @@
 # Current Context
 
-Ultimo aggiornamento: 2026-06-27 15:13 CEST.
+Ultimo aggiornamento: 2026-06-27 15:36 CEST.
 
 Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
@@ -30,7 +30,7 @@ TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
 ## Stato Ultima Attivita'
 
 Obiettivo eseguito: correzione contratto end-to-end SELL no-MFE e validazione operativa WATCH/no-MFE dopo refactor
-stringhe/contract.
+stringhe/contract. Nuovo monitoraggio FORWARD_AB_98 completato da FE `/management` su advice fresche.
 
 Diagnosi corretta:
 
@@ -93,20 +93,43 @@ Verifiche completate:
   `EXIT_ML_ADVICE_NO_MFE_DECAY`; SHADOW `112` ha `ALGOUSDC` chiusa take-profit e `HBARUSDC` chiusa no-MFE.
 - RUN successiva `113`/`114`, group `ab98-20260627T130751Z`: PAPER `113` ha 2 posizioni chiuse no-MFE e 1 dynamic
   trailing; SHADOW `114` e' stata stoppata/abbandonata dopo `AUTO_AB_STOP`, quindi non e' evidenza Forward A/B pulita.
-- FE/Kenshiro finale: `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `paperRunning=false`, `openPositions=0`,
-  `activeAdvice=0`, `paperEligibleActiveAdvice=0`, automazione `STOPPED`.
+- Nuovo ciclo management del 2026-06-27:
+  - `REFRESH_DIAGNOSTICS` iniziale: `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `paperRunning=false`,
+    `openPositions=0`, nessuna advice attiva.
+  - `AUTO_AB_START` da FE `/management` ha generato advice fresche contract-active con
+    `ml_advice_no_mfe_timeout_seconds`.
+  - `115`/`116`, group `ab98-20260627T131935Z`: PAPER `115` `STOPPED`, 3 posizioni chiuse, net
+    `-0.243031196346800000`; SHADOW `116` `COMPLETED`, 2 posizioni chiuse, net `-0.083058606990000000`.
+  - `117`/`118`, group `ab98-20260627T132306Z`: PAPER `117` `STOPPED`, 3 posizioni chiuse, net
+    `-0.134157024976800000`; SHADOW `118` `COMPLETED`, 2 posizioni chiuse, net `-0.086254814085000000`.
+  - `119`/`120`, group `ab98-20260627T132638Z`: PAPER `119` `STOPPED`, 3 posizioni chiuse, net
+    `+0.028302675459600000`; SHADOW `120` `COMPLETED`, 2 posizioni chiuse, net `-0.229538972310000000`.
+  - `AUTO_AB_STOP` e' stato inviato in finestra pulita dopo `119` chiusa e `120` completata, ma un worker aveva gia'
+    iniziato il ciclo successivo.
+  - Race finale `121`/`122`, group `ab98-20260627T133008Z`: PAPER `121` `STOPPED`, 3 posizioni chiuse, net
+    `+0.008618152636200000`; SHADOW `122` `COMPLETED`, 2 posizioni chiuse, net `-0.088206647087000000`.
+  - Tutte le posizioni PAPER/SHADOW `115`-`122` hanno `ml_advice_no_mfe_timeout_seconds` valorizzato nel `policy_json`
+    (`120` o `175`) e `ml_advice_pre_buy_watch_timeout_seconds=20`; PAPER `115`, `117`, `119`, `121` hanno generation
+    source rispettivamente `live-1782566372`, `live-1782566582`, `live-1782566795`, `live-1782567005`.
+- FE/Kenshiro finale post-monitoraggio: `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `paperRunning=false`,
+  `openPositions=0`, `activeAdvice=0`, `paperEligibleActiveAdvice=0`, `paperEligibleContractActiveAdvice=0`.
+- Automazione finale: `automationEnabled=false`, `automationStopRequested=true`, last stop reason `USER_STOP`.
+- Interpretazione: WATCH/no-MFE e contract runtime sono operativi; performance non promossa. Le PAPER `115`, `117`, `119`,
+  `121` sono `STOPPED` e quindi non sono evidenza scientifica pristine per `PASS_BASELINE`, anche se tutte le posizioni
+  risultano chiuse e senza reject budget/exchange rilevanti.
 
 ## Stato Repo
 
-Repo modificati da committare: `hft-common`, `acdc`, `docbrown`.
+Repo verificati puliti/sincronizzati prima del monitoraggio: `hft-common`, `acdc`, `docbrown`.
+Modifiche correnti da committare: solo questo aggiornamento documentale in `hft-common`.
 
 ## Prossimo TODO
 
-1. Committare e pushare i repo modificati con stesso MS successivo.
+1. Committare e pushare l'aggiornamento documentale `hft-common` con MS successivo.
 2. Non usare `107`/`108`, `109`/`110` o `113`/`114` come evidenza baseline pulita; sono contaminati rispettivamente da
    contratto no-MFE mancante o stop/abandon SHADOW.
-3. Usare `111`/`112` come evidenza tecnica positiva del contratto WATCH/no-MFE, ma non ancora come promozione baseline:
-   serve forensics A/B completa prima di `PASS_BASELINE`.
+3. Usare `111`/`112` e `115`-`122` come evidenza tecnica positiva del contratto WATCH/no-MFE, ma non ancora come
+   promozione baseline: serve forensics A/B completa e almeno un ciclo pristine prima di `PASS_BASELINE`.
 4. Prossimo piano operativo: generare una nuova `FORWARD_AB_98` da FE `/management` solo dopo nuove advice
    contract-active, lasciando chiudere entrambi i bracci senza stop/abandon SHADOW se si vuole evidenza scientifica.
 5. Prossimo piano scientifico: valutare WATCH/no-MFE su run pulita, mantenendo:
