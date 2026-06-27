@@ -259,7 +259,10 @@ public final class RemConstants {
     public static final String GUARD_METADATA_DUST_QUOTE = "dust_quote";
     public static final String GUARD_METADATA_COST_MULTIPLIER = "cost_multiplier";
 
+    public static final String MODEL_EXPECTED_RETURN = "model_expected_return";
     public static final String MOMENTUM5 = "momentum5";
+    public static final String VOLATILITY = "volatility";
+    public static final String PULLBACK_DEPTH = "pullback_depth";
     public static final String CANDIDATE_PRESENT = "candidate_present";
     public static final String REVERSAL_CONFIRMED = "reversal_confirmed";
     public static final String REVERSAL_SLOPE_SHORT = "reversal_slope_short";
