@@ -141,6 +141,9 @@ public final class RemConstants {
     public static final String PRIMARY_METRIC = "primaryMetric";
     public static final String PRE_BUY_WATCH_REQUIRED = "pre_buy_watch_required";
     public static final String PRE_BUY_WATCH_TIMEOUT_SECONDS = "pre_buy_watch_timeout_seconds";
+    public static final String PRE_BUY_WATCH_TRIGGER_CHECKED = "pre_buy_watch_trigger_checked";
+    public static final String PRE_BUY_WATCH_TRIGGER_FAILED = "pre_buy_watch_trigger_failed";
+    public static final String PRE_BUY_WATCH_TRIGGER_PASSED = "pre_buy_watch_trigger_passed";
     public static final String PROFIT_FACTOR = "profitFactor";
     public static final String RANGES = "ranges";
     public static final String REALISTIC_SAFE_NET_RETURN = "realistic_safe_net_return";

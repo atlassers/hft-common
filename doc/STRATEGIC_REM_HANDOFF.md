@@ -1300,3 +1300,15 @@ Nel path rolling advice-driven, ACDC non deve pretendere righe legacy in `acdc_r
 `ML_READY` quando sono presenti advice `PAPER_ELIGIBLE` attive e contrattualmente valide. `ML_RULES_MISSING` e
 `ML_PROMOTED_RULES_MISSING` restano warning diagnostici; non sono blocker se il contratto rolling e' fresco. Restano
 blocker: assenza advice live, assenza advice paper-eligible, contratto scaduto/incompleto e posizioni PAPER aperte.
+
+## Nota MS892
+
+Per giudicare WATCH separare sempre due piani:
+
+- rispetto del trigger: BUY ammesso solo se la decisione ENTRY passa, cioe' `ml_advice_paper_eligible=1` dopo
+  live-revalidation/freshness contract;
+- qualita' del contratto: anche con trigger rispettato, una run con `maxNetReturn=0` e no-MFE exit e' fallimento del
+  contratto ML/live, non prova positiva della strategia.
+
+Le nuove decisioni WATCH espongono `pre_buy_watch_trigger_checked`, `pre_buy_watch_trigger_failed` e
+`pre_buy_watch_trigger_passed`; `acdc_pre_buy_watch.source_generation_id` deve essere valorizzato per le nuove WATCH.

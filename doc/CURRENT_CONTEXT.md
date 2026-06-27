@@ -216,6 +216,24 @@ Aggiornamento finale MS891 del 2026-06-27:
   `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `mlReady=false`, `paperRunning=false`, `openPositions=0`,
   `activeAdvice=0`, `automationEnabled=false`, `automationStatus=STOPPED`.
 
+Aggiornamento MS892 del 2026-06-27:
+
+- Verifica WATCH sul BUY `JTOUSDC` execution `1`: all'apertura WATCH il contratto non era paper-eligible
+  (`ml_advice_paper_eligible=0`, `ml_advice_live_revalidation_pass=0`, failure su `reversal_trough_age_seconds`);
+  al BUY, 12 secondi dopo, `ml_advice_paper_eligible=1`, `ml_advice_live_revalidation_pass=1` e failure `0`.
+- Interpretazione corretta: WATCH non ha comprato solo per vincolo temporale; ha rispettato il trigger configurato.
+  Il contratto resta pero' debole dal punto di vista trading, perche' il BUY non ha prodotto MFE (`maxNetReturn=0`) ed
+  e' uscito con `EXIT_ML_ADVICE_NO_MFE_DECAY`.
+- `acdc`: aggiunti contatori diagnostici nei feature della decisione WATCH:
+  `pre_buy_watch_trigger_checked`, `pre_buy_watch_trigger_failed`, `pre_buy_watch_trigger_passed`.
+- `acdc`: corretto `source_generation_id` su `acdc_pre_buy_watch`, risolvendolo dall'advice sorgente invece di tentare di
+  leggerlo dalla feature map numerica.
+- `acdc`: rimosso l'uso di literal `WATCHING` dalle query `PreBuyWatchRepository`, usando enum/costante.
+- Verifiche: `hft-common mvn -q install` OK, `acdc mvn -q -Dtest=AcdcRunServiceTest test` OK, `acdc mvn -q test` OK,
+  `acdc ./mvnw -q -DskipTests package` OK. Container `acdc-vpn` rebuildato e riavviato, startup prod OK su MySQL 8.0.
+- Stato finale runtime post deploy: `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `mlReady=false`,
+  `paperRunning=false`, `openPositions=0`, `activeAdvice=0`, automazione `STOPPED`.
+
 ## Prossimo TODO
 
 1. Committare e pushare l'allineamento endpoint diagnostici/management ai blocchi `history_*`/`live_*`/`entry_*`/`exit_*`.
