@@ -1,6 +1,6 @@
 # Current Context
 
-Ultimo aggiornamento: 2026-06-27 16:45 CEST.
+Ultimo aggiornamento: 2026-06-27 17:00 CEST.
 
 Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
@@ -133,11 +133,24 @@ Verifiche completate:
 
 ## Stato Repo
 
-Repo con modifiche coerenti da committare/pushare con lo stesso MS: `hft-common`, `docbrown`, `acdc`.
+Nuovo avanzamento post MS881:
+
+- `acdc`: endpoint `/diagnostics/acdc/paper/sell-capture` e `/diagnostics/acdc/paper/post-sell-forensics` espongono
+  ora un blocco `contract` con mappe `history`, `live`, `entry`, `exit` e flag `complete`.
+- `kenshiro`: le query management diagnostiche leggono i dettagli da `live_*`/`entry_*` dove il contratto separato e'
+  disponibile; `paperEligibleContractActiveAdvice` richiede `live_no_mfe_timeout_seconds > 0` e freshness
+  `live_max_buy_age_seconds`.
+- `kenshiro`: corretto un bug latente in `signalFreshness(...)`: le stringhe MySQL `str_to_date` con percentuali SQL
+  sono state escapate per l'uso con `String.formatted`.
+- Verifica endpoint: `/management/state` torna correttamente `BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`; gli endpoint ACDC
+  mostrano `contract` presente. Le run storiche precedenti alla separazione mostrano `contract.complete=false`, quindi
+  non vanno usate per validare la completezza dei nuovi blocchi.
+
+Repo con modifiche coerenti da committare/pushare con lo stesso MS: `hft-common`, `acdc`, `kenshiro`.
 
 ## Prossimo TODO
 
-1. Committare e pushare la separazione contract block `history_*`/`live_*`/`entry_*`/`exit_*` nei repo coinvolti.
+1. Committare e pushare l'allineamento endpoint diagnostici/management ai blocchi `history_*`/`live_*`/`entry_*`/`exit_*`.
 2. Non usare `107`/`108`, `109`/`110` o `113`/`114` come evidenza baseline pulita; sono contaminati rispettivamente da
    contratto no-MFE mancante o stop/abandon SHADOW.
 3. Usare `111`/`112` e `115`-`122` come evidenza tecnica positiva del contratto WATCH/no-MFE, ma non ancora come

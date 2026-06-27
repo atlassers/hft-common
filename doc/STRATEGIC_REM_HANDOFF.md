@@ -94,6 +94,10 @@ Se una procedura qui descritta confligge con il piano strategico, va fermata e c
   dalle guardie runtime, ma conserva `history_*` per audit. Al BUY ACDC scrive `entry_*` nel `policy_json`; alla SELL
   PAPER/SHADOW aggiunge `exit_*` nel feature snapshot di uscita. La SELL deve propagare `history_*`, `live_*` ed
   `entry_*` dal `policy_json`, non ricalcolarli dai live feature di uscita.
+- Diagnostica contract block: gli endpoint ACDC `/diagnostics/acdc/paper/sell-capture` e
+  `/diagnostics/acdc/paper/post-sell-forensics` devono esporre per ogni riga un oggetto `contract` con mappe numeriche
+  `history`, `live`, `entry`, `exit` e flag `complete`. Le run antecedenti alla separazione possono avere
+  `contract.complete=false` e non vanno usate per validare completezza del nuovo contratto.
 - Autonomia operativa: eseguire la checklist `hft-common/doc/acdc/session/2026-06-21/session-148-autonomous-to-paper-checklist.md` senza chiedere go per ogni microtest, fermandosi solo sulle stop condition dichiarate.
 - Budget/cadenza orchestratore: non sostituisce il lifecycle SHADOW/PAPER ACDC. Ogni ciclo autonomo esterno fino alla PAPER ha budget massimo `25m`; dopo `FAIL_SELECTION_BIAS` attendere `10m` prima del ciclo successivo; dopo `6` cicli senza candidate promuovibili classificare `NO_PROMOTABLE_SIGNAL_WINDOW` e chiedere rivalutazione del Consiglio.
 - Nuovo cockpit operativo: il prossimo ciclo REM deve partire da FE `/management`, che chiama Kenshiro
