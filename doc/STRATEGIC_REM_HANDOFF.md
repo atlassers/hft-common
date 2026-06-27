@@ -311,6 +311,8 @@ Regole:
   `ML_ADVICE_NO_MFE_DECAY_EXIT`; reason: `EXIT_ML_ADVICE_NO_MFE_DECAY`. Il timeout no-MFE usa prima
   `ml_advice_no_mfe_timeout_seconds` se pubblicato dall'ML, altrimenti `ml_advice_duration_seconds * no_mfe_timeout_ratio`
   con `no_mfe_min_hold_seconds` da metadata DB. Non usare questa guardia per allargare selection o PAPER.
+- I diagnostics PAPER scoring e Forward A/B devono esporre `noMfeDecayExits`; senza questo campo, run come `103`
+  sembrano prive di exit classificata anche se il SELL no-MFE ha funzionato.
 - Se l'automazione non e' abilitata, gli step manuali restano eseguibili secondo current-step gating.
 - REAL resta vietata dal piano strategico: il cockpit puo' mostrare readiness/eligibility, ma `REAL_RUN` deve restare
   bloccata finche' il vincolo strategico non viene modificato esplicitamente.

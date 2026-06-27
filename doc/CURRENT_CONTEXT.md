@@ -1,6 +1,6 @@
 # Current Context
 
-Ultimo aggiornamento: 2026-06-27 09:58 CEST.
+Ultimo aggiornamento: 2026-06-27 10:16 CEST.
 
 Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
@@ -29,29 +29,31 @@ TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
 
 ## Stato Ultima Attivita'
 
-Obiettivo eseguito: RUN Forward A/B dopo fix SELL MS822/MS823, diagnosi zero-MFE e aggiunta guardia no-MFE decay.
+Obiettivo eseguito: RUN Forward A/B dopo fix SELL no-MFE, diagnostica aggregata e stop automazione.
 
 RUN analizzata:
 
-- PAPER B execution `95`: `STOPPED`, PnL netto `-0.164842310168994`.
-  - `AIGENSYNUSDC`: `EXIT_ML_ADVICE_TIMEOUT`, net `-0.11765237014504`, `maxNetReturn=0`.
-  - `KMNOUSDC`: `EXIT_ML_ADVICE_TIMEOUT`, net `-0.01316371680981`, `maxNetReturn=0`.
-  - `PENGUUSDC`: `EXIT_ML_ADVICE_TIMEOUT`, net `-0.034026223214144`, `maxNetReturn=0`.
-- SHADOW A execution `96`: `COMPLETED`.
-- WATCH evidence presente: PAPER `BUY WATCH_CONFIRMED_BUY=3`; la WATCH ha autorizzato BUY runtime, ma tutti i BUY
-  PAPER sono rimasti a zero MFE fino al timeout.
-- Post-sell forensics: `INCONCLUSIVE_GRANULARITY` su tutti i simboli; KMNO e PENGU hanno recuperato dopo il SELL, ma
-  con gap 25-60s, quindi non e' prova sufficiente per trattenere la posizione in runtime second-level.
+- PAPER `99`: `STOPPED`, PnL `-0.29739923458501`, 3 trade, 0 win, 3 loss, 3 `EXIT_ML_ADVICE_NO_MFE_DECAY`.
+- PAPER `101`: `STOPPED`, PnL `-0.1877739242187`, 3 trade, 0 win, 3 loss, 3 `EXIT_ML_ADVICE_NO_MFE_DECAY`.
+- PAPER `103`: `STOPPED`, PnL `+0.01173248822932`, 3 trade, 1 win, 2 loss.
+  - `HEIUSDC`: `EXIT_ML_ADVICE_TAKE_PROFIT`, net `+0.1180686402786`, hold 49s, `maxNetReturn=0.004722745625841184`.
+  - `2ZUSDC` e `ALGOUSDC`: `EXIT_ML_ADVICE_NO_MFE_DECAY`, `maxNetReturn=0`.
+- PAPER `105`: `COMPLETED` dopo `AUTO_AB_STOP`/drain, PnL `-0.17104095233731`, 3 trade, 0 win, 3 loss,
+  3 `EXIT_ML_ADVICE_NO_MFE_DECAY`.
+- Aggregato PAPER `101,103,105`: 9 trade, 1 win, 8 loss, PnL `-0.34708238832669`, 1 take-profit,
+  8 no-MFE decay, 0 timeout, 0 loss-cap.
+- Forward A/B gruppo migliore `ab98-20260627T080801Z`: B PAPER `103` positivo `+0.01173248822932`, A SHADOW `104`
+  negativo `-0.1326908504614`; diagnostics `FORWARD_AB_98_READY` senza blockers.
 
 Diagnosi del Consiglio:
 
-- MS822 e' deployata ma non poteva attivarsi nella RUN 95: la protezione positive-MFE richiede MFE netto positivo, mentre
-  tutti e tre i PAPER sono rimasti a `maxNetReturn=0`.
-- Il problema osservato e' no-MFE/decay: trade BUY-confirmed che non partono mai devono poter uscire prima del timeout
-  completo dell'advice.
-- La correzione va nel SELL runtime come risk-control, non nella selection e non nei gate PAPER.
-- La durata no-MFE deve essere agganciata al contratto ML/advice quando presente (`ml_advice_no_mfe_timeout_seconds`) e,
-  in fallback, derivata da `ml_advice_duration_seconds` tramite metadata DB esplicito.
+- WATCH funziona come pre-BUY runtime: conferma BUY reali e non e' piu' shadow tecnico.
+- SELL risk-control funziona: i casi zero-MFE non arrivano piu' al timeout lungo; escono con
+  `EXIT_ML_ADVICE_NO_MFE_DECAY`.
+- Il take-profit cattura profitto quando il segnale parte (`HEIUSDC` nella PAPER 103).
+- Il collo di bottiglia ora non e' il SELL ma la selection/upside: troppi BUY confermati da WATCH restano zero-MFE.
+- Prossima correzione consigliata: migliorare ranking/selection verso candidati con upside reale senza abbassare SELL o
+  PAPER gate e senza introdurre soglie statiche globali.
 
 Implementato e verificato:
 
@@ -64,6 +66,9 @@ Implementato e verificato:
 - `acdc`: la guardia vende solo se `hold_seconds` supera il timeout no-MFE, `max_net_return` resta sotto/uguale al ceiling
   e `net_return` resta sotto/uguale al ceiling di uscita.
 - `acdc-vpn`: immagine rebuildata e container ricreato; Flyway MySQL ha applicato `V73`, schema operativo ora `v73`.
+- `acdc`: diagnostics PAPER scoring e Forward A/B espongono `noMfeDecayExits`.
+- Automazione `AUTO_AB_STOP` eseguita da FE `/management`; stato finale `automationEnabled=false`, `automationStatus=STOPPED`,
+  `paperRunning=false`, `openPositions=0`, `activeAdvice=0`.
 
 Verifiche completate:
 
@@ -74,7 +79,10 @@ Verifiche completate:
 - `acdc`: `docker compose --env-file docker/vpn/.env -f docker/vpn/compose.yml up -d --build --force-recreate acdc` OK.
 - ACDC log prod: MySQL 8.0, schema da `72` a `73`, startup OK.
 - MySQL operativo: guardie EXIT active in ordine: take-profit, dynamic trailing, no-MFE decay, loss-cap, timeout.
-- FE proxy: `paperRunning=false`, `openPositions=0`, `activeAdvice=0`, `paperEligibleContractActiveAdvice=0`.
+- FE proxy finale: `paperRunning=false`, `openPositions=0`, `activeAdvice=0`, `paperEligibleContractActiveAdvice=0`.
+- `GET /diagnostics/acdc/paper/scoring?executionIds=103`: `noMfeDecayExits=2`, `takeProfitExits=1`, PnL positivo.
+- `GET /diagnostics/acdc/forward-ab/98?groupId=ab98-20260627T080801Z`: `FORWARD_AB_98_READY`, B PAPER positivo,
+  A SHADOW negativo.
 
 ## Stato Repo
 
@@ -82,10 +90,11 @@ Repo modificati da committare: `hft-common`, `acdc`.
 
 ## Prossimo TODO
 
-1. Committare e pushare `hft-common` e `acdc` con stesso MS.
-2. Dal FE `/management`, ripartire con `AUTO_AB_START`; non usare `/pipelines`.
-3. Avviare PAPER solo se `ML_READY=true` e solo `FORWARD_AB_98`.
-4. Nella prossima RUN monitorare:
-   - quante uscite avvengono per `EXIT_ML_ADVICE_NO_MFE_DECAY`;
-   - se MS822 intercetta eventuali rientri sotto break-even dopo MFE positivo;
-   - se WATCH conferma BUY e riduce le BUY non meritevoli senza bloccare segnali profittevoli.
+1. Committare e pushare `hft-common` e `acdc` con stesso MS per diagnostics/doc run.
+2. Non riavviare automazione prima del prossimo piano del Consiglio.
+3. Prossimo piano: correggere selection/ranking/upside per ridurre candidati zero-MFE, mantenendo:
+   - WATCH pre-BUY runtime;
+   - take-profit prioritario;
+   - no-MFE decay;
+   - niente REAL;
+   - PAPER solo `FORWARD_AB_98` e solo se `ML_READY=true`.
