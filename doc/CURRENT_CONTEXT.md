@@ -1,6 +1,6 @@
 # Current Context
 
-Ultimo aggiornamento: 2026-06-27 17:00 CEST.
+Ultimo aggiornamento: 2026-06-27 17:56 CEST.
 
 Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
@@ -28,6 +28,28 @@ TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
 - FE e script devono mantenere mapping 1:1 con i contract/payload comuni quando esistono.
 
 ## Stato Ultima Attivita'
+
+Aggiornamento operativo MS884:
+
+- `kenshiro`: rimosso il fast-path dell'autociclo che, dopo il live-score post-validazione, poteva avviare
+  `PAPER_FORWARD_AB_START` direttamente da advice `PROMOTED_RULE`. L'autociclo deve passare sempre da
+  `ROLLING_PROMOTION`, cosi' PAPER testa solo il candidato rolling e non un universo tecnico diverso.
+- `kenshiro`: `ROLLING_PROMOTION` usa `expireExisting=true` di default e salva fino a 3 simboli rolling ordinati
+  (`selectedCandidate` + top candidates non duplicati). DocBrown promuove comunque solo il subset che passa
+  promotability e live revalidation.
+- `kenshiro`: il payload di `ROLLING_PROMOTION` passa `maxBuyAgeSeconds` dal runtime
+  `rem.ml.live_advice.max_buy_age_seconds`; valore operativo corrente: `75`.
+- `docbrown`: `ROLLING_PAPER` ora pubblica anche `ml_advice_no_mfe_timeout_seconds` e i blocchi completi
+  `history_*`/`live_*`, inclusi `live_max_buy_age_seconds` e `live_no_mfe_timeout_seconds`.
+- Validazione runtime: run PAPER `143` e SHADOW `144` sono partite dopo il fix di contract rolling. PAPER `143` ha
+  comprato solo `SYRUPUSDC` da `ROLLING_PAPER`, ha chiuso `EXIT_ML_ADVICE_NO_MFE_DECAY`, contract diagnostics
+  `complete=true`, hold `125s`, net return `-0.003277493606138107`. SHADOW `144` e' partita senza posizioni.
+- Retry successivi: short-list rolling `RESOLVUSDC,SNXUSDC,REUSDC` e poi `RESOLVUSDC,REUSDC,SNXUSDC` non hanno prodotto
+  advice PAPER per live revalidation drift / non-promotability. Il sistema e' tornato fail-closed a
+  `BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, con `paperRunning=false`, `openPositions=0`, `activeAdvice=0`.
+- Interpretazione del Consiglio: obiettivo operativo PAPER_ELIGIBLE raggiunto e contratto rolling corretto; obiettivo
+  economico non raggiunto. Non allargare gate/SELL per forzare run: i candidati rolling correnti decadono in live
+  revalidation oppure producono zero-MFE loss.
 
 Obiettivo eseguito: correzione contratto end-to-end SELL no-MFE, validazione operativa WATCH/no-MFE dopo refactor
 stringhe/contract e separazione esplicita dei blocchi `history_*`, `live_*`, `entry_*`, `exit_*`.

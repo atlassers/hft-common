@@ -232,10 +232,14 @@ Regole:
 - Quando `automation.enabled=true` e `automation.status=COOLDOWN`, Kenshiro deve mantenere il current step consultivo sul
   ramo auto (`auto-prefilter`) invece di saltare al ramo manuale `ml-round-robin`; il cooldown e' parte del ciclo
   automatico e deve essere rappresentato come tale.
-- Dopo il live score post-validazione dell'autociclo, Kenshiro puo' saltare la rolling promotion se lo stato management
-  e' gia' `ML_READY` e avviare subito `PAPER_FORWARD_AB_START` in `FORWARD_AB_98`. Questo fast-path serve a consumare
-  advice fresche prima della scadenza `max_buy_age_seconds`: non allarga gate, non cambia BUY/SELL, non avvia PAPER con
-  `ML_READY=false` e non avvia REAL. Se lo stato non e' ready, il ciclo ricade sul path rolling promotion precedente.
+- Dopo il live score post-validazione dell'autociclo, Kenshiro non deve saltare la rolling promotion: deve promuovere
+  il candidato rolling selezionato, scadere le advice PAPER precedenti e avviare `PAPER_FORWARD_AB_START` solo se la
+  promozione rolling ha creato advice `PAPER_ELIGIBLE` contract-active. Questo evita di consumare advice tecniche
+  `PROMOTED_RULE` non attribuite al batch rolling appena validato.
+- `ROLLING_PROMOTION` deve usare `expireExisting=true` di default, puo' ricevere una short-list ordinata di massimo 3
+  simboli rolling (`selectedCandidate` + top candidates non duplicati) e deve passare a DocBrown il
+  `maxBuyAgeSeconds` runtime corrente. DocBrown resta responsabile di scartare ogni simbolo che non passa promotability
+  o live revalidation.
 - Un batch rolling con status promotable non deve mantenere il cockpit su `auto-promotion` se
   `latestRollingBatchAgeSeconds` supera `rem.ml.live_advice.max_buy_age_seconds`. In quel caso Kenshiro deve tornare a
   `auto-prefilter`: promuovere un batch stale genererebbe advice gia' fuori finestra e contaminerebbe il ciclo
