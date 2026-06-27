@@ -236,10 +236,9 @@ Regole:
   il candidato rolling selezionato, scadere le advice PAPER precedenti e avviare `PAPER_FORWARD_AB_START` solo se la
   promozione rolling ha creato advice `PAPER_ELIGIBLE` contract-active. Questo evita di consumare advice tecniche
   `PROMOTED_RULE` non attribuite al batch rolling appena validato.
-- `ROLLING_PROMOTION` deve usare `expireExisting=true` di default, puo' ricevere una short-list ordinata di massimo 3
-  simboli rolling (`selectedCandidate` + top candidates non duplicati) e deve passare a DocBrown il
-  `maxBuyAgeSeconds` runtime corrente. DocBrown resta responsabile di scartare ogni simbolo che non passa promotability
-  o live revalidation.
+- `ROLLING_PROMOTION` deve usare `expireExisting=true` di default, non deve ricevere una short-list operativa di
+  simboli e deve passare a DocBrown il `maxBuyAgeSeconds` runtime corrente. La selection rolling resta diagnostica/ranking:
+  DocBrown promuove dal batch validato e scarta ogni simbolo che non passa promotability o live revalidation.
 - Un batch rolling con status promotable non deve mantenere il cockpit su `auto-promotion` se
   `latestRollingBatchAgeSeconds` supera `rem.ml.live_advice.max_buy_age_seconds`. In quel caso Kenshiro deve tornare a
   `auto-prefilter`: promuovere un batch stale genererebbe advice gia' fuori finestra e contaminerebbe il ciclo
@@ -489,8 +488,8 @@ Regole:
   `rem.ml.rolling.selection.edge_weight`, `mfe_rate_weight`, `q10_mfe_weight`,
   `safe_hit_weight`, `zero_mfe_penalty_weight`, `early_trough_penalty_weight`, `instability_penalty_weight`,
   `drawdown_penalty_weight`, `lifecycle_capture_weight`, `decay_after_safe_relief_weight`. Questi pesi influenzano
-  l'ordinamento dei candidati e il `selected_symbols`
-  diagnostico/promozionale, ma non rimuovono i requisiti di promozione su holdout, worst-window, MFE eseguibile, q10 MFE
+  l'ordinamento diagnostico dei candidati, ma non producono una short-list operativa e non rimuovono i requisiti di
+  promozione su holdout, worst-window, MFE eseguibile, q10 MFE
   positivo, safe/economic return e `ML_READY`. Default legacy: edge/mfe/q10 `0`, instability `1.50`, drawdown `1.25`;
   profilo maturity/tail-aware corrente: safe-hit `0.002`, zero-MFE penalty `0.006`, early-trough penalty `0.004`.
   Profilo cost-aware usato per refinement: edge `1`, mfe-rate `0.002`, q10 MFE `2`, instability `0.35`,
@@ -549,7 +548,8 @@ Regole:
   SHADOW/PAPER/REAL, non crea advice e non promuove batch.
 - `LIVE_REVALIDATION_DRIFT_AUDIT` e' action diagnostica Kenshiro/FE DB-only sugli step `auto-validation`,
   `auto-promotion`, `ml-round-robin` e `promotion`: legge i marker correnti `round_robin.batch_id`,
-  `selected_symbols`, `promotion_rows`, `promotion_statuses`, `promotion_attempt_at`, batch timing e marker retry
+  eventuali `selected_symbols` legacy solo come contesto storico, `promotion_rows`, `promotion_statuses`,
+  `promotion_attempt_at`, batch timing e marker retry
   `rem.ml.management.automation.*`. Serve a classificare `PROMOTION_NO_ADVICE` da
   `SKIPPED_LIVE_REVALIDATION_CONTRACT` come `PROMOTION_BOTTLENECK_LIVE_REVALIDATION_DRIFT`,
   `PROMOTION_EXPIRED_BEFORE_ATTEMPT`, `LIVE_REVALIDATION_TRUE_REJECT_OR_WEAK_VALIDATION` o
