@@ -226,6 +226,10 @@ Regole:
   e' gia' `ML_READY` e avviare subito `PAPER_FORWARD_AB_START` in `FORWARD_AB_98`. Questo fast-path serve a consumare
   advice fresche prima della scadenza `max_buy_age_seconds`: non allarga gate, non cambia BUY/SELL, non avvia PAPER con
   `ML_READY=false` e non avvia REAL. Se lo stato non e' ready, il ciclo ricade sul path rolling promotion precedente.
+- Un batch rolling con status promotable non deve mantenere il cockpit su `auto-promotion` se
+  `latestRollingBatchAgeSeconds` supera `rem.ml.live_advice.max_buy_age_seconds`. In quel caso Kenshiro deve tornare a
+  `auto-prefilter`: promuovere un batch stale genererebbe advice gia' fuori finestra e contaminerebbe il ciclo
+  Forward A/B.
 - `AUTO_AB_STOP`, `PAPER_STOP` e `SHADOW_STOP` disabilitano l'automazione (`rem.ml.management.automation.enabled=false`)
   e richiedono stop runtime ACDC. Lo STOP interrompe quindi ML/auto-cycle e runtime SHADOW/PAPER/RUN.
 - Il runtime e' pulito solo se non esistono posizioni `OPEN` ne' in `acdc_paper_position` ne' in

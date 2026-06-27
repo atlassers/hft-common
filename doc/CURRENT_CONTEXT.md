@@ -1,6 +1,6 @@
 # Current Context
 
-Ultimo aggiornamento: 2026-06-26 23:31 CEST.
+Ultimo aggiornamento: 2026-06-27 09:24 CEST.
 
 Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
@@ -29,8 +29,8 @@ TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
 
 ## Stato Ultima Attivita'
 
-Obiettivo eseguito: analisi puntuale della RUN `FORWARD_AB_98` execution PAPER `93` / SHADOW `94` e fix runtime SELL
-per il decadimento post-ingresso.
+Obiettivo eseguito: check operativo post fix SELL, correzione cockpit Kenshiro su batch rolling stale e verifica
+runtime pulito.
 
 RUN analizzata:
 
@@ -70,6 +70,10 @@ Implementato e verificato:
 - `acdc`: `trailingArmed` nei nuovi diagnostics riflette l'arming reale della policy, non il semplice `maxNetReturn > 0`.
 - `acdc`: link Telegram chart reso anchor HTML sulla URL visibile; `TelegramNotifier` usava gia' `ParseMode.HTML`.
 - `acdc-vpn`: immagine `acdc:latest` rebuildata e container ricreato su MySQL/prod.
+- `kenshiro`: il current step non propone piu' `auto-promotion` se il batch rolling candidato e' gia' piu' vecchio del
+  contratto `rem.ml.live_advice.max_buy_age_seconds`. In quel caso torna ad `auto-prefilter` per generare una finestra
+  fresca, evitando promotion/advice contaminate da stale batch.
+- `kenshiro-local`: immagine `kenshiro:local` rebuildata e container ricreato su MySQL/prod.
 
 Verifiche completate:
 
@@ -80,18 +84,25 @@ Verifiche completate:
 - `acdc`: `docker compose --env-file docker/vpn/.env -f docker/vpn/compose.yml up -d --build --force-recreate acdc` OK.
 - `acdc`: startup container su MySQL 8.0 OK; `paper_running=0`, `paper_open=0`, `shadow_open=0`.
 - `acdc`: smoke HTTP `GET /diagnostics/acdc/paper/scoring?executionIds=93` OK.
+- `kenshiro`: `mvn -q test` OK.
+- `kenshiro`: `./mvnw -q -DskipTests package` OK.
+- `kenshiro`: `docker compose --env-file /home/mbc/Documenti/ws/java/hft/acdc/docker/vpn/.env up -d --build --force-recreate kenshiro` OK.
+- `FE proxy /backoffice/management/state`: current step ora `auto-prefilter`; `mlReady=false`; `paperRunning=false`;
+  `openPositions=0`; `activeAdvice=0`; `paperEligibleContractActiveAdvice=0`.
 - Durante i test ACDC, Vault Testcontainers `hashicorp/vault:1.15.2` e' partito correttamente; eventuali problemi Vault
   operativi vanno cercati in compose/config mount, non nella compatibilita' immagine base.
 
 ## Stato Repo
 
-Repo modificati da committare: `hft-common`, `acdc`.
+Repo modificati da committare: `hft-common`, `kenshiro`.
 
 ## Prossimo TODO
 
-1. Committare e pushare `hft-common` e `acdc` con stesso MS.
-2. Avviare da FE `/management` una nuova PAPER solo se `ML_READY=true` e solo `FORWARD_AB_98`.
-3. Nella prossima RUN monitorare:
+1. Committare e pushare `hft-common` e `kenshiro` con stesso MS.
+2. Dal FE `/management`, ripartire da `auto-prefilter`/`AUTO_AB_START` o equivalente percorso autorizzato; non usare
+   `/pipelines` e non promuovere batch rolling stale.
+3. Avviare PAPER solo se `ML_READY=true` e solo `FORWARD_AB_98`.
+4. Nella prossima RUN monitorare:
    - quante uscite avvengono per `EXIT_ML_ADVICE_DYNAMIC_TRAILING`;
    - se casi tipo `PENDLEUSDC` escono al rientro sotto break-even;
    - se casi tipo `ICPUSDC` senza MFE richiedono un guard no-MFE/decay advice-specific.
