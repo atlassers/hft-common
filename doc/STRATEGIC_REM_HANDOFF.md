@@ -46,7 +46,8 @@ Se una procedura qui descritta confligge con il piano strategico, va fermata e c
 - Stato strategico: `BASELINE_98_CANDIDATE_REQUIRES_FORWARD_AB`.
 - Stato operativo live, avanzamenti dell'ultimo piano e prossimo TODO stanno in
   `/home/mbc/Documenti/ws/java/hft/hft-common/doc/CURRENT_CONTEXT.md`.
-- Dal 2026-06-21 ogni nuova SHADOW/PAPER usata come evidenza baseline deve essere `FORWARD_AB_98`; checklist: `hft-common/doc/acdc/session/2026-06-21/session-144-forward-ab-98-checklist.md`.
+- Dal 2026-06-28 il ciclo management e' PAPER-only Bollinger validation. SHADOW e il vecchio confronto A/B restano
+  storico/legacy e non devono essere avviati da `/management`.
 - Diary e checklist storici sono centralizzati in `hft-common/doc/<module>/<YYYY-MM-DD>/...`; per ACDC/REM usare
   `hft-common/doc/acdc/session/<YYYY-MM-DD>/...`. I progetti applicativi non devono mantenere copie operative dei diary.
 - Nessuna REAL.
@@ -92,9 +93,9 @@ Se una procedura qui descritta confligge con il piano strategico, va fermata e c
   ACDC apre la WATCH e compra solo se il contratto BUY diventa vero prima della scadenza.
 - Contratto trigger WATCH Bollinger-only: la BUY da WATCH richiede il trigger corrente `bb_buy_contract_pass=1`.
   La finestra temporale autorizza solo l'osservazione; non basta da sola per comprare. Una WATCH con contratto Bollinger
-  non ancora vero resta `WATCH_WAITING_BUY_CONTRACT` o scade senza BUY. Reversal, trough, slope, simbolo, volume e
-  live-revalidation legacy sono ammessi solo come diagnostica storica e non devono selezionare, ordinare, bloccare o
-  confermare BUY.
+  non ancora vero resta `WATCH_WAITING_BUY_CONTRACT` o scade senza BUY. I nuovi payload operativi non devono emettere
+  chiavi `reversal_*`; eventuali dati legacy sono solo storico e non devono selezionare, ordinare, bloccare o confermare
+  BUY.
 - Le nuove key JSON/protocollo Java condivise devono essere aggiunte in
   `it.mbc.hft.common.rem.constants.RemConstants`; eventuali registry locali (`ManagementString`, `OperationalString`)
   sono ammessi solo come shim verso `hft-common`.

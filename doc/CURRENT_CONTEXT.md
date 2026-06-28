@@ -43,6 +43,10 @@ Aggiornamento strategico MS in corso:
 
 - Il processo REM runtime e' stato riallineato a Bollinger-only: `ML -> live-score -> WATCH -> BUY -> SELL -> forensics`
   resta invariato, ma i criteri decisionali sono solo `bb_*`.
+- Il ciclo management e' PAPER-only: il ramo SHADOW non viene piu' avviato, fermato o mostrato come braccio operativo
+  parallelo da `/management`.
+- I nuovi payload runtime filtrano i campi `reversal_*`; Bollinger e' l'unica famiglia di feature emessa nei nuovi
+  snapshot/advice/policy operativi.
 - `hft-common`: aggiunte le costanti condivise Bollinger per feature, contract block, baseline label e filtri candidato.
 - `docbrown`: candidate/rolling promotion non generano piu' regole `symbol=...`; live-score rank e target cap non usano
   piu' slope/trough/reversal; live revalidation e' limitata a feature Bollinger.

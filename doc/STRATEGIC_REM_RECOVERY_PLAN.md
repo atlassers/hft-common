@@ -117,6 +117,12 @@ L'obiettivo finale di questo piano e' arrivare a stato `PAPER_READY`, cioe':
     Bollinger. Reversal, trough, slope, simbolo, volume e live-revalidation legacy possono restare solo come diagnostica
     storica finche' le entity/tabelle non vengono ritirate, ma non possono selezionare, ordinare, bloccare o confermare
     BUY.
+19. Dal 2026-06-28 il ramo operativo SHADOW e' ritirato dal ciclo management. La validazione runtime approvata e'
+    PAPER-only: `ML -> live-score -> WATCH -> BUY -> SELL -> forensics`. SHADOW storico puo' restare consultabile solo
+    come dato legacy, ma `/management` non deve avviarlo, arrestarlo o usarlo come braccio parallelo.
+20. Dal 2026-06-28 i nuovi payload operativi Bollinger-only non devono emettere chiavi `reversal_*`. Eventuali colonne,
+    entity o documenti storici contenenti `reversal_*` sono legacy; i producer runtime devono filtrare quei campi dai
+    nuovi `feature_json` e `policy_json`.
 
 ## Diagnosi Vincolante
 
