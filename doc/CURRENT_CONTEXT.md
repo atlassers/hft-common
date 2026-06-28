@@ -56,6 +56,20 @@ Aggiornamento strategico MS in corso:
   `V77__bollinger_only_entry_ranking.sql` lascia attivo un solo ranking ENTRY (`bb_buy_contract_pass`) e
   `V78__expire_non_bollinger_active_advice.sql` scade advice attive legacy prive di contratto `bb_*`. Restano attive
   solo guardie tecniche minime (`entry_price_present`, `entry_snapshot_fresh`).
+- Profilo sperimentale Bollinger corrente: rolling validation `2h`, aggregazione feature `1m`
+  (`market.microbar.seconds=60`) e `featureWindowMinutes=20`, cosi' BB20 usa circa 20 minuti coerenti tra ML,
+  live-score e WATCH; il polling WATCH puo' restare piu' frequente, ma il trigger BUY resta `bb_buy_contract_pass=1`.
+- Validazione runtime immediata post-cambio:
+  - PAPER `37`, group `ab98-20260628T163823Z`, generation `management-rolling-20260628T163751Z`: `SUSDC`, closed
+    `EXIT_ML_ADVICE_LOSS_CAP`, hold `23s`, max MFE netto `0`, net `-0.009032604668395701`,
+    realized quote `-0.22581511658452`. Contract completo; entry drift non passato (`0.0085949177877429 > 0.0015`),
+    quindi evidenza contaminata per analisi economica.
+  - PAPER `38`, group `ab98-20260628T164131Z`, generation `management-rolling-20260628T164107Z`: `SUSDC`, closed
+    `EXIT_ML_ADVICE_LOSS_CAP`, hold `101s`, max MFE netto `0`, net `-0.008278373382624769`,
+    realized quote `-0.20695933439881`. Contract completo, `entry_drift=0`, `entry_drift_pass=1`.
+  - Post-sell forensics `37`/`38`: nessun recupero/safe hit osservato dopo exit, ma verdict
+    `INCONCLUSIVE_GRANULARITY` per dati post-exit a gap 56-60s.
+  - Runtime finale: `paperRunning=false`, `openPositions=0`, `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`.
 - Verifiche locali completate: `hft-common mvn -q install`, `docbrown mvn -q -Dtest=BlankRemCandidateServiceTest test`,
   `acdc mvn -q -Dtest=AcdcRunServiceTest test`,
   `acdc mvn -q -Dtest=it.mbc.hft.acdc.config.RemCurrentConfigurationTest test`,

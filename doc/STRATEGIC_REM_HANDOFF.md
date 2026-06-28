@@ -443,9 +443,11 @@ Regole:
   alleggerisce parzialmente la penalita' drawdown solo quando esiste post-safe decay misurato. Entrambi default `0`,
   non allargano gate, non cambiano SELL e non sostituiscono la Forward A/B 98.
 - La rolling validation management puo' usare `rem.ml.rolling.lookback.seconds` per ridurre o ampliare la finestra
-  osservata dal payload Kenshiro verso DocBrown. Default legacy `3600`; bounds operativi `1200..7200`; profilo latency
-  refinement corrente `1800`. Questo e' un parametro di orchestrazione/selection per ridurre window decay e latenza del
-  batch, non un allargamento dei gate PAPER e non sostituisce holdout/worst-window/MFE/safe checks.
+  osservata dal payload Kenshiro verso DocBrown. Bounds operativi `1200..7200`; il profilo Bollinger-only corrente usa
+  `7200` secondi di storico, `market.microbar.seconds=60` e `featureWindowMinutes=20`, cosi' BB20 lavora su circa 20
+  minuti coerenti tra ML/live-score/WATCH. La WATCH puo' continuare a essere valutata frequentemente dal runtime, ma il
+  contratto BUY resta Bollinger 1m (`bb_buy_contract_pass=1`). Questo e' un parametro di orchestrazione/selection, non
+  un allargamento dei gate PAPER e non sostituisce holdout/worst-window/MFE/safe checks.
 - `SHADOW_OPPORTUNITY_GUARD_TRACE` e' action diagnostica Kenshiro/FE SHADOW-only per testare l'ipotesi "BUY gate troppo
   stretto / guardia di troppo" senza contaminare PAPER. Avvia una `SHADOW_EV` tecnica con
   `shadowRelaxationProfile=SHADOW_OPPORTUNITY_NO_BUY_GATE_AUDIT_V1`, `validationProtocol=TECHNICAL_ONLY`,
