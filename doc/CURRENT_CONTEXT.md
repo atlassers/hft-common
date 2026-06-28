@@ -111,8 +111,8 @@ Implementato e verificato:
 - `hft-common`: centralizzata la chiave `ml_advice_no_mfe_timeout_seconds`; rimosse le costanti di fallback ratio/min-hold.
 - `hft-common`: aggiunte le chiavi condivise `history_*`, `live_*`, `entry_*`, `exit_*` per separare contratto storico
   ML, contratto live-score, fotografia BUY e fotografia SELL.
-- `docbrown`: `SignaturePaperAdvicePromotionService` e `ReversalMlRuleMiningService` pubblicano
-  `ml_advice_no_mfe_timeout_seconds` nell'advice usando `entryValiditySeconds` candidate-specific.
+- `docbrown`: il producer live pubblica `ml_advice_no_mfe_timeout_seconds` nell'advice usando la durata
+  candidate-specific del contratto generato.
 - `docbrown`: source/validity source literal dei due `ruleJson` toccati sono stati portati in `OperationalString`.
 - `docbrown`: `LiveMlAdviceScoringService.liveAdvice(...)` non modifica piu' semanticamente i campi ML originari
   dell'advice. Produce un blocco `history_*` copiato dal contratto storico e un blocco `live_*` speculare/valorizzato
@@ -269,18 +269,32 @@ Aggiornamento MS893 del 2026-06-27:
 - Stato finale runtime post deploy: `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `mlReady=false`,
   `paperRunning=false`, `openPositions=0`, `activeAdvice=0`, automazione `STOPPED`.
 
+Aggiornamento MS898 del 2026-06-28:
+
+- Pulizia Bollinger-only completata su DB, documentazione, script e moduli operativi.
+- `acdc`: aggiunta migration `V80__bollinger_only_residual_config_cleanup.sql` per rimuovere config vive residue
+  `observed`, `paper.session_guard.*`, `live_audit.*`, `rolling.lifecycle.*` e retry live-revalidation, mantenendo
+  `rem.ml.promotion.mode=BOLLINGER_ONLY`.
+- `acdc`: rimosse costanti cooldown zero-MFE non piu' referenziate. La metrica zero-MFE resta ammessa solo come forensics
+  post-trade, non come selezione o guardia extra.
+- `docbrown`: rimosso `LiveRuleAuditService` e le costanti di live-audit/rolling-lifecycle non piu' operative.
+- `kenshiro`: il cockpit `/management` non espone piu' action diagnostiche legacy
+  near-miss/EV/lifecycle/live-revalidation/entry-decay/false-continuation/inverse. L'autociclo usa solo cooldown standard
+  dopo terminali fail-closed; il retry breve da live-revalidation drift e' ritirato.
+- `hft-common`: rimosse dal contract comune le suffix key del retry live-revalidation e aggiornati piano/handoff al path
+  Bollinger-only.
+- Verifiche locali: `hft-common mvn -q install` OK, `docbrown mvn -q -DskipTests compile` OK, `acdc mvn -q -DskipTests
+  compile` OK, `kenshiro mvn -q -DskipTests compile` OK, `kenshiro mvn -q -Dtest=ManagementServiceCooldownTest test`
+  OK, `acdc mvn -q -Dtest=it.mbc.hft.acdc.config.RemCurrentConfigurationTest test` OK con 80 migration validate.
+- Deploy runtime: `acdc-vpn`, `docbrown` e `kenshiro-local` rebuildati/riavviati; startup prod OK. ACDC prod ha
+  applicato `V80`, schema `hft` ora a versione 80.
+- MySQL operativo post-deploy: config residue `observed`/`revalidation`/`zero_mfe`/`session_guard`/`lifecycle` = 0,
+  tabella legacy `acdc_reversal_ml_rule` assente, posizioni PAPER/SHADOW aperte = 0.
+- Kenshiro `/management/state`: `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `mlReady=false`,
+  `promotionMode=BOLLINGER_ONLY`, `paperRunning=false`, `openPositions=0`, `activeAdvice=0`,
+  `paperEligibleActiveAdvice=0`, `paperEligibleContractActiveAdvice=0`.
+
 ## Prossimo TODO
 
-1. Committare e pushare l'allineamento endpoint diagnostici/management ai blocchi `history_*`/`live_*`/`entry_*`/`exit_*`.
-2. Non usare `107`/`108`, `109`/`110` o `113`/`114` come evidenza baseline pulita; sono contaminati rispettivamente da
-   contratto no-MFE mancante o stop/abandon SHADOW.
-3. Usare `111`/`112` e `115`-`122` come evidenza tecnica positiva del contratto WATCH/no-MFE, ma non ancora come
-   promozione baseline: serve forensics A/B completa e almeno un ciclo pristine prima di `PASS_BASELINE`.
-4. Prossimo piano operativo: generare una nuova `FORWARD_AB_98` da FE `/management` solo dopo nuove advice
-   contract-active, lasciando chiudere entrambi i bracci senza stop/abandon SHADOW se si vuole evidenza scientifica.
-5. Prossimo piano scientifico: valutare WATCH/no-MFE su run pulita, mantenendo:
-   - WATCH pre-BUY runtime;
-   - take-profit prioritario;
-   - no-MFE decay;
-   - niente REAL;
-   - PAPER solo `FORWARD_AB_98` e solo se `ML_READY=true`.
+1. Committare e pushare MS898 sui repo modificati.
+2. Da FE `/management`, nuova RUN solo dopo nuove advice Bollinger `PAPER_ELIGIBLE` fresche e `ML_READY=true`.

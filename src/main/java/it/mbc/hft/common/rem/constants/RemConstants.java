@@ -211,8 +211,6 @@ public final class RemConstants {
     public static final String SCHEDULER_ENABLED = "enabled";
     public static final String AUTOMATION_COOLDOWN_KIND_KEY = "cooldown_kind";
     public static final String AUTOMATION_LAST_STOP_REASON_KEY = "last_stop_reason";
-    public static final String AUTOMATION_LIVE_REVALIDATION_RETRY_BATCH_ID_KEY = "live_revalidation_retry_batch_id";
-    public static final String AUTOMATION_LIVE_REVALIDATION_RETRY_COUNT_KEY = "live_revalidation_retry_count";
     public static final String AUTOMATION_NEXT_RUN_AFTER_KEY = "next_run_after";
     public static final String AUTOMATION_RETRY_COUNT_KEY = "retry_count";
     public static final String AUTOMATION_STOP_REQUESTED_KEY = "stop_requested";

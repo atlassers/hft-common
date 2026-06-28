@@ -189,18 +189,9 @@ RESTORE_BASELINE_98_PROFILE
 ENABLE_PAPER_CANDIDATES
 ROLLING_VALIDATION
 BASELINE_98_DIAGNOSTICS
-ROLLING_NEAR_MISS_AUDIT
-ROLLING_EV_AUDIT
 ROLLING_SELECTION_ATTRIBUTION_AUDIT
-ROLLING_LIFECYCLE_CAPTURE_AUDIT
-LIFECYCLE_CAPTURE_MISMATCH_AUDIT
-ROLLING_LATENCY_BOTTLENECK_AUDIT
-INVERSE_COMPLEMENT_WALK_FORWARD_AUDIT
 SHADOW_OPPORTUNITY_GUARD_TRACE
 SHADOW_OPPORTUNITY_RULE_MISSING_BYPASS
-LIVE_REVALIDATION_DRIFT_AUDIT
-ENTRY_WINDOW_DECAY_AUDIT
-LIVE_FALSE_CONTINUATION_AUDIT
 ROLLING_PROMOTION
 SHADOW_RUN
 SHADOW_STOP_BUY
@@ -238,9 +229,9 @@ Regole:
   gate, live revalidation o divieti PAPER/REAL. Il default `100` preserva il comportamento storico.
 - Quando l'automazione e' abilitata, le action manuali primarie sono bloccate server-side e visualmente disabilitate dal
   FE. Restano disponibili diagnostiche e STOP.
-- Le diagnostiche ammesse durante automazione includono `REFRESH_DIAGNOSTICS`, `BASELINE_98_DIAGNOSTICS`,
-  `ROLLING_NEAR_MISS_AUDIT`, `ROLLING_EV_AUDIT`, `LIVE_REVALIDATION_DRIFT_AUDIT` e
-  `ENTRY_WINDOW_DECAY_AUDIT`: devono restare consultabili anche se le action manuali primarie sono bloccate.
+- Le diagnostiche ammesse durante automazione includono `REFRESH_DIAGNOSTICS`, `BASELINE_98_DIAGNOSTICS` e
+  `ROLLING_SELECTION_ATTRIBUTION_AUDIT`. Le diagnostiche legacy near-miss/EV/lifecycle/live-revalidation/entry-decay
+  sono ritirate dal cockpit operativo Bollinger-only.
 - Quando `automation.enabled=true` e `automation.status=COOLDOWN`, Kenshiro deve mantenere il current step consultivo sul
   ramo auto (`auto-prefilter`) invece di saltare al ramo manuale `ml-round-robin`; il cooldown e' parte del ciclo
   automatico e deve essere rappresentato come tale.
@@ -291,19 +282,11 @@ Regole:
   diagnostico DB-only bounded in `rem.ml.management.auto.diagnostics.summary`, con reason e timestamp in
   `rem.ml.management.auto.diagnostics.reason` / `updated_at` e copia storica su
   `rem.ml.management.round_robin.audit.{batchId}.auto_diagnostics_summary`. Il pacchetto e' solo diagnostico: non crea
-  advice, non promuove, non avvia SHADOW/PAPER/REAL, non cambia gate e non conta come Forward A/B evidence. Mapping
-  approvato:
-  - `PROMOTION_CREATED_NO_ADVICE` / `PROMOTION_NO_ADVICE`: `LIVE_REVALIDATION_DRIFT_AUDIT`,
-    `ROLLING_SELECTION_ATTRIBUTION_AUDIT`, `ROLLING_LIFECYCLE_CAPTURE_AUDIT`,
-    `LIFECYCLE_CAPTURE_MISMATCH_AUDIT`;
-  - `NO_PROMOTABLE_CANDIDATE`: `BASELINE_98_DIAGNOSTICS`, `ROLLING_NEAR_MISS_AUDIT`, `ROLLING_EV_AUDIT`,
-    `ROLLING_SELECTION_ATTRIBUTION_AUDIT`, `ROLLING_LIFECYCLE_CAPTURE_AUDIT`,
-    `LIFECYCLE_CAPTURE_MISMATCH_AUDIT`;
-  - `LIFECYCLE_CAPTURE_REQUIRES_SHADOW_PREFLIGHT`: `ROLLING_SELECTION_ATTRIBUTION_AUDIT`,
-    `ROLLING_LIFECYCLE_CAPTURE_AUDIT`, `LIFECYCLE_CAPTURE_MISMATCH_AUDIT`.
-  Lo status lifecycle-capture non va piu' mascherato come generico `NO_PROMOTABLE_CANDIDATE` nell'autociclo: deve
-  terminare come `LIFECYCLE_CAPTURE_REQUIRES_SHADOW_PREFLIGHT` con diagnostica automatica, lasciando ogni eventuale
-  SHADOW tecnico a una action/procedura esplicita gia' approvata.
+  advice, non promuove, non avvia SHADOW/PAPER/REAL, non cambia gate e non conta come Forward A/B evidence.
+  Mapping Bollinger-only approvato:
+  - `PROMOTION_CREATED_NO_ADVICE` / `PROMOTION_NO_ADVICE`: `ROLLING_SELECTION_ATTRIBUTION_AUDIT`;
+  - `NO_PROMOTABLE_CANDIDATE`: `BASELINE_98_DIAGNOSTICS`, `ROLLING_SELECTION_ATTRIBUTION_AUDIT`;
+  - altri terminali fail-closed: `ROLLING_SELECTION_ATTRIBUTION_AUDIT`.
 - I marker diagnostici salvati in `acdc_shared_runtime_config` devono rispettare la lunghezza dello schema MySQL. Se
   `promotion_rows`, `rejectionReasons` o altri dettagli diagnostici superano il limite persistibile, Kenshiro deve
   salvarne una versione bounded/troncata e mantenere il lifecycle fail-closed leggibile; non deve abortire l'autociclo
@@ -316,16 +299,8 @@ Regole:
   Per `SKIPPED_LIVE_REVALIDATION_CONTRACT` deve indicare la feature live, il valore osservato e il range violato
   oppure il caso `no live revalidation features checked`. Kenshiro persiste queste righe senza trasformarle, quindi la
   prima diagnostica dopo `PROMOTION_NO_ADVICE` e' leggere `rem.ml.management.round_robin.promotion_rows`.
-- Quando `PROMOTION_CREATED_NO_ADVICE` / `PROMOTION_NO_ADVICE` dipende da
-  `SKIPPED_LIVE_REVALIDATION_CONTRACT`, Kenshiro puo' usare un cooldown adattivo breve e limitato per revalidare la
-  stessa zona live prima che la finestra scappi. Questo e' solo orchestrazione/latenza: non allarga gate, non promuove
-  batch falliti, non avvia PAPER se `ML_READY=false` e non sostituisce la Forward A/B 98. Marker DB:
-  `rem.ml.management.automation.cooldown_kind`, `live_revalidation_retry_count`,
-  `live_revalidation_retry_batch_id`; default runtime: retry breve `90s`, massimo `2` retry per batch, configurabili
-  via `rem.ml.management.automation.live_revalidation_retry.seconds` e
-  `rem.ml.management.automation.live_revalidation_retry.max` con tetti conservativi.
-- Dopo `FAIL_SELECTION_BIAS`, `NO_PROMOTABLE_CANDIDATE`, timeout o errore tecnico non qualificato come live
-  revalidation drift, il cooldown resta quello standard di `10m`; non accorciarlo per forzare PAPER.
+- Dopo `FAIL_SELECTION_BIAS`, `NO_PROMOTABLE_CANDIDATE`, `PROMOTION_NO_ADVICE`, timeout o errore tecnico il cooldown
+  resta quello standard di `10m`; non accorciarlo per forzare PAPER. Il retry breve da live-revalidation drift e' ritirato.
 - Dopo evidenza PAPER execution `36` (`XAIUSDC`) con MFE sopra safe (`maxNetReturn=0.007271`, safe `0.003`) ma SELL
   finale negativa, il guard `exit_ml_advice_take_profit` deve restare `ACTIVE` con priorita' precedente al dynamic
   trailing. Il dynamic trailing resta fallback; il safe target deve essere catturato appena osservato.
@@ -399,10 +374,8 @@ Regole:
   `rem.ml.paper_candidate.enabled=true`; non avviano trading, non chiamano ACDC/DocBrown e devono rispettare il current
   step `ml-round-robin`.
 - `RESTORE_BASELINE_98_PROFILE` e' action Kenshiro/FE di recovery REM sullo step `ml-round-robin`: aggiorna solo
-  `acdc_shared_runtime_config` per riportare il profilo vicino alla baseline 98 (`signature_advice=true`,
-  `paper_candidate=true`, `paper_candidate.min.validation.profit_rate=0.60`,
-  `paper_candidate.min.avg_net_return=0.0020`, `promotion.mode=PURE_REVERSAL`). Non crea advice, non promuove batch
-  falliti, non avvia trading e non sostituisce la forward A/B.
+  `acdc_shared_runtime_config` mantenendo `promotion.mode=BOLLINGER_ONLY`. Non crea advice, non promuove batch falliti,
+  non avvia trading e non sostituisce la forward A/B.
 - `ROLLING_VALIDATION` deve essere single-flight lato Kenshiro/FE: se una validazione e' gia' in corso, l'action deve
   risultare bloccata/disabilitata per evitare doppie richieste e deadlock sugli insert DocBrown.
 - La `ROLLING_VALIDATION` manuale avviata da `/management` usa il payload management con
@@ -417,13 +390,9 @@ Regole:
   Un chunk senza candidato termina fail-closed e lascia al tick successivo l'analisi dello spezzone successivo; un chunk
   promuovibile passa subito a promotion/runtime, senza creare advice preliminari destinate a scadere durante una
   validazione lunga.
-- DocBrown puo' esporre il ramo parallelo lifecycle-capture con:
-  `candidate.lifecycleStatus=PASS_CAPTURE_CANDIDATE_REQUIRES_SHADOW` e
-  `strategicStatus=LIFECYCLE_CAPTURE_REQUIRES_SHADOW_PREFLIGHT`. Questo status non e' `PASS_CANDIDATE`, non deve far
-  partire `ROLLING_PROMOTION` e non autorizza PAPER. Kenshiro deve continuare a trattarlo come fail-closed per il path
-  automatico PAPER, lasciando l'automazione in cooldown. Il vecchio preflight SHADOW dedicato al lifecycle-capture e'
-  ritirato: non usare `LIFECYCLE_CAPTURE_SHADOW_PREFLIGHT`, non creare profili `SHADOW_LIFECYCLE_CAPTURE_PREFLIGHT_V1`
-  e non salvare nuove config `rem.ml.shadow.lifecycle_capture.*`.
+- Il ramo parallelo lifecycle-capture e il relativo preflight SHADOW sono ritirati dal processo operativo
+  Bollinger-only. Non usare `LIFECYCLE_CAPTURE_SHADOW_PREFLIGHT`, non creare profili
+  `SHADOW_LIFECYCLE_CAPTURE_PREFLIGHT_V1` e non salvare nuove config `rem.ml.shadow.lifecycle_capture.*`.
 - `REM_PRE_BUY_WATCH_V1` e' il protocollo runtime corretto per la WATCH REM: non e' una action manuale e non e' un
   profilo SHADOW tecnico. Entra nel normale scheduler BUY dopo che un candidato e' gia' BUY-eligible. ACDC registra il
   candidato in `acdc_pre_buy_watch` con stato `WATCHING`, timeout derivato dall'ML/advice
@@ -441,46 +410,13 @@ Regole:
   `A_BASELINE_98_CONTRACT` sul batch `management-rolling-*` piu' recente o su `payload.batchId`, senza creare advice,
   senza promuovere, senza avviare trading. Serve a distinguere "baseline 98 senza opportunity" da "opportunity isolate
   ma non stabili".
-- `ROLLING_NEAR_MISS_AUDIT` e' action diagnostica Kenshiro/FE DB-only sugli step `auto-validation` e `ml-round-robin`:
-  legge gli ultimi batch `management-rolling-*`, top symbol, simboli positivi ripetuti e near-miss per finestre rolling.
-  Payload opzionale: `batchLimit` default `12`, `topLimit` default `8`, `economicSafeReturn` default `0.0030`.
-  Non chiama ACDC/DocBrown, non crea advice, non promuove batch falliti e non autorizza allargamento gate. Se il verdict
-  e' `POSITIVE_CLUSTERS_NOT_STABLE_ENOUGH`, la diagnosi corretta e' "segnali grezzi presenti ma non PAPER-promuovibili".
-- `ROLLING_EV_AUDIT` e' action diagnostica Kenshiro/FE DB-only sugli step `auto-validation` e `ml-round-robin`: legge gli
-  ultimi batch `management-rolling-*` e calcola per simbolo EV proxy, win/loss ratio, safe-hit rate, zero-MFE rate,
-  average MFE, worst/best end e classi `EV_CANDIDATE`, `POSITIVE_BUT_ZERO_MFE_RISK`, `MFE_PRESENT_BUT_EV_WEAK`,
-  `NEGATIVE_EV`. Payload opzionale: `batchLimit` default `12`, `topLimit` default `12`, `economicSafeReturn` default
-  `0.0030`. Serve a distinguere segnali con payoff atteso credibile da segnali con media positiva ma rischio zero-MFE
-  e non crea advice, non promuove batch falliti, non allarga gate e non sostituisce Forward A/B 98.
 - `ROLLING_SELECTION_ATTRIBUTION_AUDIT` e' action diagnostica Kenshiro/FE DB-only sugli step `auto-validation` e
   `ml-round-robin`: legge il batch corrente o `payload.batchId`, confronta il simbolo selezionato da round-robin con i
-  top simboli del batch e con la classifica EV recente, e riporta rank per `avg_end`, `avg_mfe`, `safe_hit_rate`,
-  `zero_mfe_rate`, tail/worst-end, split stats e distribuzione `reversal_trough_age_seconds`. Classi principali:
+  top simboli del batch e riporta rank per metriche del batch e split stats. Classi principali:
   `UPSIDE_WITH_TAIL_RISK`, `SELECTION_RANKING_MISMATCH`, `EV_TAIL_RISK_BLOCK`, `POSITIVE_CLUSTER_UNSTABLE`,
   `WINDOW_NOT_USEFUL`, `PROMOTION_NOT_REACHED`. Payload opzionale: `batchId`, `batchLimit` default `12`, `topLimit`
   default `12`, `economicSafeReturn` default `0.0030`. Non crea advice, non promuove, non cambia ranking, non avvia
   SHADOW/PAPER/REAL e non conta come evidenza Forward A/B.
-- `ROLLING_LIFECYCLE_CAPTURE_AUDIT` e' action diagnostica Kenshiro/FE DB-only sugli step `auto-validation` e
-  `ml-round-robin`: legge il batch corrente o `payload.batchId` e misura se candidati bocciati su end-return sarebbero
-  stati lifecycle-captureable dal guard `EXIT_ML_ADVICE_TAKE_PROFIT`. Riporta per simbolo metriche aggregate e split
-  selection/holdout: `avg_end`, `avg_mfe`, `safe_hit_rate`, `zero_mfe_rate`, `worst_end`,
-  `post_safe_decay`, `holdout_avg_end`, `holdout_avg_mfe`, `holdout_safe_hit_rate`,
-  `holdout_zero_mfe_rate`, `holdout_post_safe_decay` e `capture_score`. Classi principali:
-  `CAPTURE_CANDIDATE_DECAYS_AFTER_SAFE`, `END_AND_SAFE_ALIGNED`, `NO_SAFE_OPPORTUNITY`, `INCONCLUSIVE`;
-  verdict principali `SELECTED_CAPTURE_CANDIDATE_DECAYS_AFTER_SAFE`, `CAPTURE_CANDIDATES_PRESENT`,
-  `NO_CAPTURE_OBJECTIVE_MISMATCH`. Payload opzionale: `batchId`, `symbol`, `batchLimit` default `12`, `topLimit`
-  default `12`, `economicSafeReturn` default `0.0030`. Non crea advice, non promuove batch falliti, non cambia ranking,
-  non allarga gate, non cambia SELL, non avvia SHADOW/PAPER/REAL e non conta come evidenza Forward A/B.
-- `LIFECYCLE_CAPTURE_MISMATCH_AUDIT` e' action diagnostica Kenshiro/FE DB-only sugli step `auto-validation`,
-  `ml-round-robin` e `shadow`: legge il selected lifecycle-capture del batch corrente o `payload.batchId` e lo classifica
-  senza avviare preflight SHADOW dedicati. Payload opzionale: `batchId`, `symbol`, `decisionLimit` default `20` massimo
-  `100`, `economicSafeReturn` default `0.0030`. Classi principali:
-  `SELECTED_CAPTURE_WITHOUT_LIVE_ML_CONTRACT`, `SELECTED_CAPTURE_WITHOUT_ML_RULES`,
-  `SELECTED_CAPTURE_WITHOUT_PAPER_ELIGIBLE_ADVICE`, `LIFECYCLE_PREFLIGHT_REMOVED`. Serve a distinguere un candidato
-  rolling captureable o gia' allineato su end/safe (`CAPTURE_CANDIDATE_DECAYS_AFTER_SAFE` o `END_AND_SAFE_ALIGNED`)
-  senza contratto ML live (`reversal_ml_rules=0`, `ml_advice_paper_eligible=0`) da un problema di selection. Non crea
-  advice, non promuove, non avvia SHADOW/PAPER/REAL, non allarga gate, non
-  cambia SELL e non conta come evidenza Forward A/B.
 - Dopo una `ROLLING_VALIDATION` con DocBrown score-breakdown abilitato, Kenshiro persiste diagnostica compatta e bounded
   nei marker:
   `rem.ml.management.round_robin.selected_score_breakdown` e
@@ -492,13 +428,6 @@ Regole:
   `no_safe_opportunity`, `drawdown`, `instability` e per `lifecycleStatus` (`ls`); `selection_score_rows` contiene solo
   selected e prima alternativa per restare sotto il limite DB dei marker. Non cambiano gate, non creano advice e non
   sostituiscono Forward A/B 98.
-- `ROLLING_LATENCY_BOTTLENECK_AUDIT` e' action diagnostica Kenshiro/FE DB-only sugli step `auto-validation` e
-  `ml-round-robin`: legge il batch corrente o `payload.batchId`, il simbolo selezionato, timing batch/round-robin e una
-  classifica freshness/risk basata su `safe_hit_rate`, `zero_mfe_rate`, tail/worst-end e
-  `reversal_trough_age_seconds`. Classi principali: `SELECTION_TOO_EARLY`, `SELECTION_TOO_LATE`,
-  `TAIL_RISK_SELECTED`, `FRESHNESS_AWARE_SELECTION_WOULD_DIFFER`, `NO_LATENCY_BOTTLENECK`,
-  `PROMOTION_NOT_REACHED`. Payload opzionale: `batchId`, `symbol`, `economicSafeReturn`. Non crea advice, non promuove,
-  non cambia gate, non avvia SHADOW/PAPER/REAL e serve solo ad attribuire colli di bottiglia di timing/ranking.
 - Rolling selection ranking DocBrown puo' usare pesi runtime cost-aware senza cambiare i gate PAPER:
   `rem.ml.rolling.selection.edge_weight`, `mfe_rate_weight`, `q10_mfe_weight`,
   `safe_hit_weight`, `zero_mfe_penalty_weight`, `early_trough_penalty_weight`, `instability_penalty_weight`,
@@ -516,16 +445,6 @@ Regole:
   osservata dal payload Kenshiro verso DocBrown. Default legacy `3600`; bounds operativi `1200..7200`; profilo latency
   refinement corrente `1800`. Questo e' un parametro di orchestrazione/selection per ridurre window decay e latenza del
   batch, non un allargamento dei gate PAPER e non sostituisce holdout/worst-window/MFE/safe checks.
-- `INVERSE_COMPLEMENT_WALK_FORWARD_AUDIT` e' action diagnostica Kenshiro/FE DB-only sugli step `auto-validation` e
-  `ml-round-robin`: legge batch `management-rolling-*`, seleziona i top simboli inverse solo sulla meta' train piu'
-  vecchia e valuta la meta' test successiva senza usare runtime trading. Proxy inverse: `-end_net_return`; MFE favorevole
-  inverse: `greatest(0, -min_net_return)`. Payload opzionale: `batchLimit` default `12`, `topLimit` default `20`,
-  `economicSafeReturn`/`safeReturn` default `0.0030`. Output: selected train symbols, bucket test
-  `SELECTED_TOP_INVERSE`/`COMPLEMENT`, fold test, contribution per simbolo, verdict conservativo e policy
-  `DB_ONLY_TECHNICAL_ONLY`. Non crea advice, non promuove, non avvia SHADOW/PAPER/REAL, non conta come Forward A/B 98 e
-  non autorizza inversione operativa. Un verdict `INVERSE_COMPLEMENT_RESEARCH_CANDIDATE` autorizza solo la
-  pre-registrazione del prossimo protocollo scientifico; eventuale SHADOW inverse/complement deve essere progettato e
-  approvato separatamente come `TECHNICAL_ONLY`.
 - `SHADOW_OPPORTUNITY_GUARD_TRACE` e' action diagnostica Kenshiro/FE SHADOW-only per testare l'ipotesi "BUY gate troppo
   stretto / guardia di troppo" senza contaminare PAPER. Avvia una `SHADOW_EV` tecnica con
   `shadowRelaxationProfile=SHADOW_OPPORTUNITY_NO_BUY_GATE_AUDIT_V1`, `validationProtocol=TECHNICAL_ONLY`,
@@ -561,31 +480,9 @@ Regole:
 - `SAVE_MANAGEMENT_CONFIG` e' action Kenshiro/FE per salvare configurazioni `rem.ml.*` editabili in
   `acdc_shared_runtime_config`. E' bloccata se c'e' PAPER running o qualsiasi posizione aperta. Non avvia
   SHADOW/PAPER/REAL, non crea advice e non promuove batch.
-- `LIVE_REVALIDATION_DRIFT_AUDIT` e' action diagnostica Kenshiro/FE DB-only sugli step `auto-validation`,
-  `auto-promotion`, `ml-round-robin` e `promotion`: legge i marker correnti `round_robin.batch_id`,
-  eventuali `selected_symbols` legacy solo come contesto storico, `promotion_rows`, `promotion_statuses`,
-  `promotion_attempt_at`, batch timing e marker retry
-  `rem.ml.management.automation.*`. Serve a classificare `PROMOTION_NO_ADVICE` da
-  `SKIPPED_LIVE_REVALIDATION_CONTRACT` come `PROMOTION_BOTTLENECK_LIVE_REVALIDATION_DRIFT`,
-  `PROMOTION_EXPIRED_BEFORE_ATTEMPT`, `LIVE_REVALIDATION_TRUE_REJECT_OR_WEAK_VALIDATION` o
-  `NO_LIVE_REVALIDATION_DRIFT_ROWS`, esponendo feature fallite, valore osservato, range contrattuale, distanza dal
-  range, lag `signal->batch->promotion` e secondi residui a `validUntil` al momento dell'attempt. Non chiama
-  DocBrown/ACDC, non crea advice, non promuove batch falliti, non avvia PAPER e non autorizza allargamento gate.
-  Payload opzionale: `batchId`; se i marker per-batch sono stati persistiti da Kenshiro, l'audit legge lo storico del
-  batch richiesto invece dei marker correnti.
-- `ENTRY_WINDOW_DECAY_AUDIT` e' action diagnostica Kenshiro/FE DB-only sugli step `auto-validation`, `auto-promotion`,
-  `auto-paper-start`, `auto-shadow-start`, `run-monitor`, `ml-round-robin`, `promotion`, `shadow` e `paper`: legge
-  execution Forward A/B, advice live, decisioni PAPER/SHADOW e timeline entry per classificare
-  `ENTRY_WINDOW_DECAY`, `A_B_RULE_ALIGNMENT_MISMATCH`, `LIVE_REVALIDATION_TRUE_REJECT`,
-  `FRESHNESS_CONTRACT_EXPIRED` o `NO_ENTRY_WINDOW_DECAY`. Payload opzionale: `groupId`, `paperExecutionId`,
-  `shadowExecutionId`; senza payload usa l'ultimo gruppo `FORWARD_AB_98`. Non chiama ACDC/DocBrown, non crea advice,
-  non cambia `max_buy_age_seconds`, non allarga gate e non promuove run fallite.
-- `LIVE_FALSE_CONTINUATION_AUDIT` e' action diagnostica Kenshiro/FE DB-only sugli step `run-monitor`, `shadow` e
-  `paper`: legge PAPER Forward A/B, posizioni, policy JSON e post-sell forensics per classificare trade fresche con
-  entry timing valido ma `max_net_return=0` come `LIVE_REVERSAL_FALSE_CONTINUATION`, distinguendole da
-  `SELL_CAPTURE_CANDIDATE` quando `max_net_return >= safe_net_return` e la chiusura resta negativa. Payload opzionale:
-  `executionId`; senza payload usa l'ultima PAPER `FORWARD_AB_98`. Non chiama ACDC/DocBrown, non cambia gate/ranking,
-  non cambia SELL e non autorizza tuning da un singolo caso.
+- Le action diagnostiche legacy near-miss/EV/lifecycle/latency/inverse/live-revalidation/entry-decay/false-continuation
+  sono ritirate dal cockpit operativo Bollinger-only. Non sono workflow approvati e non possono selezionare, ordinare,
+  bloccare o confermare BUY.
 - `/pipelines` e sotto-pagine sono legacy per il prossimo ciclo REM.
 - Curl diretti su ACDC/DocBrown sono ammessi come diagnostica tecnica o fallback esplicito, non come interfaccia utente
   primaria per avviare il ciclo.
@@ -659,39 +556,26 @@ Checklist operativa:
    - se A-98 e' positivo e B negativo, il problema e' regressione selection/gate/promotion;
    - se B e' positivo ma non promuove, il problema e' promotion/live revalidation/freshness.
 
-5. Near-miss e stabilita':
-   - eseguire `ROLLING_NEAR_MISS_AUDIT`;
-   - distinguere `NO_POSITIVE_CLUSTERS` da `POSITIVE_CLUSTERS_NOT_STABLE_ENOUGH`;
-   - per ogni simbolo near-miss leggere `avg_mean_end`, `avg_worst_end`, `avg_safe_windows`,
-     `avg_positive_windows`, `avg_mean_mfe`;
-   - un simbolo con media forte ma worst-window negativa non e' promuovibile, ma e' candidato per diagnosi ranking/gate.
-
-6. Selection/ranking:
-   - confrontare simbolo selezionato dalla rolling validation con top symbol A-98 e top symbol near-miss;
-   - eseguire `ROLLING_EV_AUDIT` per separare candidati con EV proxy credibile da candidati positivi ma zero-MFE-risk;
-   - se il selezionato non e' tra i migliori per edge/MFE/stabilita', classificare `SELECTION_RANKING_MISMATCH`;
+5. Selection/ranking:
+   - confrontare il simbolo selezionato dalla rolling validation con le righe Bollinger del batch;
+   - eseguire solo `ROLLING_SELECTION_ATTRIBUTION_AUDIT` se serve attribuire ranking/promozione;
+   - se il selezionato non e' coerente con il batch Bollinger, classificare `SELECTION_RANKING_MISMATCH`;
    - non cambiare ranking senza prima produrre confronto su piu' batch freschi.
 
-7. Promotion e rejection reasons:
+6. Promotion e rejection reasons:
    - dopo `PROMOTION_NO_ADVICE`, leggere `rem.ml.management.round_robin.promotion_rows` e `promotion_statuses`;
-   - eseguire `LIVE_REVALIDATION_DRIFT_AUDIT` per misurare lag e distanza dal range live senza cambiare contratto;
-   - classificare ogni riga: `SKIPPED_LIVE_REVALIDATION_CONTRACT`, `NO_LIVE_REVALIDATION_FEATURES`,
-     `ADVICE_EXPIRED`, `SOURCE_GENERATION_MISMATCH`, altro;
-   - se la promotion arriva ma non crea advice per drift live, correggere latenza o contratto di revalidation solo dopo
-     evidenza ripetuta.
+   - classificare ogni riga rispetto ai soli campi Bollinger, freshness e completezza del contratto;
+   - se la promotion arriva ma non crea advice, rigenerare segnali freschi invece di introdurre retry live-revalidation.
 
-8. PAPER e SELL, solo se parte PAPER:
+7. PAPER e SELL, solo se parte PAPER:
    - confermare `FORWARD_AB_98`;
    - verificare BUY B corrente e SHADOW A baseline nella stessa finestra;
    - dopo SELL leggere forensics: MFE, safe hit, capture ratio, exit guard, loss cap, hold time;
    - una PAPER con MFE sopra safe e SELL negativa richiede diagnosi SELL/capture, non tuning entry;
-   - una PAPER fresca con entry drift nullo ma `maxNetReturn=0`, `targetHit=false` e loss-cap richiede diagnosi
-     `ENTRY_WINDOW_DECAY` / `LIVE_REVERSAL_FALSE_CONTINUATION`: confrontare validation split, timeline advice->BUY,
-     live revalidation e post-exit forensics prima di toccare SELL o gate entry.
-   - se PAPER non compra ma SHADOW A compra, eseguire `ENTRY_WINDOW_DECAY_AUDIT` per separare live revalidation
-     temporale, scadenza freshness, mismatch di source/rule e differenza contrattuale A/B.
+   - una PAPER fresca con `bb_buy_contract_pass=1` ma `maxNetReturn=0` richiede lettura post-sell e timeline WATCH,
+     non ripristino di guardie legacy.
 
-9. Decisione:
+8. Decisione:
    - `WINDOW_NOT_USEFUL`: A-98 e B negativi, nessuna azione strategica;
    - `REGRESSION_SUSPECTED`: A-98 positivo e B negativo su piu' batch freschi;
    - `LATENCY_BOTTLENECK`: opportunity valida ma advice/PAPER arriva tardi;
@@ -772,7 +656,6 @@ Pre-run minimo:
 curl -sS 'http://localhost:8091/diagnostics/acdc/ml-readiness?profileKey=REM_CURRENT' | tee "$OUT/ml_readiness_pre.json" | jq '.'
 curl -sS 'http://localhost:8091/diagnostics/acdc/live-advice/REM_CURRENT' | tee "$OUT/live_advice_pre.json" | jq '.'
 curl -sS 'http://localhost:8091/diagnostics/acdc/rem/readiness?profileKey=REM_CURRENT' | tee "$OUT/rem_readiness_pre.json" | jq '.'
-curl -sS 'http://localhost:8091/diagnostics/acdc/paper/session-guard/REM_CURRENT' | tee "$OUT/session_guard_pre.json" | jq '.'
 ```
 
 Post-run minimo per ogni execution prodotta:
@@ -783,7 +666,6 @@ curl -sS "http://localhost:8091/diagnostics/acdc/paper/scoring?executionIds=$EXE
 curl -sS "http://localhost:8091/diagnostics/acdc/paper/timeline?executionIds=$EXEC" > "$OUT/timeline_$EXEC.json"
 curl -sS "http://localhost:8091/diagnostics/acdc/paper/sell-capture?executionIds=$EXEC" > "$OUT/sell_capture_$EXEC.json"
 curl -sS "http://localhost:8091/diagnostics/acdc/paper/post-sell-forensics?executionIds=$EXEC" > "$OUT/post_sell_forensics_$EXEC.json"
-curl -sS "http://localhost:8091/diagnostics/acdc/paper/live-revalidation-counterfactual?executionIds=$EXEC&horizonSeconds=900" > "$OUT/counterfactual_$EXEC.json"
 ```
 
 Metriche minime da confrontare fra A e B:
@@ -835,12 +717,13 @@ SELECT COUNT(*) open_positions
 FROM acdc_paper_position
 WHERE status = \"OPEN\";
 
-SELECT COUNT(*) rules, COALESCE(SUM(status=\"PROMOTED\"),0) promoted, MAX(created_at) max_created
-FROM acdc_reversal_ml_rule;
-
 SELECT status, COUNT(*) c, MAX(created_at) max_created, MAX(advice_valid_until) max_until
 FROM acdc_live_ml_advice
 GROUP BY status;
+
+SELECT COUNT(*) reversal_rule_table
+FROM information_schema.tables
+WHERE table_schema=DATABASE() AND table_name=\"acdc_reversal_ml_rule\";
 "'
 ```
 
@@ -848,6 +731,7 @@ Scopo:
 
 - capire se ci sono PAPER running;
 - verificare `reserved_budget`;
+- verificare che la tabella legacy `acdc_reversal_ml_rule` non esista piu' nello schema operativo;
 - verificare posizioni aperte;
 - verificare se ML pesante ha regole;
 - verificare se advice live sono fresche o residue.
@@ -942,7 +826,7 @@ curl -sS 'http://localhost:8091/diagnostics/acdc/ml-readiness?profileKey=REM_CUR
 Nota:
 
 - per PAPER validativa deve restituire `ready=true`;
-- advice `PURE_REVERSAL_OBSERVED` non bastano per readiness validativa;
+- advice non Bollinger o non `PAPER_ELIGIBLE` non bastano per readiness validativa;
 - `PAPER_ELIGIBLE_ADVICE_ACTIVE_MISSING` blocca PAPER;
 - `sourceGenerationId` e `adviceSource` sono colonne queryable su `acdc_live_ml_advice`;
 - una PAPER nuova viene legata a `expectedSourceGenerationId` e i BUY incoerenti vengono rifiutati;
@@ -996,20 +880,6 @@ Paper post-SELL forensics:
 curl -sS 'http://localhost:8091/diagnostics/acdc/paper/post-sell-forensics?executionIds=17' \
   | tee /tmp/acdc_paper_post_sell_forensics.json \
   | jq '.'
-```
-
-Paper live revalidation counterfactual:
-
-```bash
-curl -sS 'http://localhost:8091/diagnostics/acdc/paper/live-revalidation-counterfactual?executionIds=17&horizonSeconds=900' \
-  | tee /tmp/acdc_paper_counterfactual.json \
-  | jq '.'
-```
-
-Paper session guard:
-
-```bash
-curl -sS 'http://localhost:8091/diagnostics/acdc/paper/session-guard/REM_CURRENT' | jq '.'
 ```
 
 Shadow replay:
@@ -1225,9 +1095,6 @@ SELECT COUNT(*) open_positions
 FROM acdc_paper_position
 WHERE status=\"OPEN\";
 
-SELECT COUNT(*) rules, COALESCE(SUM(status=\"PROMOTED\"),0) promoted
-FROM acdc_reversal_ml_rule;
-
 SELECT status, COUNT(*) c, MAX(advice_valid_until) max_until
 FROM acdc_live_ml_advice
 GROUP BY status;
@@ -1241,7 +1108,7 @@ Fail-closed se:
 
 - PAPER running inattesa;
 - posizioni aperte inattese;
-- `rules=0` senza stato `NO_SIGNATURES` esplicito;
+- assenza di advice Bollinger `PAPER_ELIGIBLE` fresche;
 - DocBrown research `RUNNING`;
 - log DocBrown contiene rollback/timeout recente;
 - advice active sono residue o incoerenti con la run.
@@ -1283,7 +1150,6 @@ curl -sS "http://localhost:8091/diagnostics/acdc/paper/scoring?executionIds=$EXE
 curl -sS "http://localhost:8091/diagnostics/acdc/paper/timeline?executionIds=$EXEC" > "$OUT/timeline.json"
 curl -sS "http://localhost:8091/diagnostics/acdc/paper/sell-capture?executionIds=$EXEC" > "$OUT/sell_capture.json"
 curl -sS "http://localhost:8091/diagnostics/acdc/paper/post-sell-forensics?executionIds=$EXEC" > "$OUT/post_sell_forensics.json"
-curl -sS "http://localhost:8091/diagnostics/acdc/paper/live-revalidation-counterfactual?executionIds=$EXEC&horizonSeconds=900" > "$OUT/counterfactual.json"
 ```
 
 Sintesi rapida:
@@ -1291,7 +1157,6 @@ Sintesi rapida:
 ```bash
 jq '{totalTrades,totalWins,totalLosses,totalNetProfitQuote,lossCapExits,timeoutExits}' "$OUT/scoring.json"
 jq '{rows,missedReversals,noReversalConfirmed,inconclusiveGranularity,inconclusiveNoTicks}' "$OUT/post_sell_forensics.json"
-jq '{totalBlockedAdvice,goodBlocks,badBlocks,ambiguousBlocks}' "$OUT/counterfactual.json"
 ```
 
 ## Interpretazione Minima Del Consiglio
@@ -1303,10 +1168,9 @@ jq '{totalBlockedAdvice,goodBlocks,badBlocks,ambiguousBlocks}' "$OUT/counterfact
 
 ## Nota MS890
 
-Nel path rolling advice-driven, ACDC non deve pretendere righe legacy in `acdc_reversal_ml_rule` per dichiarare
-`ML_READY` quando sono presenti advice `PAPER_ELIGIBLE` attive e contrattualmente valide. `ML_RULES_MISSING` e
-`ML_PROMOTED_RULES_MISSING` restano warning diagnostici; non sono blocker se il contratto rolling e' fresco. Restano
-blocker: assenza advice live, assenza advice paper-eligible, contratto scaduto/incompleto e posizioni PAPER aperte.
+Nel path Bollinger-only, ACDC non deve pretendere righe legacy in `acdc_reversal_ml_rule` per dichiarare `ML_READY`.
+La tabella legacy deve essere assente nello schema operativo. Restano blocker: assenza advice live, assenza advice
+paper-eligible, contratto scaduto/incompleto e posizioni PAPER aperte.
 
 ## Nota MS892
 

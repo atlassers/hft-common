@@ -254,7 +254,7 @@ La sessione `105` non e' una bocciatura della baseline `98`: e' una bocciatura d
 Decisione vincolante:
 
 - una run PAPER validativa deve essere preceduta da un check `ML_READY`;
-- `acdc_reversal_ml_rule=0`, DocBrown research `RUNNING`, timeout transazionale, rollback o advice residue incoerenti bloccano lo start;
+- assenza di advice Bollinger `PAPER_ELIGIBLE` fresche, DocBrown research `RUNNING`, timeout transazionale, rollback o advice residue incoerenti bloccano lo start;
 - DocBrown heavy mining deve essere reso completabile e osservabile prima di nuove finestre PAPER;
 - la finestra PAPER parte solo dopo scoring live leggero verificato;
 - il Consiglio non accetta piu' run "semi-pulite" o contaminate da scheduler/advice residue come evidenza sulla baseline.
