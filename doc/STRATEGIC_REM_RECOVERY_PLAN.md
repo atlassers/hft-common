@@ -51,8 +51,10 @@ Cambiano solo le definizioni decisionali:
 7. Ogni advice deve dichiarare setup e trigger Bollinger.
 8. Ogni WATCH deve fallire chiusa se setup, trigger o soglie Bollinger sono mancanti.
 9. La finestra temporale WATCH autorizza solo l'osservazione; non e' una condizione BUY.
-10. Nessuna soglia DB `rem_*` legacy puo' diventare guardia di trading.
-11. Stringhe operative, payload key, status, reason e action devono stare in enum/costanti.
+10. WATCH e BUY non possono essere limitate da cap numerici su posizioni o osservazioni concorrenti; l'unico limite
+    ammesso all'acquisto e' la disponibilita' di budget/exchange sizing al momento della BUY.
+11. Nessuna soglia DB `rem_*` legacy puo' diventare guardia di trading.
+12. Stringhe operative, payload key, status, reason e action devono stare in enum/costanti.
 
 ## Setup Ammessi
 

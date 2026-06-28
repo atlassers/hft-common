@@ -197,6 +197,8 @@ Interventi:
 - `PreBuyWatchService`:
   - sostituire il trigger unico `bb_buy_contract_pass` con dispatch su `bb_setup`;
   - mantenere `bb_buy_contract_pass` solo come compatibilita' diagnostica o derivato finale;
+  - non limitare WATCH o BUY con cap numerici su posizioni/osservazioni concorrenti;
+  - l'unico limite ammesso alla BUY e' il budget disponibile, insieme alle regole di sizing/exchange;
   - produrre reason distinte:
     - `WATCH_WAITING_BB_REENTRY_CONTRACT`
     - `WATCH_WAITING_BB_BREAKOUT_CONTRACT`

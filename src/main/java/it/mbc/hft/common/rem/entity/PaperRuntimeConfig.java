@@ -38,9 +38,6 @@ public class PaperRuntimeConfig extends PanacheEntityBase {
     @Column(name = "tick_size", nullable = false, precision = 38, scale = 18)
     public BigDecimal tickSize;
 
-    @Column(name = "max_open_positions", nullable = false)
-    public int maxOpenPositions;
-
     @Column(name = "low_balance_max_quote", nullable = false, precision = 38, scale = 18)
     public BigDecimal lowBalanceMaxQuote;
 
