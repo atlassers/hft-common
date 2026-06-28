@@ -90,9 +90,11 @@ Se una procedura qui descritta confligge con il piano strategico, va fermata e c
   della firma (`entry_validity_seconds`, `duration_seconds` o timeout no-MFE esplicito). La live revalidation puo'
   essere falsa al momento della promozione: in quel caso DocBrown deve comunque pubblicare l'advice WATCH-eligible,
   ACDC apre la WATCH e compra solo se il contratto BUY diventa vero prima della scadenza.
-- Contratto trigger WATCH: la BUY da WATCH richiede il trigger corrente del contratto, incluso
-  `reversal_confirmed=1`. La finestra temporale autorizza solo l'osservazione; non basta da sola per comprare. Una
-  WATCH con contratto non ancora vero resta `WATCH_WAITING_BUY_CONTRACT` o scade senza BUY.
+- Contratto trigger WATCH Bollinger-only: la BUY da WATCH richiede il trigger corrente `bb_buy_contract_pass=1`.
+  La finestra temporale autorizza solo l'osservazione; non basta da sola per comprare. Una WATCH con contratto Bollinger
+  non ancora vero resta `WATCH_WAITING_BUY_CONTRACT` o scade senza BUY. Reversal, trough, slope, simbolo, volume e
+  live-revalidation legacy sono ammessi solo come diagnostica storica e non devono selezionare, ordinare, bloccare o
+  confermare BUY.
 - Le nuove key JSON/protocollo Java condivise devono essere aggiunte in
   `it.mbc.hft.common.rem.constants.RemConstants`; eventuali registry locali (`ManagementString`, `OperationalString`)
   sono ammessi solo come shim verso `hft-common`.

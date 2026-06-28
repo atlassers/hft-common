@@ -110,6 +110,13 @@ L'obiettivo finale di questo piano e' arrivare a stato `PAPER_READY`, cioe':
     `ml_advice_no_mfe_timeout_seconds`; se manca, ACDC resta fail-closed e non inventa fallback da durata advice,
     ratio, metadata DB o config runtime. Questa regola non e' una soglia di selection, non allarga gate/live/PAPER e
     non sostituisce WATCH o Forward A/B evidence.
+18. Dal 2026-06-28 il vincolo strategico runtime diventa Bollinger-only. Il processo resta
+    `ML -> live-score -> WATCH -> BUY -> SELL -> forensics`, ma le definizioni decisionali sono solo Bollinger:
+    DocBrown identifica advice da `bb_*`, il live-score produce un set live speculare `live_bb_*`, la WATCH compra solo
+    quando il trigger corrente `bb_buy_contract_pass=1` e' vero, e la SELL usa target/loss/timeout derivati dal contratto
+    Bollinger. Reversal, trough, slope, simbolo, volume e live-revalidation legacy possono restare solo come diagnostica
+    storica finche' le entity/tabelle non vengono ritirate, ma non possono selezionare, ordinare, bloccare o confermare
+    BUY.
 
 ## Diagnosi Vincolante
 

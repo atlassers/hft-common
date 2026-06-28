@@ -1,6 +1,6 @@
 # Current Context
 
-Ultimo aggiornamento: 2026-06-27 22:24 CEST.
+Ultimo aggiornamento: 2026-06-28 15:10 CEST.
 
 Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
@@ -28,6 +28,24 @@ TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
 - FE e script devono mantenere mapping 1:1 con i contract/payload comuni quando esistono.
 
 ## Stato Ultima Attivita'
+
+Aggiornamento strategico MS in corso:
+
+- Il processo REM runtime e' stato riallineato a Bollinger-only: `ML -> live-score -> WATCH -> BUY -> SELL -> forensics`
+  resta invariato, ma i criteri decisionali sono solo `bb_*`.
+- `hft-common`: aggiunte le costanti condivise Bollinger per feature, contract block, baseline label e filtri candidato.
+- `docbrown`: candidate/rolling promotion non generano piu' regole `symbol=...`; live-score rank e target cap non usano
+  piu' slope/trough/reversal; live revalidation e' limitata a feature Bollinger.
+- `acdc`: WATCH conferma il BUY solo su `bb_buy_contract_pass`; `ML_ADVICE_PAPER_ELIGIBLE` richiede contratto Bollinger
+  completo/fresco ma non blocca piu' per drift/live-revalidation/reversal.
+- `acdc`: migration `V76__bollinger_only_watch_entry.sql` disattiva le guardie ENTRY legacy di mercato,
+  `V77__bollinger_only_entry_ranking.sql` lascia attivo un solo ranking ENTRY (`bb_buy_contract_pass`) e
+  `V78__expire_non_bollinger_active_advice.sql` scade advice attive legacy prive di contratto `bb_*`. Restano attive
+  solo guardie tecniche minime (`entry_price_present`, `entry_snapshot_fresh`).
+- Verifiche locali completate: `hft-common mvn -q install`, `docbrown mvn -q -Dtest=BlankRemCandidateServiceTest test`,
+  `acdc mvn -q -Dtest=AcdcRunServiceTest test`,
+  `acdc mvn -q -Dtest=it.mbc.hft.acdc.config.RemCurrentConfigurationTest test`,
+  `docbrown ./mvnw -q -DskipTests package`, `acdc ./mvnw -q -DskipTests package`.
 
 Aggiornamento operativo in corso:
 
