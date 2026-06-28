@@ -31,11 +31,15 @@ TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
 
 Aggiornamento strategico MS in corso:
 
+- MS900: rimozione ponte HFT/scalping legacy e mining outcome-first storico. Le tabelle
+  `stan_strategy_parameters`, `scalping_scout_candidate_dataset_config`, `scalping_scout_candidate_dataset_run`,
+  `scalping_scout_runtime_config`, `acdc_outcome_signature`, `acdc_outcome_training_sample` e
+  `acdc_rem_data_quality_band_model` sono legacy nel processo Bollinger-only e vengono droppate da nuove migration.
+  Kenshiro `/management` legge le candidate operative da `acdc_live_ml_advice`, non da parametri HFT legacy.
+
 - MS899: pulizia residuale DB/codice/script post Bollinger-only. Le tabelle `best_winner_signature` e
   `best_winner_window_config` sono legacy: ACDC `V81` e DocBrown `V31` le droppano, e sono stati rimossi endpoint,
-  pagina FE, contratti comuni, script ACDC e modello Python DocBrown collegati. Le tabelle
-  `acdc_rem_observation_candidate` e `acdc_rem_data_quality_band_model` restano: la prima e' input operativo per
-  rolling validation/promotion e diagnostica management, la seconda e' ancora referenziata dal research job DocBrown.
+  pagina FE, contratti comuni, script ACDC e modello Python DocBrown collegati.
 
 - Il processo REM runtime e' stato riallineato a Bollinger-only: `ML -> live-score -> WATCH -> BUY -> SELL -> forensics`
   resta invariato, ma i criteri decisionali sono solo `bb_*`.
