@@ -90,6 +90,9 @@ Se una procedura qui descritta confligge con il piano strategico, va fermata e c
   della firma (`entry_validity_seconds`, `duration_seconds` o timeout no-MFE esplicito). La live revalidation puo'
   essere falsa al momento della promozione: in quel caso DocBrown deve comunque pubblicare l'advice WATCH-eligible,
   ACDC apre la WATCH e compra solo se il contratto BUY diventa vero prima della scadenza.
+- Contratto trigger WATCH: la BUY da WATCH richiede il trigger corrente del contratto, incluso
+  `reversal_confirmed=1`. La finestra temporale autorizza solo l'osservazione; non basta da sola per comprare. Una
+  WATCH con contratto non ancora vero resta `WATCH_WAITING_BUY_CONTRACT` o scade senza BUY.
 - Le nuove key JSON/protocollo Java condivise devono essere aggiunte in
   `it.mbc.hft.common.rem.constants.RemConstants`; eventuali registry locali (`ManagementString`, `OperationalString`)
   sono ammessi solo come shim verso `hft-common`.
@@ -103,6 +106,8 @@ Se una procedura qui descritta confligge con il piano strategico, va fermata e c
   `/diagnostics/acdc/paper/post-sell-forensics` devono esporre per ogni riga un oggetto `contract` con mappe numeriche
   `history`, `live`, `entry`, `exit` e flag `complete`. Le run antecedenti alla separazione possono avere
   `contract.complete=false` e non vanno usate per validare completezza del nuovo contratto.
+- Diagnostica post-sell: `/diagnostics/acdc/paper/post-sell-forensics` senza `executionIds` deve analizzare le ultime
+  execution PAPER disponibili entro `limit`; id mancanti o non piu' presenti non devono causare 500.
 - Autonomia operativa: eseguire la checklist `hft-common/doc/acdc/session/2026-06-21/session-148-autonomous-to-paper-checklist.md` senza chiedere go per ogni microtest, fermandosi solo sulle stop condition dichiarate.
 - Budget/cadenza orchestratore: non sostituisce il lifecycle SHADOW/PAPER ACDC. Ogni ciclo autonomo esterno fino alla PAPER ha budget massimo `25m`; dopo `FAIL_SELECTION_BIAS` attendere `10m` prima del ciclo successivo; dopo `6` cicli senza candidate promuovibili classificare `NO_PROMOTABLE_SIGNAL_WINDOW` e chiedere rivalutazione del Consiglio.
 - Nuovo cockpit operativo: il prossimo ciclo REM deve partire da FE `/management`, che chiama Kenshiro
