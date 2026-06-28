@@ -1,8 +1,7 @@
 package it.mbc.hft.common.rem.enums;
 
 public enum RemPromotionClass {
-    PAPER_ELIGIBLE("PAPER_ELIGIBLE"),
-    PURE_REVERSAL_OBSERVED("PURE_REVERSAL_OBSERVED");
+    PAPER_ELIGIBLE("PAPER_ELIGIBLE");
 
     private final String value;
 

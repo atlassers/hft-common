@@ -27,7 +27,7 @@ public final class RemConstants {
     public static final String ABANDONED = "ABANDONED";
     public static final String ACCEPTED = "ACCEPTED";
     public static final String REJECTED = "REJECTED";
-    public static final String PURE_REVERSAL_OBSERVED = "PURE_REVERSAL_OBSERVED";
+    public static final String BOLLINGER_ONLY = "BOLLINGER_ONLY";
     public static final String PAPER_ELIGIBLE = "PAPER_ELIGIBLE";
 
     public static final String FORWARD_AB_98 = "FORWARD_AB_98";
