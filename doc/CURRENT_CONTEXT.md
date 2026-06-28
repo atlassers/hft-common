@@ -1,14 +1,15 @@
 # Current Context
 
-Ultimo aggiornamento: 2026-06-28 15:55 CEST.
+Ultimo aggiornamento: 2026-06-28 20:18 CEST.
 
 Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
 ## Gerarchia Documentale
 
 1. `/home/mbc/Documenti/ws/java/hft/hft-common/doc/STRATEGIC_REM_RECOVERY_PLAN.md`
-2. `/home/mbc/Documenti/ws/java/hft/hft-common/doc/CURRENT_CONTEXT.md`
-3. `/home/mbc/Documenti/ws/java/hft/hft-common/doc/STRATEGIC_REM_HANDOFF.md`
+2. `/home/mbc/Documenti/ws/java/hft/hft-common/doc/BOLLINGER_ONLY_PLAN.md`
+3. `/home/mbc/Documenti/ws/java/hft/hft-common/doc/CURRENT_CONTEXT.md`
+4. `/home/mbc/Documenti/ws/java/hft/hft-common/doc/STRATEGIC_REM_HANDOFF.md`
 
 Se i documenti confliggono, prevale il piano strategico. Il current context contiene solo lo stato corrente e il prossimo
 TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
@@ -16,18 +17,90 @@ TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
 ## Vincoli Hard Correnti
 
 - REAL vietata.
-- PAPER solo `FORWARD_AB_98` e solo se `ML_READY=true`.
+- PAPER solo da ciclo `/management` e solo se `ML_READY=true`.
 - Il ciclo operativo parte da FE `/management` -> Kenshiro `/backoffice/management/*`.
 - `/pipelines` non e' path operativo primario.
 - Non allargare gate/live/SELL per forzare PAPER.
-- SHADOW technical, WATCH tecnico e UI evidence non sono Forward A/B evidence.
+- SHADOW e Forward A/B 98 sono legacy operativi ritirati dal ciclo management.
 - MySQL e container deployati sono obbligatori per validazione operativa; H2 non vale come validazione operativa.
 - Il Consiglio elabora piani e monitora avanzamenti; Codex implementa secondo le indicazioni e produce report finale.
 - Stringhe operative, action id, status, config key e payload key devono essere centralizzati in `hft-common` o registry
   locali usati come shim.
 - FE e script devono mantenere mapping 1:1 con i contract/payload comuni quando esistono.
+- `BOLLINGER_ONLY_PLAN.md` e' il piano strategico vincolante: sono ammessi solo setup
+  `BB_REENTRY_MEAN_REVERSION_LONG` e `BB_SQUEEZE_BREAKOUT_LONG`, solo trigger Bollinger e nessuna famiglia decisionale
+  esterna.
 
 ## Stato Ultima Attivita'
+
+Aggiornamento operativo MS904 completato:
+
+- `BOLLINGER_ONLY_PLAN.md` e' il piano strategico vincolante e sostituisce il precedente piano REM outcome-first.
+- `hft-common` introduce enum/costanti per setup, trigger, protocollo `BOLLINGER_ONLY_V2` e contract `bb_*`.
+- `docbrown` promuove advice setup-specifiche:
+  - `BB_REENTRY_MEAN_REVERSION_LONG`;
+  - `BB_SQUEEZE_BREAKOUT_LONG`.
+- `docbrown` non usa piu' pesi DB `rem.ml.rolling.selection.*` per ordinare le candidate.
+- `acdc` compra da WATCH solo con dispatch setup-specifico e fail-closed se setup/trigger/soglie Bollinger mancano.
+- `acdc` migration `V84__bollinger_only_v2_runtime_config_purge.sql` rimuove dal DB live:
+  - `rem.ml.signature_advice.*`;
+  - `rem.ml.paper_candidate.*`;
+  - `rem.ml.rolling.selection.*`;
+  - audit round-robin storici persistiti sotto `rem.ml.management.round_robin.audit.*`.
+- `kenshiro` espone solo azioni management Bollinger/PAPER: niente SHADOW, niente Forward A/B, niente enable
+  signature/paper-candidate.
+- `hft-fe` `/management` e' allineato al ciclo PAPER Bollinger-only e non espone azioni legacy.
+
+Verifiche completate:
+
+- `hft-common mvn -q install`;
+- `docbrown mvn -q -Dtest=BlankRemCandidateServiceTest test`;
+- `docbrown ./mvnw -q -DskipTests package`;
+- `acdc mvn -q -Dtest=AcdcRunServiceTest,it.mbc.hft.acdc.config.RemCurrentConfigurationTest test`;
+- `acdc ./mvnw -q -DskipTests package`;
+- `kenshiro mvn -q -DskipTests compile`;
+- `kenshiro mvn -q -DskipTests package`;
+- `hft-fe npm run check`;
+- `hft-fe npm run build`.
+
+Deploy completato:
+
+- `docbrown` up su 8083;
+- `acdc-vpn` up su 8091, schema `hft` migrato a `acdc_flyway_schema_history` versione `84`;
+- `kenshiro-local` up su 8085;
+- `hft-fe-local` up su 5173.
+
+Validazione runtime post-V84:
+
+- `PAPER 41`, generation `management-rolling-20260628T181353Z`, protocollo `BOLLINGER_ONLY_V2`:
+  - started `2026-06-28T18:14:30Z`, completed `2026-06-28T18:16:40Z`;
+  - posizioni `0`;
+  - BUY accettate `0`;
+  - WATCH scadute `19`;
+  - decisioni `WATCH_WAITING_BUY_CONTRACT` `684`;
+  - interpretazione: WATCH non compra sul solo vincolo temporale.
+- `PAPER 42`, generation `management-rolling-20260628T181650Z`, protocollo `BOLLINGER_ONLY_V2`:
+  - started `2026-06-28T18:17:23Z`, stopped `2026-06-28T18:18:01Z`;
+  - posizioni `0`;
+  - BUY accettate `0`;
+  - avviata perche' l'automazione aveva gia' superato la promotion quando e' stato inviato lo stop; fermata
+    manualmente per lasciare runtime controllato.
+- Stato live finale dopo redeploy da `/management`:
+  - `paperRunning=false`;
+  - `openPositions=0`;
+  - `activeAdvice=0`;
+  - `paperEligibleContractActiveAdvice=0`;
+  - `ML_READY=false`;
+  - `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`;
+  - automazione `STOPPED`.
+
+Nota tecnica:
+
+- Le ultime PAPER `39` e `40` pre-V84 erano gia' `BOLLINGER_ONLY_V2`; `40` ha chiuso con due posizioni e somma
+  posizioni positiva, ma e' stata osservata una possibile incoerenza contabile tra `acdc_run_execution` e
+  `acdc_paper_run.net_profit_quote`. Da verificare separatamente; non modifica il vincolo strategico.
+
+## Stato Storico Precedente
 
 Aggiornamento strategico MS in corso:
 

@@ -6,14 +6,12 @@ public enum ManagementStepId {
     AUTO_VALIDATION("auto-validation"),
     AUTO_PROMOTION("auto-promotion"),
     AUTO_PAPER_START("auto-paper-start"),
-    AUTO_SHADOW_START("auto-shadow-start"),
     RUN_MONITOR("run-monitor"),
     ML_PREFILTER("ml-prefilter"),
     ML_HEAVY_RESEARCH("ml-heavy-research"),
     ML_ROUND_ROBIN("ml-round-robin"),
     PROMOTION("promotion"),
     WATCH("watch"),
-    SHADOW("shadow"),
     PAPER("paper"),
     REAL("real");
 

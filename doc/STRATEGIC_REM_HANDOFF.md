@@ -32,8 +32,9 @@ Non deve contenere:
 Gerarchia:
 
 1. Piano strategico: `hft-common/doc/STRATEGIC_REM_RECOVERY_PLAN.md`.
-2. Snapshot workspace: `/home/mbc/Documenti/ws/java/hft/hft-common/doc/CURRENT_CONTEXT.md`.
-3. Handoff operativo: questo file.
+2. Piano tecnico vincolante: `hft-common/doc/BOLLINGER_ONLY_PLAN.md`.
+3. Snapshot workspace: `/home/mbc/Documenti/ws/java/hft/hft-common/doc/CURRENT_CONTEXT.md`.
+4. Handoff operativo: questo file.
 
 Se una procedura qui descritta confligge con il piano strategico, va fermata e corretta.
 
@@ -43,11 +44,14 @@ Se una procedura qui descritta confligge con il piano strategico, va fermata e c
 - Checklist operativa autonoma: `hft-common/doc/acdc/session/2026-06-21/session-148-autonomous-to-paper-checklist.md`.
 - Checklist Telegram SELL chart: `hft-common/doc/acdc/session/2026-06-21/session-145-telegram-sell-chart-link-checklist.md`.
 - Checklist Forward A/B readiness: `hft-common/doc/acdc/session/2026-06-21/session-146-forward-ab-run-readiness-checklist.md`.
-- Stato strategico: `BASELINE_98_CANDIDATE_REQUIRES_FORWARD_AB`.
+- Stato strategico: `BOLLINGER_ONLY_V2_IMPLEMENTED_PAPER_VALIDATION_ACTIVE`.
 - Stato operativo live, avanzamenti dell'ultimo piano e prossimo TODO stanno in
   `/home/mbc/Documenti/ws/java/hft/hft-common/doc/CURRENT_CONTEXT.md`.
-- Dal 2026-06-28 il ciclo management e' PAPER-only Bollinger validation. SHADOW e il vecchio confronto A/B restano
-  storico/legacy e non devono essere avviati da `/management`.
+- Dal 2026-06-28 il ciclo management e' PAPER-only Bollinger validation. SHADOW e Forward A/B 98 sono storico/legacy e
+  non devono essere avviati da `/management`.
+- Dal 2026-06-28 MS904 il ciclo management non espone piu' toggles legacy `ENABLE_SIGNATURE_ADVICE` /
+  `ENABLE_PAPER_CANDIDATES`, ne' config runtime `rem.ml.signature_advice.*`, `rem.ml.paper_candidate.*` o
+  `rem.ml.rolling.selection.*`. Le migration nuove arrivano a `acdc_flyway_schema_history` versione `84`.
 - Diary e checklist storici sono centralizzati in `hft-common/doc/<module>/<YYYY-MM-DD>/...`; per ACDC/REM usare
   `hft-common/doc/acdc/session/<YYYY-MM-DD>/...`. I progetti applicativi non devono mantenere copie operative dei diary.
 - Nessuna REAL.
@@ -91,11 +95,12 @@ Se una procedura qui descritta confligge con il piano strategico, va fermata e c
   della firma (`entry_validity_seconds`, `duration_seconds` o timeout no-MFE esplicito). La live revalidation puo'
   essere falsa al momento della promozione: in quel caso DocBrown deve comunque pubblicare l'advice WATCH-eligible,
   ACDC apre la WATCH e compra solo se il contratto BUY diventa vero prima della scadenza.
-- Contratto trigger WATCH Bollinger-only: la BUY da WATCH richiede il trigger corrente `bb_buy_contract_pass=1`.
-  La finestra temporale autorizza solo l'osservazione; non basta da sola per comprare. Una WATCH con contratto Bollinger
-  non ancora vero resta `WATCH_WAITING_BUY_CONTRACT` o scade senza BUY. I nuovi payload operativi non devono emettere
-  chiavi `reversal_*`; eventuali dati legacy sono solo storico e non devono selezionare, ordinare, bloccare o confermare
-  BUY.
+- Contratto trigger WATCH Bollinger-only V2: la BUY da WATCH richiede setup e trigger Bollinger dichiarati
+  nell'advice. Setup ammessi: `BB_REENTRY_MEAN_REVERSION_LONG` e `BB_SQUEEZE_BREAKOUT_LONG`. Trigger ammessi:
+  `BB_REENTRY_CONFIRMED` e `BB_UPPER_BREAKOUT_CONFIRMED`. La finestra temporale autorizza solo l'osservazione; non basta
+  da sola per comprare. Una WATCH con contratto Bollinger non ancora vero resta in attesa o scade senza BUY. I nuovi
+  payload operativi non devono emettere chiavi `reversal_*`; eventuali dati legacy sono solo storico e non devono
+  selezionare, ordinare, bloccare o confermare BUY.
 - Le nuove key JSON/protocollo Java condivise devono essere aggiunte in
   `it.mbc.hft.common.rem.constants.RemConstants`; eventuali registry locali (`ManagementString`, `OperationalString`)
   sono ammessi solo come shim verso `hft-common`.
@@ -170,8 +175,9 @@ curl -sS -X POST -H 'Content-Type: application/json' \
 Action Kenshiro approvate:
 
 ```text
-AUTO_AB_START
-AUTO_AB_STOP
+AUTO_BOLLINGER_START
+AUTO_BOLLINGER_STOP
+AUTO_BOLLINGER_CYCLE_START
 UNIVERSE_PREFILTER
 RUN_RESEARCH
 RESEARCH_STATUS
@@ -181,23 +187,11 @@ APPLY_MICRO_ML_REFRESH
 APPLY_ROUND_ROBIN_DEEP_30
 APPLY_FAST_ML_REFRESH
 APPLY_FULL_ML_AUDIT
-APPLY_SELECTION_FILTERS_MIN
-APPLY_SELECTION_FILTERS_50
-APPLY_SELECTION_FILTERS_100
-ENABLE_SIGNATURE_ADVICE
 LIVE_SCORE
-RESTORE_BASELINE_98_PROFILE
-ENABLE_PAPER_CANDIDATES
 ROLLING_VALIDATION
-BASELINE_98_DIAGNOSTICS
 ROLLING_SELECTION_ATTRIBUTION_AUDIT
-SHADOW_OPPORTUNITY_GUARD_TRACE
-SHADOW_OPPORTUNITY_RULE_MISSING_BYPASS
 ROLLING_PROMOTION
-SHADOW_RUN
-SHADOW_STOP_BUY
-SHADOW_STOP
-PAPER_FORWARD_AB_START
+PAPER_BOLLINGER_START
 PAPER_STOP_BUY
 PAPER_STOP
 SAVE_MANAGEMENT_CONFIG
@@ -207,11 +201,11 @@ REAL_RUN
 
 Regole:
 
-- `AUTO_AB_START` e' la action primaria del ciclo normale da FE `/management`: abilita in Kenshiro l'automazione
-  persistente `FORWARD_AB_98`, che esegue prefiltro -> live score -> rolling validation -> live score immediato
-  pre-promotion -> rolling promotion -> PAPER Forward A/B -> monitor, senza richiedere micro-click FE tra uno step e il
-  successivo.
-- Dal fix MS748 `AUTO_AB_START` e' anche action di bootstrap: se automazione e' spenta e il runtime e' pulito puo'
+- `AUTO_BOLLINGER_START` e' la action primaria del ciclo normale da FE `/management`: abilita in Kenshiro
+  l'automazione persistente `BOLLINGER_ONLY_V2`, che esegue prefiltro -> live score -> rolling validation ->
+  live score immediato pre-promotion -> rolling promotion -> PAPER Bollinger -> monitor, senza richiedere micro-click FE
+  tra uno step e il successivo.
+- `AUTO_BOLLINGER_START` e' anche action di bootstrap: se automazione e' spenta e il runtime e' pulito puo'
   partire da FE anche quando il current step consultivo e' su un passo manuale, per evitare mismatch FE abilitato /
   backend `required step auto-prefilter`. Le altre action primarie manuali restano gated sul current step.
 - L'automazione persistente deve avere un tick interno Kenshiro, non dipendere dal refresh FE. Kenshiro usa scheduler
@@ -221,26 +215,21 @@ Regole:
   in memoria, Kenshiro deve trattarlo come ciclo stale dopo il timeout conservativo e riconciliare fail-closed in
   cooldown usando il terminale persistito del round-robin, quando disponibile (`PROMOTION_NO_ADVICE`,
   `NO_PROMOTABLE_CANDIDATE`, `FAIL_SELECTION_BIAS`, `LIFECYCLE_CAPTURE_REQUIRES_SHADOW_PREFLIGHT`).
-- Dal fix MS748 le chiamate downstream Kenshiro hanno timeout fail-closed: `ROLLING_VALIDATION` 5 minuti,
+- Le chiamate downstream Kenshiro hanno timeout fail-closed: `ROLLING_VALIDATION` 5 minuti,
   `RUN_RESEARCH` 30 minuti, live score/prefilter/promotion 90 secondi, start/stop runtime 45 secondi. Un timeout produce
   `DOWNSTREAM_TIMEOUT`/504 e l'autociclo deve andare in abort/cooldown, non restare `RUNNING_CYCLE` indefinito.
-- I profili `APPLY_SELECTION_FILTERS_MIN`, `APPLY_SELECTION_FILTERS_50` e `APPLY_SELECTION_FILTERS_100` modificano solo
-  `rem.ml.management.selection.strictness_percent` e il relativo payload DocBrown `selectionStrictnessPercent`.
-  Scalano la severita' dei filtri di selezione ML per esperimenti controllati; non cambiano WATCH, BUY, SELL, runtime
-  gate, live revalidation o divieti PAPER/REAL. Il default `100` preserva il comportamento storico.
 - Quando l'automazione e' abilitata, le action manuali primarie sono bloccate server-side e visualmente disabilitate dal
   FE. Restano disponibili diagnostiche e STOP.
-- Le diagnostiche ammesse durante automazione includono `REFRESH_DIAGNOSTICS`, `BASELINE_98_DIAGNOSTICS` e
-  `ROLLING_SELECTION_ATTRIBUTION_AUDIT`. Le diagnostiche legacy near-miss/EV/lifecycle/live-revalidation/entry-decay
-  sono ritirate dal cockpit operativo Bollinger-only.
+- Le diagnostiche ammesse durante automazione includono `REFRESH_DIAGNOSTICS` e
+  `ROLLING_SELECTION_ATTRIBUTION_AUDIT`. Le diagnostiche legacy baseline/near-miss/EV/lifecycle/live-revalidation/
+  entry-decay sono ritirate dal cockpit operativo Bollinger-only.
 - Quando `automation.enabled=true` e `automation.status=COOLDOWN`, Kenshiro deve mantenere il current step consultivo sul
   ramo auto (`auto-prefilter`) invece di saltare al ramo manuale `ml-round-robin`; il cooldown e' parte del ciclo
   automatico e deve essere rappresentato come tale.
 - Dopo il live score post-validazione dell'autociclo, Kenshiro non deve saltare la rolling promotion: deve promuovere
-  il batch rolling validato, scadere le advice PAPER precedenti e avviare `PAPER_FORWARD_AB_START` solo se la promozione
+  il batch rolling validato, scadere le advice PAPER precedenti e avviare `PAPER_BOLLINGER_START` solo se la promozione
   rolling ha creato advice `PAPER_ELIGIBLE` WATCH-eligible. La BUY resta fail-closed finche' ACDC non vede vero il
-  contratto live della stessa advice. Questo evita di consumare advice tecniche `PROMOTED_RULE` non attribuite al batch
-  rolling appena validato e impedisce che una live revalidation istantanea negativa cancelli l'osservazione WATCH.
+  contratto Bollinger live della stessa advice.
 - `ROLLING_PROMOTION` deve usare `expireExisting=true` di default, non deve ricevere una short-list operativa di
   simboli e deve passare a DocBrown il `maxBuyAgeSeconds` runtime corrente. La selection rolling resta diagnostica/ranking:
   DocBrown promuove dal batch validato e scarta solo i simboli non promotable. La live revalidation istantanea viene
@@ -250,11 +239,11 @@ Regole:
   `latestRollingBatchAgeSeconds` supera `rem.ml.live_advice.max_buy_age_seconds`. In quel caso Kenshiro deve tornare a
   `auto-prefilter`: promuovere un batch stale genererebbe advice gia' fuori finestra e contaminerebbe il ciclo
   Forward A/B.
-- `AUTO_AB_STOP`, `PAPER_STOP` e `SHADOW_STOP` disabilitano l'automazione (`rem.ml.management.automation.enabled=false`)
-  e richiedono stop runtime ACDC. Lo STOP interrompe quindi ML/auto-cycle e runtime SHADOW/PAPER/RUN.
-- Il runtime e' pulito solo se non esistono posizioni `OPEN` ne' in `acdc_paper_position` ne' in
-  `acdc_shadow_position`. Kenshiro `/management/state` deve usare questo conteggio aggregato per `summary.openPositions`
-  e per bloccare `AUTO_AB_START`/scheduler; una SHADOW Forward A/B aperta vale come blocker anche se non e' PAPER.
+- `AUTO_BOLLINGER_STOP` e `PAPER_STOP` disabilitano l'automazione
+  (`rem.ml.management.automation.enabled=false`) e richiedono stop runtime ACDC. Lo STOP interrompe quindi ML/auto-cycle
+  e runtime PAPER.
+- Il runtime e' pulito solo se non esistono posizioni `OPEN` in `acdc_paper_position`. Kenshiro `/management/state`
+  deve usare questo conteggio per `summary.openPositions` e per bloccare `AUTO_BOLLINGER_START`/scheduler.
 - Le query diagnostiche Kenshiro su `acdc_rem_observation_candidate` per batch management devono filtrare anche
   `profile_id` oltre a `batch_id`, per usare l'indice `(profile_id, batch_id, ...)` ed evitare scansioni MySQL che
   bloccano `/management/state` o il ritorno delle action.
@@ -370,13 +359,6 @@ Regole:
 - Kenshiro `/management/state` deve esporre metriche di freshness: `latestAdviceAgeSeconds`,
   `latestActiveAdviceAgeSeconds`, `latestAdviceRemainingSeconds`, `latestSignalToAdviceSeconds`,
   `latestRollingSignalLagSeconds`, `latestRoundRobinDurationSeconds`, simbolo/source/generation latest advice.
-- `ENABLE_SIGNATURE_ADVICE` e `ENABLE_PAPER_CANDIDATES` sono action Kenshiro/FE di recovery REM: possono aggiornare
-  solo `acdc_shared_runtime_config` per abilitare rispettivamente `rem.ml.signature_advice.enabled=true` e
-  `rem.ml.paper_candidate.enabled=true`; non avviano trading, non chiamano ACDC/DocBrown e devono rispettare il current
-  step `ml-round-robin`.
-- `RESTORE_BASELINE_98_PROFILE` e' action Kenshiro/FE di recovery REM sullo step `ml-round-robin`: aggiorna solo
-  `acdc_shared_runtime_config` mantenendo `promotion.mode=BOLLINGER_ONLY`. Non crea advice, non promuove batch falliti,
-  non avvia trading e non sostituisce la forward A/B.
 - `ROLLING_VALIDATION` deve essere single-flight lato Kenshiro/FE: se una validazione e' gia' in corso, l'action deve
   risultare bloccata/disabilitata per evitare doppie richieste e deadlock sugli insert DocBrown.
 - La `ROLLING_VALIDATION` manuale avviata da `/management` usa il payload management con
