@@ -992,21 +992,13 @@ scripts/
 Script disponibili:
 
 ```text
-scripts/acdc-start-dry-run.sh
-scripts/acdc-start-shadow-run.sh
-scripts/acdc-start-paper-run.sh
-scripts/acdc-start-real-run.sh
-scripts/acdc-stop-run.sh
 scripts/acdc-run-rem-ml.sh
-scripts/acdc-stop-containers.sh
-scripts/acdc-best-winner-action.sh
 ```
 
 Uso consigliato:
 
 - preferire endpoint espliciti per diagnosi scientifiche;
 - usare script solo se accelerano azioni gia' comprese;
-- non usare `acdc-start-real-run.sh`;
 - non usare script PAPER se `ML_READY=false`.
 
 ### 8. Build E Deploy Container

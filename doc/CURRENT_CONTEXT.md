@@ -1,6 +1,6 @@
 # Current Context
 
-Ultimo aggiornamento: 2026-06-28 15:10 CEST.
+Ultimo aggiornamento: 2026-06-28 15:55 CEST.
 
 Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
@@ -30,6 +30,12 @@ TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
 ## Stato Ultima Attivita'
 
 Aggiornamento strategico MS in corso:
+
+- MS899: pulizia residuale DB/codice/script post Bollinger-only. Le tabelle `best_winner_signature` e
+  `best_winner_window_config` sono legacy: ACDC `V81` e DocBrown `V31` le droppano, e sono stati rimossi endpoint,
+  pagina FE, contratti comuni, script ACDC e modello Python DocBrown collegati. Le tabelle
+  `acdc_rem_observation_candidate` e `acdc_rem_data_quality_band_model` restano: la prima e' input operativo per
+  rolling validation/promotion e diagnostica management, la seconda e' ancora referenziata dal research job DocBrown.
 
 - Il processo REM runtime e' stato riallineato a Bollinger-only: `ML -> live-score -> WATCH -> BUY -> SELL -> forensics`
   resta invariato, ma i criteri decisionali sono solo `bb_*`.
