@@ -7,8 +7,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "acdc_live_ml_advice")
-public class LiveMlAdvice extends PanacheEntityBase {
+@Table(name = "acdc_live_bb_advice")
+public class LiveBbAdvice extends PanacheEntityBase {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;

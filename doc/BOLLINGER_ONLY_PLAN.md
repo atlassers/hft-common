@@ -30,7 +30,7 @@ Le PAPER `37` e `38` hanno validato il meccanismo tecnico ma non la qualita' eco
 - Il profilo `2h/1m` e' operativo.
 - Entrambe le run hanno comprato `SUSDC`.
 - Entrambe hanno avuto MFE netto `0`.
-- Entrambe sono uscite in `EXIT_ML_ADVICE_LOSS_CAP`.
+- Entrambe sono uscite in `EXIT_BB_ADVICE_LOSS_CAP`.
 
 Conclusione: il problema prioritario non e' che WATCH ignora Bollinger. Il problema e' che il flag unico
 `bb_buy_contract_pass` e' troppo debole/ambiguo per distinguere segnali Bollinger buoni da rientri inutili.
@@ -268,7 +268,7 @@ Interventi ACDC:
 
 Interventi DocBrown:
 
-- nessuna tabella nuova obbligatoria se `acdc_rem_observation_candidate.feature_json` e `acdc_live_ml_advice.advice_json`
+- nessuna tabella nuova obbligatoria se `acdc_rem_observation_candidate.feature_json` e `acdc_live_bb_advice.advice_json`
   bastano.
 
 Principio:

@@ -1,12 +1,12 @@
 package it.mbc.hft.common.rem.enums;
 
-public enum MlReadinessStatus {
-    ML_READY("ML_READY"),
+public enum BbReadinessStatus {
+    BB_READY("BB_READY"),
     NOT_READY("NOT_READY");
 
     private final String value;
 
-    MlReadinessStatus(String value) {
+    BbReadinessStatus(String value) {
         this.value = value;
     }
 

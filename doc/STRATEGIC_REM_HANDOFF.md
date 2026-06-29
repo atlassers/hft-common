@@ -50,14 +50,14 @@ Se una procedura qui descritta confligge con il piano strategico, va fermata e c
 - Dal 2026-06-28 il ciclo management e' PAPER-only Bollinger validation. SHADOW e Forward A/B 98 sono storico/legacy e
   non devono essere avviati da `/management`.
 - Dal 2026-06-28 MS904 il ciclo management non espone piu' toggles legacy `ENABLE_SIGNATURE_ADVICE` /
-  `ENABLE_PAPER_CANDIDATES`, ne' config runtime `rem.ml.signature_advice.*`, `rem.ml.paper_candidate.*` o
-  `rem.ml.rolling.selection.*`. Le migration nuove arrivano a `acdc_flyway_schema_history` versione `84`.
+  `ENABLE_PAPER_CANDIDATES`, ne' config runtime `bb.signature_advice.*`, `bb.paper_candidate.*` o
+  `bb.rolling.selection.*`. Le migration nuove arrivano a `acdc_flyway_schema_history` versione `84`.
 - Diary e checklist storici sono centralizzati in `hft-common/doc/<module>/<YYYY-MM-DD>/...`; per ACDC/REM usare
   `hft-common/doc/acdc/session/<YYYY-MM-DD>/...`. I progetti applicativi non devono mantenere copie operative dei diary.
 - Nessuna REAL.
 - Nessun H2 per test operativi.
 - MySQL/container obbligatori.
-- Nessuna PAPER validativa se `ML_READY=false`.
+- Nessuna PAPER validativa se `BB_READY=false`.
 - DocBrown espone sotto root path `/docbrown`.
 - Commit/push: usare naming convention workspace `MS<n>: <message>`, con `n = max(MS nei log workspace coinvolti) + 1`; per interventi multi-modulo logicamente unici usare lo stesso `MS<n>` in tutti i repo.
 - Contratti Java condivisi: ACDC, DocBrown e Kenshiro devono importare payload/enum/costanti/model/entity cross-modulo da
@@ -106,7 +106,7 @@ Se una procedura qui descritta confligge con il piano strategico, va fermata e c
   sono ammessi solo come shim verso `hft-common`.
 - Contratto advice separato: DocBrown live-score non deve modificare semanticamente i campi ML storici dell'advice.
   Deve produrre un blocco `history_*` copiato dal contratto ML/promozione storico e un blocco `live_*` speculare,
-  valorizzato con il live-score corrente. ACDC consuma `live_*` per valorizzare i campi canonici `ml_advice_*` usati
+  valorizzato con il live-score corrente. ACDC consuma `live_*` per valorizzare i campi canonici `bb_advice_*` usati
   dalle guardie runtime, ma conserva `history_*` per audit. Al BUY ACDC scrive `entry_*` nel `policy_json`; alla SELL
   PAPER/SHADOW aggiunge `exit_*` nel feature snapshot di uscita. La SELL deve propagare `history_*`, `live_*` ed
   `entry_*` dal `policy_json`, non ricalcolarli dai live feature di uscita.
@@ -121,7 +121,7 @@ Se una procedura qui descritta confligge con il piano strategico, va fermata e c
 - Nuovo cockpit operativo: il prossimo ciclo REM deve partire da FE `/management`, che chiama Kenshiro
   `/backoffice/management/*`. Gli endpoint ACDC/DocBrown sotto restano approvati come runtime/diagnostica, ma non sono
   l'interfaccia primaria per avviare il ciclo utente.
-- Kenshiro e' l'orchestratore di management: legge MySQL, calcola `ML_READY`, espone lifecycle/checklist/action e chiama
+- Kenshiro e' l'orchestratore di management: legge MySQL, calcola `BB_READY`, espone lifecycle/checklist/action e chiama
   endpoint ACDC/DocBrown esistenti solo quando una action FE lo richiede. Non aggiungere nuovi endpoint o carichi ad
   ACDC/DocBrown per la pagina management.
 
@@ -209,9 +209,9 @@ Regole:
   partire da FE anche quando il current step consultivo e' su un passo manuale, per evitare mismatch FE abilitato /
   backend `required step auto-prefilter`. Le altre action primarie manuali restano gated sul current step.
 - L'automazione persistente deve avere un tick interno Kenshiro, non dipendere dal refresh FE. Kenshiro usa scheduler
-  interno ogni 30 secondi per valutare `rem.ml.management.automation.next_run_after` e riavviare il worker quando il
+  interno ogni 30 secondi per valutare `bb.management.automation.next_run_after` e riavviare il worker quando il
   cooldown e' scaduto, se non ci sono PAPER o posizioni aperte.
-- Se un recreate/restart del container lascia in MySQL `rem.ml.management.automation.status=RUNNING_CYCLE` senza worker
+- Se un recreate/restart del container lascia in MySQL `bb.management.automation.status=RUNNING_CYCLE` senza worker
   in memoria, Kenshiro deve trattarlo come ciclo stale dopo il timeout conservativo e riconciliare fail-closed in
   cooldown usando il terminale persistito del round-robin, quando disponibile (`PROMOTION_NO_ADVICE`,
   `NO_PROMOTABLE_CANDIDATE`, `FAIL_SELECTION_BIAS`, `LIFECYCLE_CAPTURE_REQUIRES_SHADOW_PREFLIGHT`).
@@ -236,11 +236,11 @@ Regole:
   riportata in diagnostica ma non delimita la promozione: e' la WATCH ACDC a rivalutare lo stesso contratto fino a BUY o
   scadenza.
 - Un batch rolling con status promotable non deve mantenere il cockpit su `auto-promotion` se
-  `latestRollingBatchAgeSeconds` supera `rem.ml.live_advice.max_buy_age_seconds`. In quel caso Kenshiro deve tornare a
+  `latestRollingBatchAgeSeconds` supera `bb.live_advice.max_buy_age_seconds`. In quel caso Kenshiro deve tornare a
   `auto-prefilter`: promuovere un batch stale genererebbe advice gia' fuori finestra e contaminerebbe il ciclo
   Forward A/B.
 - `AUTO_BOLLINGER_STOP` e `PAPER_STOP` disabilitano l'automazione
-  (`rem.ml.management.automation.enabled=false`) e richiedono stop runtime ACDC. Lo STOP interrompe quindi ML/auto-cycle
+  (`bb.management.automation.enabled=false`) e richiedono stop runtime ACDC. Lo STOP interrompe quindi ML/auto-cycle
   e runtime PAPER.
 - Il runtime e' pulito solo se non esistono posizioni `OPEN` in `acdc_paper_position`. Kenshiro `/management/state`
   deve usare questo conteggio per `summary.openPositions` e per bloccare `AUTO_BOLLINGER_START`/scheduler.
@@ -259,8 +259,8 @@ Regole:
   chiuse, PnL, PASS/FAIL baseline o evidenza Forward A/B pulita. Se un gruppo A/B ha richiesto questa riconciliazione,
   classificarlo `INCONCLUSIVE_LIFECYCLE_CONTAMINATED`.
 - Se la rolling validation arriva alla promotion ma non crea advice, Kenshiro deve persistere
-  `rem.ml.management.round_robin.status=PROMOTION_NO_ADVICE` e i dettagli
-  `rem.ml.management.round_robin.promotion_rows` / `promotion_statuses`. Non va mascherato come
+  `bb.management.round_robin.status=PROMOTION_NO_ADVICE` e i dettagli
+  `bb.management.round_robin.promotion_rows` / `promotion_statuses`. Non va mascherato come
   `FAIL_SELECTION_BIAS`, perche' la diagnosi e' diversa.
 - DocBrown rolling validation deve usare solo outcome maturi: con `horizonSeconds=900` le finestre di classificazione
   devono escludere il trailing horizon non ancora osservabile e `evaluate()` non deve persistere righe candidate se
@@ -269,9 +269,9 @@ Regole:
   promotion. Se questo riduce supporto/holdout, il ciclo deve restare fail-closed invece di classificare il futuro
   incompleto come perdita.
 - Quando l'autociclo Kenshiro termina fail-closed prima di PAPER, deve eseguire e persistere automaticamente un summary
-  diagnostico DB-only bounded in `rem.ml.management.auto.diagnostics.summary`, con reason e timestamp in
-  `rem.ml.management.auto.diagnostics.reason` / `updated_at` e copia storica su
-  `rem.ml.management.round_robin.audit.{batchId}.auto_diagnostics_summary`. Il pacchetto e' solo diagnostico: non crea
+  diagnostico DB-only bounded in `bb.management.auto.diagnostics.summary`, con reason e timestamp in
+  `bb.management.auto.diagnostics.reason` / `updated_at` e copia storica su
+  `bb.management.round_robin.audit.{batchId}.auto_diagnostics_summary`. Il pacchetto e' solo diagnostico: non crea
   advice, non promuove, non avvia SHADOW/PAPER/REAL, non cambia gate e non conta come Forward A/B evidence.
   Mapping Bollinger-only approvato:
   - `PROMOTION_CREATED_NO_ADVICE` / `PROMOTION_NO_ADVICE`: `ROLLING_SELECTION_ATTRIBUTION_AUDIT`;
@@ -282,32 +282,32 @@ Regole:
   salvarne una versione bounded/troncata e mantenere il lifecycle fail-closed leggibile; non deve abortire l'autociclo
   solo per eccesso di lunghezza del marker diagnostico.
 - A ogni nuova `ROLLING_VALIDATION`, Kenshiro deve azzerare i marker promotion del ciclo precedente
-  (`rem.ml.management.round_robin.promotion_rows` e `promotion_statuses`) prima di eventuale nuova promotion. I dettagli
+  (`bb.management.round_robin.promotion_rows` e `promotion_statuses`) prima di eventuale nuova promotion. I dettagli
   promotion devono riferirsi solo al batch corrente; su `FAIL_SELECTION_BIAS` / `NO_PROMOTABLE_CANDIDATE` non devono
   restare righe `PROMOTED` vecchie.
 - Dal fix MS747 DocBrown include in ogni row di `rolling-paper-promotion` il campo `rejectionReasons`.
   Per `SKIPPED_LIVE_REVALIDATION_CONTRACT` deve indicare la feature live, il valore osservato e il range violato
   oppure il caso `no live revalidation features checked`. Kenshiro persiste queste righe senza trasformarle, quindi la
-  prima diagnostica dopo `PROMOTION_NO_ADVICE` e' leggere `rem.ml.management.round_robin.promotion_rows`.
+  prima diagnostica dopo `PROMOTION_NO_ADVICE` e' leggere `bb.management.round_robin.promotion_rows`.
 - Dopo `FAIL_SELECTION_BIAS`, `NO_PROMOTABLE_CANDIDATE`, `PROMOTION_NO_ADVICE`, timeout o errore tecnico il cooldown
   resta quello standard di `10m`; non accorciarlo per forzare PAPER. Il retry breve da live-revalidation drift e' ritirato.
 - Dopo evidenza PAPER execution `36` (`XAIUSDC`) con MFE sopra safe (`maxNetReturn=0.007271`, safe `0.003`) ma SELL
-  finale negativa, il guard `exit_ml_advice_take_profit` deve restare `ACTIVE` con priorita' precedente al dynamic
+  finale negativa, il guard `exit_bb_advice_take_profit` deve restare `ACTIVE` con priorita' precedente al dynamic
   trailing. Il dynamic trailing resta fallback; il safe target deve essere catturato appena osservato.
-- Il dynamic trailing ML advice deve usare lo stesso calcolo in runtime e diagnostics. `trailingArmed` indica arming
+- Il dynamic trailing BB advice deve usare lo stesso calcolo in runtime e diagnostics. `trailingArmed` indica arming
   reale della policy, non semplice `maxNetReturn > 0`. Il default operativo e' coerente con V67: se il metadata non
   impone `require_safe_for_trailing=true`, l'arming usa `min_arm_net_return`/`safe_arm_ratio`; inoltre
   `protect_positive_mfe=true` permette di uscire quando un trade ha avuto MFE netto positivo e poi rientra sotto
   `break_even_floor`, senza aspettare il timeout.
 - Dopo evidenza PAPER execution `95` con tre BUY confermati da WATCH ma `maxNetReturn=0` fino a timeout, il guard
-  `exit_ml_advice_no_mfe_decay` deve restare `ACTIVE` tra dynamic trailing/take-profit e loss-cap/timeout. Operatore:
-  `ML_ADVICE_NO_MFE_DECAY_EXIT`; reason: `EXIT_ML_ADVICE_NO_MFE_DECAY`. Il timeout no-MFE deve arrivare
-  esclusivamente da `ml_advice_no_mfe_timeout_seconds` pubblicato dall'ML/advice. Se il campo manca, ACDC resta
+  `exit_bb_advice_no_mfe_decay` deve restare `ACTIVE` tra dynamic trailing/take-profit e loss-cap/timeout. Operatore:
+  `BB_ADVICE_NO_MFE_DECAY_EXIT`; reason: `EXIT_BB_ADVICE_NO_MFE_DECAY`. Il timeout no-MFE deve arrivare
+  esclusivamente da `bb_advice_no_mfe_timeout_seconds` pubblicato dall'ML/advice. Se il campo manca, ACDC resta
   fail-closed e non ricostruisce fallback da durata, ratio, metadata DB o config runtime. Non usare questa guardia per
   allargare selection o PAPER.
 - Le advice persistite con `status='ACTIVE'` ma `advice_valid_until < CURRENT_TIMESTAMP` sono residui operativi e devono
   essere marcate `EXPIRED` prima di una run pulita. Una PAPER Forward A/B non deve consumare advice vecchie o advice
-  prodotte prima del contratto `ml_advice_no_mfe_timeout_seconds`.
+  prodotte prima del contratto `bb_advice_no_mfe_timeout_seconds`.
 - I diagnostics PAPER scoring e Forward A/B devono esporre `noMfeDecayExits`; senza questo campo, run come `103`
   sembrano prive di exit classificata anche se il SELL no-MFE ha funzionato.
 - Se l'automazione non e' abilitata, gli step manuali restano eseguibili secondo current-step gating.
@@ -318,7 +318,7 @@ Regole:
   se chiamate fuori ordine.
 - Le action diagnostiche possono restare disponibili anche sugli step non correnti.
 - `REAL_RUN` deve restare bloccata.
-- `PAPER_FORWARD_AB_START` deve restare fail-closed se `ML_READY=false`.
+- `PAPER_FORWARD_AB_START` deve restare fail-closed se `BB_READY=false`.
 - Il runtime PAPER ACDC deve usare un hot path di orchestrazione per advice live `PAPER_ELIGIBLE`: quando esistono
   advice attive, il BUY path valuta i simboli advice da Influx prima dell'universo completo e mantiene comunque gli open
   positions per SELL. Scopo: ridurre la granularita' di rivalutazione dentro `max_buy_age_seconds` senza cambiare
@@ -355,7 +355,7 @@ Regole:
   I profili micro/fast servono a ridurre latenza operativa e refresh delle regole, ma non sostituiscono full
   audit/forward A/B per validazione scientifica. `MICRO_REFRESH_40` e `ROUND_ROBIN_DEEP_30` sono scheduling
   computazionale: non escludono simboli in modo definitivo, non modificano BUY/SELL e non autorizzano PAPER se
-  `ML_READY=false`.
+  `BB_READY=false`.
 - Kenshiro `/management/state` deve esporre metriche di freshness: `latestAdviceAgeSeconds`,
   `latestActiveAdviceAgeSeconds`, `latestAdviceRemainingSeconds`, `latestSignalToAdviceSeconds`,
   `latestRollingSignalLagSeconds`, `latestRoundRobinDurationSeconds`, simbolo/source/generation latest advice.
@@ -364,18 +364,18 @@ Regole:
 - La `ROLLING_VALIDATION` manuale avviata da `/management` usa il payload management con
   `universeMode=ROUND_ROBIN_SLA`, universo base configurabile e audit periodico; lo scheduler resta solo computazionale e
   non e' un filtro BUY/SELL. L'autociclo `AUTO_AB_START` usa invece chunk piccoli per abbattere la latenza:
-  `rem.ml.management.auto.round_robin.chunk_symbol_limit` default `30`,
-  `rem.ml.management.auto.round_robin.hot_symbol_limit` default `10`,
-  `rem.ml.management.auto.round_robin.per_symbol_limit` default `8`,
-  `rem.ml.management.auto.round_robin.window_minutes` default `5`,
-  `rem.ml.management.auto.round_robin.feature_window_minutes` default `10`. Le finestre automatiche piu' corte sono
+  `bb.management.auto.round_robin.chunk_symbol_limit` default `30`,
+  `bb.management.auto.round_robin.hot_symbol_limit` default `10`,
+  `bb.management.auto.round_robin.per_symbol_limit` default `8`,
+  `bb.management.auto.round_robin.window_minutes` default `5`,
+  `bb.management.auto.round_robin.feature_window_minutes` default `10`. Le finestre automatiche piu' corte sono
   un intervento di freschezza/latency, non un allargamento dei gate: `horizonSeconds` e vincoli PAPER restano invariati.
   Un chunk senza candidato termina fail-closed e lascia al tick successivo l'analisi dello spezzone successivo; un chunk
   promuovibile passa subito a promotion/runtime, senza creare advice preliminari destinate a scadere durante una
   validazione lunga.
 - Il ramo parallelo lifecycle-capture e il relativo preflight SHADOW sono ritirati dal processo operativo
   Bollinger-only. Non usare `LIFECYCLE_CAPTURE_SHADOW_PREFLIGHT`, non creare profili
-  `SHADOW_LIFECYCLE_CAPTURE_PREFLIGHT_V1` e non salvare nuove config `rem.ml.shadow.lifecycle_capture.*`.
+  `SHADOW_LIFECYCLE_CAPTURE_PREFLIGHT_V1` e non salvare nuove config `bb.shadow.lifecycle_capture.*`.
 - `REM_PRE_BUY_WATCH_V1` e' il protocollo runtime corretto per la WATCH REM: non e' una action manuale e non e' un
   profilo SHADOW tecnico. Entra nel normale scheduler BUY dopo che un candidato e' gia' BUY-eligible. ACDC registra il
   candidato in `acdc_pre_buy_watch` con stato `WATCHING`, timeout derivato dall'ML/advice
@@ -385,7 +385,7 @@ Regole:
   conferma registra `BUY_REJECTED_RUNTIME`. `PAPER_STOP`, `PAPER_STOP_BUY`, `SHADOW_STOP` e `SHADOW_STOP_BUY` devono
   chiudere ogni WATCH ancora `WATCHING` della execution: `EXPIRED` se il timeout e' gia' superato, altrimenti
   `ABANDONED` con reason di stop. Il watch conta come BUY pending ai fini dei limiti operativi. Non introduce soglie
-  parallele, non allarga gate/live/SELL, non promuove, non avvia PAPER se `ML_READY=false` e non avvia REAL.
+  parallele, non allarga gate/live/SELL, non promuove, non avvia PAPER se `BB_READY=false` e non avvia REAL.
 - Una WATCH gia' aperta deve essere processata anche se il tick successivo non ripete il flag
   `pre_buy_watch_required`: il contratto da rivalutare e' quello salvato/aperto dalla WATCH. Se il BUY contract non e'
   ancora vero, la WATCH resta `WATCHING` con reason `WATCH_WAITING_BUY_CONTRACT`, senza invalidarsi immediatamente.
@@ -402,29 +402,29 @@ Regole:
   SHADOW/PAPER/REAL e non conta come evidenza Forward A/B.
 - Dopo una `ROLLING_VALIDATION` con DocBrown score-breakdown abilitato, Kenshiro persiste diagnostica compatta e bounded
   nei marker:
-  `rem.ml.management.round_robin.selected_score_breakdown` e
-  `rem.ml.management.round_robin.selection_score_rows`; per lookup storico usa anche
-  `rem.ml.management.round_robin.audit.{batchId}.selected_score_breakdown` e
-  `rem.ml.management.round_robin.audit.{batchId}.selection_score_rows`. `ROLLING_SELECTION_ATTRIBUTION_AUDIT` restituisce
+  `bb.management.round_robin.selected_score_breakdown` e
+  `bb.management.round_robin.selection_score_rows`; per lookup storico usa anche
+  `bb.management.round_robin.audit.{batchId}.selected_score_breakdown` e
+  `bb.management.round_robin.audit.{batchId}.selection_score_rows`. `ROLLING_SELECTION_ATTRIBUTION_AUDIT` restituisce
   questi marker come `docBrownSelectedScoreBreakdown` e `docBrownSelectionScoreRows`. Sono diagnostica DB-only:
   spiegano lo `stabilityScore` effettivo con chiavi sintetiche per i contributi `safe_hit`, `zero_mfe`, `early_trough`,
   `no_safe_opportunity`, `drawdown`, `instability` e per `lifecycleStatus` (`ls`); `selection_score_rows` contiene solo
   selected e prima alternativa per restare sotto il limite DB dei marker. Non cambiano gate, non creano advice e non
   sostituiscono Forward A/B 98.
 - Rolling selection ranking DocBrown puo' usare pesi runtime cost-aware senza cambiare i gate PAPER:
-  `rem.ml.rolling.selection.edge_weight`, `mfe_rate_weight`, `q10_mfe_weight`,
+  `bb.rolling.selection.edge_weight`, `mfe_rate_weight`, `q10_mfe_weight`,
   `safe_hit_weight`, `zero_mfe_penalty_weight`, `early_trough_penalty_weight`, `instability_penalty_weight`,
   `drawdown_penalty_weight`, `lifecycle_capture_weight`, `decay_after_safe_relief_weight`. Questi pesi influenzano
   l'ordinamento diagnostico dei candidati, ma non producono una short-list operativa e non rimuovono i requisiti di
   promozione su holdout, worst-window, MFE eseguibile, q10 MFE
-  positivo, safe/economic return e `ML_READY`. Default legacy: edge/mfe/q10 `0`, instability `1.50`, drawdown `1.25`;
+  positivo, safe/economic return e `BB_READY`. Default legacy: edge/mfe/q10 `0`, instability `1.50`, drawdown `1.25`;
   profilo maturity/tail-aware corrente: safe-hit `0.002`, zero-MFE penalty `0.006`, early-trough penalty `0.004`.
   Profilo cost-aware usato per refinement: edge `1`, mfe-rate `0.002`, q10 MFE `2`, instability `0.35`,
   drawdown `0.5`. Il refinement lifecycle-capture approvato dal Consiglio usa solo pesi DB-driven reversibili:
   `lifecycle_capture_weight` premia candidati con safe-hit/MFE robusti e zero-MFE basso; `decay_after_safe_relief_weight`
   alleggerisce parzialmente la penalita' drawdown solo quando esiste post-safe decay misurato. Entrambi default `0`,
   non allargano gate, non cambiano SELL e non sostituiscono la Forward A/B 98.
-- La rolling validation management puo' usare `rem.ml.rolling.lookback.seconds` per ridurre o ampliare la finestra
+- La rolling validation management puo' usare `bb.rolling.lookback.seconds` per ridurre o ampliare la finestra
   osservata dal payload Kenshiro verso DocBrown. Bounds operativi `1200..7200`; il profilo Bollinger-only corrente usa
   `7200` secondi di storico, `market.microbar.seconds=60` e `featureWindowMinutes=20`, cosi' BB20 lavora su circa 20
   minuti coerenti tra ML/live-score/WATCH. La WATCH puo' continuare a essere valutata frequentemente dal runtime, ma il
@@ -458,11 +458,11 @@ Regole:
   Forward A/B 98 e non autorizza tuning da un singolo esito. Stop/valutazione: dopo primo BUY chiuso o breve finestra di
   probe, usare `SHADOW_STOP_BUY` e lasciare drain; se i probe producono `zero_mfe_rate` alto, safe-hit nullo o loss-cap
   ripetuti, classificare `FALSE_CONTINUATION_CONFIRMED` / `RULELESS_EV_SELECTOR_NOT_MONETIZABLE_AS_IS`.
-- I probe automatici/tecnici `rem.ml.management.auto.shadow_probe.*` e `SHADOW_PAPER_LIKE_RELAXED_98_PROBE` sono
-  ritirati. Non usarli come modo per osservare WATCH, non salvare nuove config `rem.ml.shadow.paper_like.*` e non
+- I probe automatici/tecnici `bb.management.auto.shadow_probe.*` e `SHADOW_PAPER_LIKE_RELAXED_98_PROBE` sono
+  ritirati. Non usarli come modo per osservare WATCH, non salvare nuove config `bb.shadow.paper_like.*` e non
   bypassare `REVERSAL_ML_RULE_MISSING` per forzare una WATCH. La WATCH deve arrivare da advice ML/promossa tramite
   `REM_PRE_BUY_WATCH_V1`.
-- `SAVE_MANAGEMENT_CONFIG` e' action Kenshiro/FE per salvare configurazioni `rem.ml.*` editabili in
+- `SAVE_MANAGEMENT_CONFIG` e' action Kenshiro/FE per salvare configurazioni `bb.*` editabili in
   `acdc_shared_runtime_config`. E' bloccata se c'e' PAPER running o qualsiasi posizione aperta. Non avvia
   SHADOW/PAPER/REAL, non crea advice e non promuove batch.
 - Le action diagnostiche legacy near-miss/EV/lifecycle/latency/inverse/live-revalidation/entry-decay/false-continuation
@@ -548,7 +548,7 @@ Checklist operativa:
    - non cambiare ranking senza prima produrre confronto su piu' batch freschi.
 
 6. Promotion e rejection reasons:
-   - dopo `PROMOTION_NO_ADVICE`, leggere `rem.ml.management.round_robin.promotion_rows` e `promotion_statuses`;
+   - dopo `PROMOTION_NO_ADVICE`, leggere `bb.management.round_robin.promotion_rows` e `promotion_statuses`;
    - classificare ogni riga rispetto ai soli campi Bollinger, freshness e completezza del contratto;
    - se la promotion arriva ma non crea advice, rigenerare segnali freschi invece di introdurre retry live-revalidation.
 
@@ -578,7 +578,7 @@ Stop condition:
 
 Il braccio A rappresenta il contratto della sessione `98`: `reversal_pre_trough_drop` fuori dal live hard gate, `reversal_slope_delta` dentro, nessun ulteriore tuning. Se non e' ancora disponibile come runtime separato, deve essere calcolato almeno come shadow/counterfactual sullo stesso snapshot set della finestra realtime.
 
-Il braccio B rappresenta la pipeline corrente: `ROLLING_PAPER`, source generation binding, live revalidation, economic safe, `ML_READY=true` per PAPER.
+Il braccio B rappresenta la pipeline corrente: `ROLLING_PAPER`, source generation binding, live revalidation, economic safe, `BB_READY=true` per PAPER.
 
 Payload minimo braccio A:
 
@@ -703,7 +703,7 @@ FROM acdc_paper_position
 WHERE status = \"OPEN\";
 
 SELECT status, COUNT(*) c, MAX(created_at) max_created, MAX(advice_valid_until) max_until
-FROM acdc_live_ml_advice
+FROM acdc_live_bb_advice
 GROUP BY status;
 
 SELECT COUNT(*) reversal_rule_table
@@ -762,7 +762,7 @@ curl -sS -X POST -H 'Content-Type: application/json' \
 
 Uso:
 
-- `paper/run`: solo dopo preflight `ML_READY=true`;
+- `paper/run`: solo dopo preflight `BB_READY=true`;
 - `paper/stop-buy`: blocca nuove BUY e lascia drenare SELL;
 - `paper/stop`: chiude execution se `reserved_budget=0`, altrimenti comportarsi come drain/stop-buy.
 
@@ -813,7 +813,7 @@ Nota:
 - per PAPER validativa deve restituire `ready=true`;
 - advice non Bollinger o non `PAPER_ELIGIBLE` non bastano per readiness validativa;
 - `PAPER_ELIGIBLE_ADVICE_ACTIVE_MISSING` blocca PAPER;
-- `sourceGenerationId` e `adviceSource` sono colonne queryable su `acdc_live_ml_advice`;
+- `sourceGenerationId` e `adviceSource` sono colonne queryable su `acdc_live_bb_advice`;
 - una PAPER nuova viene legata a `expectedSourceGenerationId` e i BUY incoerenti vengono rifiutati;
 - l'endpoint e' intenzionalmente fast e non include il replay completo REM, che resta su `/diagnostics/acdc/rem/readiness`.
 
@@ -984,7 +984,7 @@ Uso consigliato:
 
 - preferire endpoint espliciti per diagnosi scientifiche;
 - usare script solo se accelerano azioni gia' comprese;
-- non usare script PAPER se `ML_READY=false`.
+- non usare script PAPER se `BB_READY=false`.
 
 ### 8. Build E Deploy Container
 
@@ -1058,7 +1058,7 @@ docker rm -f docbrown
 docker compose --env-file /home/mbc/Documenti/ws/java/hft/acdc/docker/vpn/.env -f docker-compose.yml up -d docbrown
 ```
 
-### 9. Preflight ML_READY Manuale Finche' L'Endpoint Non Esiste
+### 9. Preflight BB_READY Manuale Finche' L'Endpoint Non Esiste
 
 Eseguire questi controlli prima di qualunque PAPER:
 
@@ -1073,7 +1073,7 @@ FROM acdc_paper_position
 WHERE status=\"OPEN\";
 
 SELECT status, COUNT(*) c, MAX(advice_valid_until) max_until
-FROM acdc_live_ml_advice
+FROM acdc_live_bb_advice
 GROUP BY status;
 
 SELECT COUNT(*) post_sell_forensics_rows
@@ -1096,7 +1096,7 @@ Fail-closed se:
 
 ### 10. Monitor Run PAPER
 
-Usare solo dopo `ML_READY=true`.
+Usare solo dopo `BB_READY=true`.
 
 ```bash
 OUT=/tmp/session-next-paper-run
@@ -1145,7 +1145,7 @@ jq '{rows,missedReversals,noReversalConfirmed,inconclusiveGranularity,inconclusi
 
 ## Nota MS890
 
-Nel path Bollinger-only, ACDC non deve pretendere righe legacy in `acdc_reversal_ml_rule` per dichiarare `ML_READY`.
+Nel path Bollinger-only, ACDC non deve pretendere righe legacy in `acdc_reversal_ml_rule` per dichiarare `BB_READY`.
 La tabella legacy deve essere assente nello schema operativo. Restano blocker: assenza advice live, assenza advice
 paper-eligible, contratto scaduto/incompleto e posizioni PAPER aperte.
 
@@ -1153,7 +1153,7 @@ paper-eligible, contratto scaduto/incompleto e posizioni PAPER aperte.
 
 Per giudicare WATCH separare sempre due piani:
 
-- rispetto del trigger: BUY ammesso solo se la decisione ENTRY passa, cioe' `ml_advice_paper_eligible=1` dopo
+- rispetto del trigger: BUY ammesso solo se la decisione ENTRY passa, cioe' `bb_advice_paper_eligible=1` dopo
   live-revalidation/freshness contract;
 - qualita' del contratto: anche con trigger rispettato, una run con `maxNetReturn=0` e no-MFE exit e' fallimento del
   contratto ML/live, non prova positiva della strategia.

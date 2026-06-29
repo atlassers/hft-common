@@ -17,7 +17,7 @@ TODO; procedure, endpoint, payload e diagnostica stabile stanno nell'handoff.
 ## Vincoli Hard Correnti
 
 - REAL vietata.
-- PAPER solo da ciclo `/management` e solo se `ML_READY=true`.
+- PAPER solo da ciclo `/management` e solo se `BB_READY=true`.
 - Il ciclo operativo parte da FE `/management` -> Kenshiro `/backoffice/management/*`.
 - `/pipelines` non e' path operativo primario.
 - Non allargare gate/live/SELL per forzare PAPER.
@@ -40,13 +40,13 @@ Aggiornamento operativo MS904 completato:
 - `docbrown` promuove advice setup-specifiche:
   - `BB_REENTRY_MEAN_REVERSION_LONG`;
   - `BB_SQUEEZE_BREAKOUT_LONG`.
-- `docbrown` non usa piu' pesi DB `rem.ml.rolling.selection.*` per ordinare le candidate.
+- `docbrown` non usa piu' pesi DB `bb.rolling.selection.*` per ordinare le candidate.
 - `acdc` compra da WATCH solo con dispatch setup-specifico e fail-closed se setup/trigger/soglie Bollinger mancano.
 - `acdc` migration `V84__bollinger_only_v2_runtime_config_purge.sql` rimuove dal DB live:
-  - `rem.ml.signature_advice.*`;
-  - `rem.ml.paper_candidate.*`;
-  - `rem.ml.rolling.selection.*`;
-  - audit round-robin storici persistiti sotto `rem.ml.management.round_robin.audit.*`.
+  - `bb.signature_advice.*`;
+  - `bb.paper_candidate.*`;
+  - `bb.rolling.selection.*`;
+  - audit round-robin storici persistiti sotto `bb.management.round_robin.audit.*`.
 - `kenshiro` espone solo azioni management Bollinger/PAPER: niente SHADOW, niente Forward A/B, niente enable
   signature/paper-candidate.
 - `hft-fe` `/management` e' allineato al ciclo PAPER Bollinger-only e non espone azioni legacy.
@@ -90,7 +90,7 @@ Validazione runtime post-V84:
   - `openPositions=0`;
   - `activeAdvice=0`;
   - `paperEligibleContractActiveAdvice=0`;
-  - `ML_READY=false`;
+  - `BB_READY=false`;
   - `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`;
   - automazione `STOPPED`.
 
@@ -108,7 +108,7 @@ Aggiornamento strategico MS in corso:
   `stan_strategy_parameters`, `scalping_scout_candidate_dataset_config`, `scalping_scout_candidate_dataset_run`,
   `scalping_scout_runtime_config`, `acdc_outcome_signature`, `acdc_outcome_training_sample` e
   `acdc_rem_data_quality_band_model` sono legacy nel processo Bollinger-only e vengono droppate da nuove migration.
-  Kenshiro `/management` legge le candidate operative da `acdc_live_ml_advice`, non da parametri HFT legacy.
+  Kenshiro `/management` legge le candidate operative da `acdc_live_bb_advice`, non da parametri HFT legacy.
 
 - MS899: pulizia residuale DB/codice/script post Bollinger-only. Le tabelle `best_winner_signature` e
   `best_winner_window_config` sono legacy: ACDC `V81` e DocBrown `V31` le droppano, e sono stati rimossi endpoint,
@@ -123,7 +123,7 @@ Aggiornamento strategico MS in corso:
 - `hft-common`: aggiunte le costanti condivise Bollinger per feature, contract block, baseline label e filtri candidato.
 - `docbrown`: candidate/rolling promotion non generano piu' regole `symbol=...`; live-score rank e target cap non usano
   piu' slope/trough/reversal; live revalidation e' limitata a feature Bollinger.
-- `acdc`: WATCH conferma il BUY solo su `bb_buy_contract_pass`; `ML_ADVICE_PAPER_ELIGIBLE` richiede contratto Bollinger
+- `acdc`: WATCH conferma il BUY solo su `bb_buy_contract_pass`; `BB_ADVICE_PAPER_ELIGIBLE` richiede contratto Bollinger
   completo/fresco ma non blocca piu' per drift/live-revalidation/reversal.
 - `acdc`: migration `V76__bollinger_only_watch_entry.sql` disattiva le guardie ENTRY legacy di mercato,
   `V77__bollinger_only_entry_ranking.sql` lascia attivo un solo ranking ENTRY (`bb_buy_contract_pass`) e
@@ -134,11 +134,11 @@ Aggiornamento strategico MS in corso:
   live-score e WATCH; il polling WATCH puo' restare piu' frequente, ma il trigger BUY resta `bb_buy_contract_pass=1`.
 - Validazione runtime immediata post-cambio:
   - PAPER `37`, group `ab98-20260628T163823Z`, generation `management-rolling-20260628T163751Z`: `SUSDC`, closed
-    `EXIT_ML_ADVICE_LOSS_CAP`, hold `23s`, max MFE netto `0`, net `-0.009032604668395701`,
+    `EXIT_BB_ADVICE_LOSS_CAP`, hold `23s`, max MFE netto `0`, net `-0.009032604668395701`,
     realized quote `-0.22581511658452`. Contract completo; entry drift non passato (`0.0085949177877429 > 0.0015`),
     quindi evidenza contaminata per analisi economica.
   - PAPER `38`, group `ab98-20260628T164131Z`, generation `management-rolling-20260628T164107Z`: `SUSDC`, closed
-    `EXIT_ML_ADVICE_LOSS_CAP`, hold `101s`, max MFE netto `0`, net `-0.008278373382624769`,
+    `EXIT_BB_ADVICE_LOSS_CAP`, hold `101s`, max MFE netto `0`, net `-0.008278373382624769`,
     realized quote `-0.20695933439881`. Contract completo, `entry_drift=0`, `entry_drift_pass=1`.
   - Post-sell forensics `37`/`38`: nessun recupero/safe hit osservato dopo exit, ma verdict
     `INCONCLUSIVE_GRANULARITY` per dati post-exit a gap 56-60s.
@@ -170,11 +170,11 @@ Aggiornamento operativo MS884:
   (`selectedCandidate` + top candidates non duplicati). DocBrown promuove comunque solo il subset che passa
   promotability e live revalidation.
 - `kenshiro`: il payload di `ROLLING_PROMOTION` passa `maxBuyAgeSeconds` dal runtime
-  `rem.ml.live_advice.max_buy_age_seconds`; valore operativo corrente: `75`.
-- `docbrown`: `ROLLING_PAPER` ora pubblica anche `ml_advice_no_mfe_timeout_seconds` e i blocchi completi
+  `bb.live_advice.max_buy_age_seconds`; valore operativo corrente: `75`.
+- `docbrown`: `ROLLING_PAPER` ora pubblica anche `bb_advice_no_mfe_timeout_seconds` e i blocchi completi
   `history_*`/`live_*`, inclusi `live_max_buy_age_seconds` e `live_no_mfe_timeout_seconds`.
 - Validazione runtime: run PAPER `143` e SHADOW `144` sono partite dopo il fix di contract rolling. PAPER `143` ha
-  comprato solo `SYRUPUSDC` da `ROLLING_PAPER`, ha chiuso `EXIT_ML_ADVICE_NO_MFE_DECAY`, contract diagnostics
+  comprato solo `SYRUPUSDC` da `ROLLING_PAPER`, ha chiuso `EXIT_BB_ADVICE_NO_MFE_DECAY`, contract diagnostics
   `complete=true`, hold `125s`, net return `-0.003277493606138107`. SHADOW `144` e' partita senza posizioni.
 - Retry successivi: short-list rolling `RESOLVUSDC,SNXUSDC,REUSDC` e poi `RESOLVUSDC,REUSDC,SNXUSDC` non hanno prodotto
   advice PAPER per live revalidation drift / non-promotability. Il sistema e' tornato fail-closed a
@@ -188,11 +188,11 @@ stringhe/contract e separazione esplicita dei blocchi `history_*`, `live_*`, `en
 
 Diagnosi corretta:
 
-- Le posizioni PAPER `99`-`105` avevano `policy_json.ml_advice_no_mfe_timeout_seconds = NULL`.
+- Le posizioni PAPER `99`-`105` avevano `policy_json.bb_advice_no_mfe_timeout_seconds = NULL`.
 - Dopo il primo fix, DocBrown pubblicava la key nei `ruleJson` di mining/promotion, ma non nel path effettivo
-  `LiveMlAdviceScoringService.liveAdvice(...)` usato dal ciclo management.
+  `LiveBbAdviceScoringService.liveAdvice(...)` usato dal ciclo management.
 - Le RUN `107`/`108` e `109`/`110` del 2026-06-27 restano contaminate per no-MFE: la generation live non conteneva
-  `ml_advice_no_mfe_timeout_seconds`; SHADOW `110` e' anche lifecycle-contaminata per stop/abandon.
+  `bb_advice_no_mfe_timeout_seconds`; SHADOW `110` e' anche lifecycle-contaminata per stop/abandon.
 - I reject `PAPER_BUDGET_OR_EXCHANGE_RULES_REJECTED` osservati non erano exchange filter: con budget PAPER 100,
   `min_trade_quote=25` e fee, dopo 3 posizioni restavano circa 24.925 quote, sotto il minimo per un quarto BUY.
 - WATCH non e' bocciata: nelle run pulite successive ha aperto, confermato BUY e alimentato SELL no-MFE correttamente.
@@ -204,23 +204,23 @@ Diagnosi del Consiglio:
 - Mediano pragmatico: correggere anche il live-score producer e aggiungere un guardrail ACDC di entry/readiness per non
   avviare PAPER con advice prive del campo.
 - Decisione unica: no-MFE runtime usa solo il timeout pubblicato dall'advice live (`live_no_mfe_timeout_seconds`,
-  mappato in ACDC nel campo canonico `ml_advice_no_mfe_timeout_seconds` per le guardie). ACDC deve considerare non
+  mappato in ACDC nel campo canonico `bb_advice_no_mfe_timeout_seconds` per le guardie). ACDC deve considerare non
   contract-active e respingere PAPER ENTRY se il campo manca.
 
 Implementato e verificato:
 
-- `hft-common`: centralizzata la chiave `ml_advice_no_mfe_timeout_seconds`; rimosse le costanti di fallback ratio/min-hold.
+- `hft-common`: centralizzata la chiave `bb_advice_no_mfe_timeout_seconds`; rimosse le costanti di fallback ratio/min-hold.
 - `hft-common`: aggiunte le chiavi condivise `history_*`, `live_*`, `entry_*`, `exit_*` per separare contratto storico
   ML, contratto live-score, fotografia BUY e fotografia SELL.
-- `docbrown`: il producer live pubblica `ml_advice_no_mfe_timeout_seconds` nell'advice usando la durata
+- `docbrown`: il producer live pubblica `bb_advice_no_mfe_timeout_seconds` nell'advice usando la durata
   candidate-specific del contratto generato.
 - `docbrown`: source/validity source literal dei due `ruleJson` toccati sono stati portati in `OperationalString`.
-- `docbrown`: `LiveMlAdviceScoringService.liveAdvice(...)` non modifica piu' semanticamente i campi ML originari
+- `docbrown`: `LiveBbAdviceScoringService.liveAdvice(...)` non modifica piu' semanticamente i campi ML originari
   dell'advice. Produce un blocco `history_*` copiato dal contratto storico e un blocco `live_*` speculare/valorizzato
   dal live-score. Il timeout no-MFE runtime ora e' `live_no_mfe_timeout_seconds`; per regole storiche viene derivato
   una tantum da `entry_validity_seconds` nel producer live, non in ACDC.
 - `acdc`: `OutcomeQualityModelService` copia `history_*` e `live_*`, usa `live_*` per valorizzare i campi canonici
-  `ml_advice_*` consumati dalle guardie runtime, e scrive `entry_*` al momento della decisione BUY.
+  `bb_advice_*` consumati dalle guardie runtime, e scrive `entry_*` al momento della decisione BUY.
 - `acdc`: `MlAdviceFeatures.exitFeatures(...)` propaga da `policy_json` i blocchi `history_*`, `live_*` ed `entry_*`
   verso la SELL, evitando che i live feature ricalcolati in uscita sovrascrivano la fotografia di ingresso.
 - `acdc`: `PaperRunService` e `ShadowRunService` aggiungono `exit_*` nei feature snapshot di uscita mantenendo i campi
@@ -236,7 +236,7 @@ Implementato e verificato:
 - `acdc`: `V75__expire_stale_live_advice.sql` marca `EXPIRED` le advice `ACTIVE` gia' scadute, eliminando residui senza
   nuovo contratto no-MFE.
 - `hft-common/doc`: piano strategico e handoff aggiornati: il timeout no-MFE deve arrivare solo da
-  `ml_advice_no_mfe_timeout_seconds`; nessun fallback da durata, ratio, metadata DB o config runtime.
+  `bb_advice_no_mfe_timeout_seconds`; nessun fallback da durata, ratio, metadata DB o config runtime.
 
 Verifiche completate:
 
@@ -252,18 +252,18 @@ Verifiche completate:
 - `acdc`: container `acdc-vpn` rebuildato/ricreato dopo la separazione contract block, startup prod OK su MySQL 8.0.
 - ACDC log prod: MySQL 8.0, schema operativo up to date, startup OK.
 - MySQL operativo: `acdc_flyway_schema_history` ultimo `version=75`, `success=1`.
-- MySQL operativo: guardia `exit_ml_advice_no_mfe_decay` ha `min_threshold=0`, `max_threshold=0`, metadata senza ratio/min-hold.
+- MySQL operativo: guardia `exit_bb_advice_no_mfe_decay` ha `min_threshold=0`, `max_threshold=0`, metadata senza ratio/min-hold.
 - MySQL operativo: generation `live-1782565383` e `live-1782565442` hanno 5/5 advice con
-  `ml_advice_no_mfe_timeout_seconds`.
+  `bb_advice_no_mfe_timeout_seconds`.
 - RUN pulita `111`/`112`, group `ab98-20260627T130406Z`: PAPER `111` ha 3 posizioni chiuse con
-  `EXIT_ML_ADVICE_NO_MFE_DECAY`; SHADOW `112` ha `ALGOUSDC` chiusa take-profit e `HBARUSDC` chiusa no-MFE.
+  `EXIT_BB_ADVICE_NO_MFE_DECAY`; SHADOW `112` ha `ALGOUSDC` chiusa take-profit e `HBARUSDC` chiusa no-MFE.
 - RUN successiva `113`/`114`, group `ab98-20260627T130751Z`: PAPER `113` ha 2 posizioni chiuse no-MFE e 1 dynamic
   trailing; SHADOW `114` e' stata stoppata/abbandonata dopo `AUTO_AB_STOP`, quindi non e' evidenza Forward A/B pulita.
 - Nuovo ciclo management del 2026-06-27:
   - `REFRESH_DIAGNOSTICS` iniziale: `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `paperRunning=false`,
     `openPositions=0`, nessuna advice attiva.
   - `AUTO_AB_START` da FE `/management` ha generato advice fresche contract-active con
-    `ml_advice_no_mfe_timeout_seconds`.
+    `bb_advice_no_mfe_timeout_seconds`.
   - `115`/`116`, group `ab98-20260627T131935Z`: PAPER `115` `STOPPED`, 3 posizioni chiuse, net
     `-0.243031196346800000`; SHADOW `116` `COMPLETED`, 2 posizioni chiuse, net `-0.083058606990000000`.
   - `117`/`118`, group `ab98-20260627T132306Z`: PAPER `117` `STOPPED`, 3 posizioni chiuse, net
@@ -274,8 +274,8 @@ Verifiche completate:
     iniziato il ciclo successivo.
   - Race finale `121`/`122`, group `ab98-20260627T133008Z`: PAPER `121` `STOPPED`, 3 posizioni chiuse, net
     `+0.008618152636200000`; SHADOW `122` `COMPLETED`, 2 posizioni chiuse, net `-0.088206647087000000`.
-  - Tutte le posizioni PAPER/SHADOW `115`-`122` hanno `ml_advice_no_mfe_timeout_seconds` valorizzato nel `policy_json`
-    (`120` o `175`) e `ml_advice_pre_buy_watch_timeout_seconds=20`; PAPER `115`, `117`, `119`, `121` hanno generation
+  - Tutte le posizioni PAPER/SHADOW `115`-`122` hanno `bb_advice_no_mfe_timeout_seconds` valorizzato nel `policy_json`
+    (`120` o `175`) e `bb_advice_pre_buy_watch_timeout_seconds=20`; PAPER `115`, `117`, `119`, `121` hanno generation
     source rispettivamente `live-1782566372`, `live-1782566582`, `live-1782566795`, `live-1782567005`.
 - FE/Kenshiro finale post-deploy: `globalStatus=BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE`, `mlReady=false`,
   `paperRunning=false`, `openPositions=0`, `activeAdvice=0`, `paperEligibleActiveAdvice=0`,
@@ -305,7 +305,7 @@ Repo con modifiche coerenti da committare/pushare con lo stesso MS: `hft-common`
 Aggiornamento MS890 del 2026-06-27:
 
 - `acdc`: `MlReadinessDiagnosticsService` e' stato allineato al path rolling advice-driven. Se esistono advice
-  `PAPER_ELIGIBLE` attive, `ML_RULES_MISSING` e `ML_PROMOTED_RULES_MISSING` non bloccano piu' `ML_READY`; restano
+  `PAPER_ELIGIBLE` attive, `ML_RULES_MISSING` e `ML_PROMOTED_RULES_MISSING` non bloccano piu' `BB_READY`; restano
   warning diagnostici. Le guardie su advice attive, advice paper-eligible, contratto attivo e posizioni aperte restano
   bloccanti.
 - Deploy runtime: container `acdc-vpn` rebuildato e riavviato, startup prod OK su MySQL 8.0.
@@ -313,7 +313,7 @@ Aggiornamento MS890 del 2026-06-27:
 - RUN runtime dopo fix:
   - `1`/`2`, group `ab98-20260627T203315Z`: PAPER B partita da generation
     `management-rolling-20260627T203248Z`; WATCH ha aperto `JTOUSDC`, sell
-    `EXIT_ML_ADVICE_NO_MFE_DECAY`, net `-0.1047430562718`; una WATCH PAPER e una WATCH SHADOW sono scadute senza BUY.
+    `EXIT_BB_ADVICE_NO_MFE_DECAY`, net `-0.1047430562718`; una WATCH PAPER e una WATCH SHADOW sono scadute senza BUY.
   - `3`/`4`, group `ab98-20260627T203619Z`: PAPER B partita da generation
     `management-rolling-20260627T203556Z`; nessuna WATCH PAPER ha confermato il BUY, PAPER chiusa con 0 trade; SHADOW
     baseline completata con PnL runtime negativo.
@@ -338,11 +338,11 @@ Aggiornamento finale MS891 del 2026-06-27:
 Aggiornamento MS892 del 2026-06-27:
 
 - Verifica WATCH sul BUY `JTOUSDC` execution `1`: all'apertura WATCH il contratto non era paper-eligible
-  (`ml_advice_paper_eligible=0`, `ml_advice_live_revalidation_pass=0`, failure su `reversal_trough_age_seconds`);
-  al BUY, 12 secondi dopo, `ml_advice_paper_eligible=1`, `ml_advice_live_revalidation_pass=1` e failure `0`.
+  (`bb_advice_paper_eligible=0`, `bb_advice_live_revalidation_pass=0`, failure su `reversal_trough_age_seconds`);
+  al BUY, 12 secondi dopo, `bb_advice_paper_eligible=1`, `bb_advice_live_revalidation_pass=1` e failure `0`.
 - Interpretazione corretta: WATCH non ha comprato solo per vincolo temporale; ha rispettato il trigger configurato.
   Il contratto resta pero' debole dal punto di vista trading, perche' il BUY non ha prodotto MFE (`maxNetReturn=0`) ed
-  e' uscito con `EXIT_ML_ADVICE_NO_MFE_DECAY`.
+  e' uscito con `EXIT_BB_ADVICE_NO_MFE_DECAY`.
 - `acdc`: aggiunti contatori diagnostici nei feature della decisione WATCH:
   `pre_buy_watch_trigger_checked`, `pre_buy_watch_trigger_failed`, `pre_buy_watch_trigger_passed`.
 - `acdc`: corretto `source_generation_id` su `acdc_pre_buy_watch`, risolvendolo dall'advice sorgente invece di tentare di
@@ -375,7 +375,7 @@ Aggiornamento MS898 del 2026-06-28:
 - Pulizia Bollinger-only completata su DB, documentazione, script e moduli operativi.
 - `acdc`: aggiunta migration `V80__bollinger_only_residual_config_cleanup.sql` per rimuovere config vive residue
   `observed`, `paper.session_guard.*`, `live_audit.*`, `rolling.lifecycle.*` e retry live-revalidation, mantenendo
-  `rem.ml.promotion.mode=BOLLINGER_ONLY`.
+  `bb.promotion.mode=BOLLINGER_ONLY`.
 - `acdc`: rimosse costanti cooldown zero-MFE non piu' referenziate. La metrica zero-MFE resta ammessa solo come forensics
   post-trade, non come selezione o guardia extra.
 - `docbrown`: rimosso `LiveRuleAuditService` e le costanti di live-audit/rolling-lifecycle non piu' operative.
@@ -398,4 +398,4 @@ Aggiornamento MS898 del 2026-06-28:
 ## Prossimo TODO
 
 1. Committare e pushare MS898 sui repo modificati.
-2. Da FE `/management`, nuova RUN solo dopo nuove advice Bollinger `PAPER_ELIGIBLE` fresche e `ML_READY=true`.
+2. Da FE `/management`, nuova RUN solo dopo nuove advice Bollinger `PAPER_ELIGIBLE` fresche e `BB_READY=true`.

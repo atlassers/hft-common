@@ -1,7 +1,7 @@
 package it.mbc.hft.common.management.enums;
 
 public enum ManagementRuntimeStatus {
-    ML_READY("ML_READY"),
+    BB_READY("BB_READY"),
     NOT_READY("NOT_READY"),
     AUTO_PREFLIGHT_NOT_READY("AUTO_PREFLIGHT_NOT_READY"),
     BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE("BLOCKED_WAITING_PAPER_ELIGIBLE_ADVICE"),
