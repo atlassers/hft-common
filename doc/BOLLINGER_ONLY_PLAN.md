@@ -313,6 +313,24 @@ Promuovibile solo se:
 - contract completo in forensics;
 - runtime finale pulito.
 
+## Set Minimo Ex Novo
+
+Il repository installabile per Bollinger-only non deve includere dump DB storici o backup operativi.
+
+Sono ammessi:
+
+- sorgenti runtime;
+- migration necessarie a creare lo schema corrente;
+- script necessari a build, deploy, diagnostica e PAPER;
+- documentazione corrente del processo Bollinger-only.
+
+Non sono ammessi:
+
+- dump `hft` / `back_test`;
+- backup SQL generati durante reset operativi;
+- migration o script che creano e poi cancellano strutture di strategie ritirate;
+- payload di esempio con `shadow`, `reversal`, `scalping`, `backtest` o contratti non `bb_*`, salvo documentazione storica esplicitamente marcata come tale.
+
 ## Rischi
 
 - Restare Bollinger-only puo' non bastare nei mercati direzionali o illiquidi.
