@@ -10,10 +10,8 @@ public final class RemConstants {
     public static final String KENSHIRO = "KENSHIRO";
 
     public static final String DRY = "DRY";
-    public static final String SHADOW = "SHADOW";
     public static final String PAPER = "PAPER";
     public static final String REAL = "REAL";
-    public static final String SHADOW_EV = "SHADOW_EV";
 
     public static final String RUNNING = "RUNNING";
     public static final String COMPLETED = "COMPLETED";
@@ -31,7 +29,6 @@ public final class RemConstants {
     public static final String BOLLINGER_ONLY_V2 = "BOLLINGER_ONLY_V2";
     public static final String PAPER_ELIGIBLE = "PAPER_ELIGIBLE";
 
-    public static final String FORWARD_AB_98 = "FORWARD_AB_98";
     public static final String A_BASELINE_98_CONTRACT = "A_BASELINE_98_CONTRACT";
     public static final String B_CURRENT_ROLLING_PIPELINE = "B_CURRENT_ROLLING_PIPELINE";
 
@@ -39,11 +36,8 @@ public final class RemConstants {
     public static final String SNAPSHOTS = "snapshots";
     public static final String SYMBOLS = "symbols";
     public static final String VALIDATION_PROTOCOL = "validationProtocol";
-    public static final String FORWARD_AB_GROUP_ID = "forwardAbGroupId";
-    public static final String FORWARD_AB_ARM = "forwardAbArm";
     public static final String BASELINE_REFERENCE_SESSION = "baselineReferenceSession";
     public static final String COMPARISON_ARM = "comparisonArm";
-    public static final String SHADOW_RELAXATION_PROFILE = "shadowRelaxationProfile";
     public static final String SOURCE_BATCH_ID = "sourceBatchId";
     public static final String EXPERIMENT_TRIGGER = "experimentTrigger";
     public static final String TECHNICAL_OPTIONS = "technicalOptions";
@@ -202,8 +196,6 @@ public final class RemConstants {
     public static final String SELECTION_SET = "selectionSet";
     public static final String SELL_CENTROID_CONFIG = "sellCentroidConfig";
     public static final String SELL_PARAMETERS = "sellParameters";
-    public static final String SHADOW_2 = "shadow";
-    public static final String SHADOW_RUNNING = "shadowRunning";
     public static final String SIDE = "side";
     public static final String SECONDARY_METRIC = "secondaryMetric";
     public static final String SCHEDULER_PREFIX = "scheduler.";
@@ -429,34 +421,10 @@ public final class RemConstants {
     public static final String ENTRY_BB_TRIGGER = "entry_bb_trigger";
     public static final String ENTRY_BB_BUY_CONTRACT_PASS = "entry_bb_buy_contract_pass";
     public static final String EXIT_BB_TARGET_NET_RETURN = "exit_bb_target_net_return";
-    public static final String REVERSAL_CONFIRMED = "reversal_confirmed";
-    public static final String REVERSAL_SLOPE_SHORT = "reversal_slope_short";
-    public static final String REVERSAL_SLOPE_MEDIUM = "reversal_slope_medium";
-    public static final String REVERSAL_SLOPE_DELTA = "reversal_slope_delta";
-    public static final String REVERSAL_ACCELERATION = "reversal_acceleration";
-    public static final String REVERSAL_PRE_TROUGH_DROP = "reversal_pre_trough_drop";
-    public static final String REVERSAL_DISTANCE_FROM_TROUGH = "reversal_distance_from_trough";
-    public static final String REVERSAL_VOLUME_CONFIRMATION = "reversal_volume_confirmation";
-    public static final String REVERSAL_QUALITY = "reversal_quality";
-    public static final String REVERSAL_TROUGH_AGE_SECONDS = "reversal_trough_age_seconds";
-    public static final String REVERSAL_DATA_COVERAGE_RATIO = "reversal_data_coverage_ratio";
-    public static final String REVERSAL_DISTINCT_PRICE_POINTS = "reversal_distinct_price_points";
-    public static final String REVERSAL_MAX_GAP_SECONDS = "reversal_max_gap_seconds";
-    public static final String REVERSAL_DIRECTION_SCORE = "reversal_direction_score";
-    public static final String REVERSAL_ML_RULES = "reversal_ml_rules";
-    public static final String REVERSAL_ML_VALIDATION_SAMPLES = "reversal_ml_validation_samples";
-    public static final String REVERSAL_ML_SCORE = "reversal_ml_score";
-    public static final String REVERSAL_ML_PROFIT_PROBABILITY = "reversal_ml_profit_probability";
-    public static final String CURVE_REVERSAL = "curve_reversal";
-    public static final String EARLY_REBOUND = "early_rebound";
-    public static final String PULLBACK_REBOUND_VOLUME = "pullback_rebound_volume";
-    public static final String ACCELERATION_REVERSAL = "acceleration_reversal";
-    public static final String QUALITY_STRUCTURE = "quality_structure";
     public static final String OUTCOME_QUALITY_SCORE = "outcome_quality_score";
     public static final String OUTCOME_QUALITY_PROFIT_PROBABILITY = "outcome_quality_profit_probability";
     public static final String OUTCOME_QUALITY_SAMPLES = "outcome_quality_samples";
     public static final String CAUSAL_CLASSIFICATION_AVAILABLE = "causalClassificationAvailable";
-    public static final String CAPTURABLE_REVERSAL = "capturable_reversal";
     public static final String COMMITTED_AND_PUSHED = "committedAndPushed";
     public static final String DEFENSIVE_LEARNED = "defensiveLearned";
     public static final String DOCUMENTATION_UPDATED = "documentationUpdated";
