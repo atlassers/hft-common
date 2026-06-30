@@ -52,7 +52,9 @@ Regimi Context V1:
 curl -sS 'http://localhost:5173/backoffice/management/state?profileKey=REM_CURRENT' | jq '.'
 curl -sS 'http://localhost:5173/backoffice/management/runs?limit=20' | jq '.'
 curl -sS 'http://localhost:5173/backoffice/management/runs/{executionId}' | jq '.'
+curl -sS 'http://localhost:5173/backoffice/management/trades/executions?date=YYYY-MM-DD&limit=100' | jq '.'
 curl -sS 'http://localhost:5173/backoffice/management/trades?profileKey=REM_CURRENT&limit=50' | jq '.'
+curl -sS 'http://localhost:5173/backoffice/management/trades?profileKey=REM_CURRENT&executionId={executionId}&limit=300' | jq '.'
 curl -sS 'http://localhost:5173/backoffice/management/trades/{executionId}/{symbol}' | jq '.'
 curl -sS -X POST -H 'Content-Type: application/json' \
   'http://localhost:5173/backoffice/management/actions/REFRESH_DIAGNOSTICS' \
@@ -92,7 +94,8 @@ Da introdurre solo quando DocBrown e ACDC sono compatibili:
 5. Dopo run PAPER, leggere `/management/runs/{executionId}`.
 6. Attribuire ogni BUY/SELL a setup, trigger, regime, gate context, reason e PnL.
 7. Separare sempre le metriche di breakout e reentry.
-8. Per analisi visiva usare `/trades`: lista trade/WATCH, replay candle persistito, bande Bollinger e punti decisionali.
+8. Per analisi visiva usare `/trades`: selezione data, execution del giorno, simboli per execution, filtri fase
+   WATCH/BUY/SELL, replay candle persistito e replay live Influx con refresh 1s.
 
 ## Build
 
