@@ -29,6 +29,89 @@ regime e liquidita' diventano feature contrattuali esplicite.
 Conferma utente ricevuta il 2026-06-30: questo documento e' ora il charter tecnico-operativo vincolante.
 L'implementazione deve seguirlo alla lettera, con commit/push a ogni blocco coerente.
 
+## Modello Vincolante Contract/Realtime
+
+Questa sezione e' vincolo assoluto di implementazione.
+
+```text
+ML non decide il BUY.
+ML produce un contratto osservabile.
+WATCH decide il BUY solo con misure realtime ricalcolate nel runtime.
+```
+
+Formula operativa:
+
+```text
+candidate = scelta dal ML
+contract = prodotto dal ML
+current_state = calcolato dal WATCH nel runtime corrente
+BUY = current_state soddisfa contract
+```
+
+Separazione delle responsabilita':
+
+- DocBrown/ML possiede candidate, setup, trigger atteso, soglie contrattuali, regimi ammessi e limiti
+  `contract_*` / `live_contract_*`;
+- ACDC/live-score importa e normalizza l'advice, ma non puo' trasformare valori di mercato pubblicati dall'advice in
+  verita' finale di BUY;
+- ACDC/WATCH possiede prezzo live, Bollinger live, EMA live, RSI live, ATR live, volume ratio live, regime live e
+  decisione BUY;
+- ACDC/BUY congela in `policyJson` solo i valori `entry_*` effettivamente usati al momento dell'acquisto;
+- forensics confronta contract, current_state, entry, exit e PnL senza confondere predizione e decisione.
+
+I valori `history_*` e `live_*` provenienti da DocBrown/advice possono essere usati per selezione, audit, readiness,
+promozione e compatibilita' del contratto. Non possono essere usati come misura autoritativa del BUY se non sono stati
+ricalcolati o riconfermati dal WATCH nel runtime corrente.
+
+Ogni advice Context V1 deve contenere almeno:
+
+```text
+strategy_family = BOLLINGER_CONTEXT_V1
+bb_setup
+bb_trigger
+contract_version = BOLLINGER_CONTEXT_V1
+contract_* oppure live_contract_* richiesti dal setup
+```
+
+Il WATCH deve valutare i gate in questo ordine fisso:
+
+```text
+1. advice active
+2. contract complete
+3. setup recognized
+4. Bollinger trigger live pass
+5. Context live complete
+6. Regime live pass
+7. Trend live pass
+8. Momentum live pass
+9. Volume live pass
+10. Risk live pass
+11. Budget / exchange sizing pass
+12. BUY
+```
+
+Sono vietati come condizioni BUY post-promozione:
+
+```text
+advice_valid_until
+max_buy_age
+watch_timeout
+paper elapsed time
+promotion age
+ML duration
+```
+
+Questi valori possono restare solo diagnostici o di audit. L'unico limite operativo esterno al contract live e'
+budget/exchange sizing al momento della BUY.
+
+Il fail-closed e' obbligatorio:
+
+- se manca un campo contract o current_state richiesto: `WATCH_CONTEXT_CONTRACT_INCOMPLETE`;
+- se il campo esiste ma non passa: reason specifica del primo blocco dominante:
+  `WATCH_REGIME_BLOCKED`, `WATCH_TREND_BLOCKED`, `WATCH_MOMENTUM_BLOCKED`, `WATCH_VOLUME_BLOCKED`,
+  `WATCH_LIQUIDITY_BLOCKED`;
+- nessuna reason generica puo' nascondere il gate che ha bloccato.
+
 ## Stato Di Partenza Consolidato
 
 Completato in Bollinger-only:
