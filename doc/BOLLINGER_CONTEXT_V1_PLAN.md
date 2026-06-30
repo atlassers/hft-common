@@ -140,6 +140,82 @@ Decisione unica:
 5. mantiene SELL esistente nella fase 1;
 6. valuta il miglioramento solo per setup e solo dopo PAPER con trade reali.
 
+## Audit AS-IS
+
+Il piano e' stato ricontrollato contro lo stato corrente dei moduli.
+
+### hft-common
+
+AS-IS:
+
+- esistono `BollingerSetupType` e `BollingerTriggerType`;
+- esistono costanti `BOLLINGER_ONLY` e `BOLLINGER_ONLY_V2`;
+- esistono le key Bollinger `bb_*`, `history_bb_*`, `live_bb_*`, `entry_bb_*`;
+- non esiste ancora una family runtime `BOLLINGER_CONTEXT_V1`;
+- non esistono ancora enum/costanti condivise per regime, trend, momentum, volume e risk.
+
+Implicazione:
+
+- Context V1 deve estendere `RemConstants` e gli enum esistenti senza duplicare setup/trigger;
+- non deve introdurre una seconda gerarchia contrattuale parallela.
+
+### docbrown
+
+AS-IS:
+
+- `InfluxSnapshotService` calcola gia' le feature Bollinger operative;
+- `BlankRemCandidateService` seleziona gia' reentry e squeeze/breakout separatamente;
+- `RollingPaperPromotion` produce advice setup-specifiche e contratto Bollinger;
+- non sono ancora calcolati EMA/RSI/ATR/volume ratio/regime nel contratto live.
+
+Implicazione:
+
+- Context V1 deve aggiungere un layer context sopra la selection Bollinger esistente;
+- non deve ricreare il motore candidate da zero.
+
+### acdc
+
+AS-IS:
+
+- `PreBuyWatchService` ha gia' dispatch per `BB_REENTRY_MEAN_REVERSION_LONG` e `BB_SQUEEZE_BREAKOUT_LONG`;
+- il trigger audit controlla common pass, reentry contract e breakout contract;
+- le reason WATCH sono ancora generiche (`WATCH_WAITING_BUY_CONTRACT`, `WATCH_EXPIRED`, ecc.);
+- `PaperRunService` scrive `policyJson` con setup/trigger e contratto Bollinger;
+- SELL e post-sell forensics sono gia' legati al contratto Bollinger.
+
+Implicazione:
+
+- Context V1 deve innestarsi dopo il trigger audit Bollinger e prima della BUY;
+- le nuove reason context devono essere enum/costanti, non stringhe locali;
+- SELL fase 1 deve restare invariato per isolare l'effetto dei nuovi gate di ingresso.
+
+### kenshiro / hft-fe
+
+AS-IS:
+
+- l'automazione management salva `mode=BOLLINGER_ONLY_V2`;
+- `/management` espone e orchestra solo Bollinger-only;
+- `REAL_RUN` e' bloccata;
+- non esistono ancora action/config runtime per scegliere Context V1;
+- FE mostra il cockpit `/management`, ma non ha sezioni regime/context.
+
+Implicazione:
+
+- Context V1 deve essere introdotto come family selezionabile solo dopo approvazione;
+- fino ad allora `/management` deve continuare a mostrare chiaramente `BOLLINGER_ONLY_V2`.
+
+### influxer / InfluxDB
+
+AS-IS:
+
+- OHLCV 1m su bucket realtime e' sufficiente per EMA/RSI/ATR/volume ratio;
+- microbar e' utile per forensics, ma la RUN 82-91 ha mostrato gap 41-60s in molti post-exit.
+
+Implicazione:
+
+- la fase 1 puo' usare OHLCV 1m per i gate Context;
+- la forensics second-level non deve essere usata come prova forte finche' i gap microbar restano larghi.
+
 ## Setup Ammessi
 
 ### BB_SQUEEZE_BREAKOUT_LONG
@@ -324,8 +400,10 @@ Regola: se spread/liquidita' non hanno fonte affidabile, marcare `UNKNOWN` e non
 
 Interventi:
 
-- aggiungere/estendere enum strategy family:
+- aggiungere costante condivisa `BOLLINGER_CONTEXT_V1`;
+- se viene introdotto un enum strategy family, deve mappare le costanti esistenti:
   - `BOLLINGER_ONLY`;
+  - `BOLLINGER_ONLY_V2`;
   - `BOLLINGER_CONTEXT_V1`.
 - riusare i setup gia' operativi:
   - `BB_SQUEEZE_BREAKOUT_LONG`;
@@ -341,12 +419,28 @@ Interventi:
   - `REGIME_EXPANSION`;
   - `REGIME_CHAOS`.
 - aggiungere costanti JSON in `RemConstants` per tutte le nuove feature context.
+- aggiungere prefissi coerenti:
+  - `history_market_regime`, `live_market_regime`, `entry_market_regime`;
+  - `history_ema9`, `live_ema9`, `entry_ema9`, ecc.;
+  - `history_rsi14`, `live_rsi14`, `entry_rsi14`;
+  - `history_volume_ratio_1m_20m`, `live_volume_ratio_1m_20m`, `entry_volume_ratio_1m_20m`;
+  - `history_atr14`, `live_atr14`, `entry_atr14`.
+- aggiungere reason condivise per WATCH context:
+  - `WATCH_WAITING_BB_BREAKOUT_CONTEXT`;
+  - `WATCH_WAITING_BB_REENTRY_CONTEXT`;
+  - `WATCH_CONTEXT_CONTRACT_INCOMPLETE`;
+  - `WATCH_REGIME_BLOCKED`;
+  - `WATCH_TREND_BLOCKED`;
+  - `WATCH_MOMENTUM_BLOCKED`;
+  - `WATCH_VOLUME_BLOCKED`;
+  - `WATCH_LIQUIDITY_BLOCKED`.
 
 Note:
 
 - niente stringhe operative nei consumer;
 - nessun ritorno a nomi `ml_*` o contratti runtime legacy;
 - nessun payload operativo nuovo deve emettere `reversal_*`.
+- ogni key nuova deve avere una sola fonte canonica in `RemConstants`, poi shim locale nei moduli se serve.
 
 ### docbrown
 
@@ -373,6 +467,21 @@ Interventi:
     - max EMA50 slope;
     - max ATR pct;
     - target/loss/timeout.
+
+Sequenza consigliata:
+
+1. aggiungere calcolo indicatori puramente diagnostico nel report research, senza promotion;
+2. aggiungere `market_regime` e score context nei candidate;
+3. pubblicare `history_*` context nelle advice;
+4. solo dopo test, pubblicare `live_*` context e renderlo requisito di promotion;
+5. solo dopo deploy ACDC compatibile, rendere `BOLLINGER_CONTEXT_V1` selezionabile.
+
+Vincoli AS-IS:
+
+- la selection esistente `PromotionSelection` resta il punto di innesto;
+- `BollingerContract` va esteso o affiancato da `ContextContract`, non sostituito al primo step;
+- le soglie context devono derivare dai campioni candidate-specific, non da global defaults opachi;
+- se un indicatore non ha abbastanza barre, la candidate non e' promotable in Context V1.
 
 Test:
 
@@ -413,6 +522,32 @@ Interventi:
     - breakout: trailing ATR o middle-band failure;
     - reentry: target middle band e invalidazione range.
 
+Sequenza consigliata:
+
+1. estendere `BbAdviceFeatures` / mapper contract per portare `history_*`, `live_*`, `entry_*` context;
+2. aggiungere un `ContextGateAudit` separato dal `TriggerAudit` Bollinger;
+3. nel WATCH, eseguire:
+
+```text
+common pass -> setup trigger audit -> context gate audit -> BUY
+```
+
+4. se il context fallisce, mantenere la watch aperta finche' non scade, come oggi accade per il trigger Bollinger;
+5. scrivere in decisione:
+   - `context_checked`;
+   - `context_failed`;
+   - `context_passed`;
+   - reason specifica del primo blocco dominante;
+6. nel `policyJson`, congelare i valori `entry_*` usati per il BUY;
+7. lasciare SELL invariato nella prima PAPER Context V1.
+
+Vincoli AS-IS:
+
+- `bb_buy_contract_pass` puo' restare diagnostico/derivato, ma non deve bypassare il context gate;
+- le reason generiche esistenti restano per Bollinger-only;
+- le reason context devono comparire solo quando strategy family e' `BOLLINGER_CONTEXT_V1`;
+- se strategy family e' `BOLLINGER_ONLY_V2`, il comportamento deve restare byte-for-byte equivalente salvo logging.
+
 Test:
 
 - fail-closed su contratto context incompleto;
@@ -420,6 +555,7 @@ Test:
 - reentry compra solo in range;
 - no BUY se regime `REGIME_TREND_DOWN` o `REGIME_CHAOS`;
 - BUY continua a rispettare solo budget/sizing, non cap arbitrari.
+- regressione: Bollinger-only continua a comprare con gli stessi trigger setup-specifici di oggi.
 
 ### kenshiro
 
@@ -440,6 +576,21 @@ Interventi:
   - attribution per setup/regime;
   - expectancy, win/loss, MFE, zero-MFE, loss-cap;
   - confronto "actual vs Context V1 filtered" per run PAPER.
+
+Sequenza consigliata:
+
+1. aggiungere lettura config strategy family, default `BOLLINGER_ONLY_V2`;
+2. mostrare la family corrente in `/management/state`;
+3. aggiungere sezioni diagnostiche context senza cambiare orchestrazione;
+4. aggiungere `APPLY_BOLLINGER_CONTEXT_V1` solo quando DocBrown e ACDC sono deployati con contract compatibile;
+5. bloccare `PAPER_BOLLINGER_START` se family Context V1 e advice senza regime/context completo;
+6. mantenere `AUTO_BOLLINGER_START` come nome action, oppure introdurre alias UI solo dopo aver evitato confusione operativa.
+
+Vincoli AS-IS:
+
+- oggi `autoAutomationStart` persiste `mode=BOLLINGER_ONLY_V2`;
+- nessuna action Context esiste ancora;
+- la prima implementazione deve essere backward-compatible con le RUN Bollinger-only.
 
 Test:
 
@@ -462,6 +613,14 @@ Interventi:
     - zero-MFE/loss-cap by setup/regime;
     - Context V1 diagnostic comparison.
 - Nessuna nuova pagina.
+
+Sequenza consigliata:
+
+1. estendere i tipi management con family/regime/context opzionali;
+2. visualizzare i nuovi campi solo se presenti;
+3. mantenere le label Bollinger-only esistenti quando family non e' Context;
+4. aggiungere pannello diagnostico compatto, non una nuova landing/page;
+5. impedire azioni Context se backend non espone action abilitate.
 
 Test:
 
@@ -502,6 +661,14 @@ DocBrown:
 
 - nessuna tabella nuova obbligatoria;
 - valutare indice/query solo se diagnostiche setup/regime diventano lente.
+
+Ordine migration/config:
+
+1. aggiungere solo chiavi config e costanti;
+2. usare JSON advice/policy per feature context;
+3. creare colonne dedicate solo se `/management` o report diventano lenti;
+4. non modificare le migration di purge legacy per introdurre Context V1;
+5. non cambiare checksum Flyway gia' deployati salvo procedura esplicita.
 
 ## Scoring Live
 
