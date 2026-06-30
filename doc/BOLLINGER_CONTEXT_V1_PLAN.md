@@ -48,6 +48,8 @@ Completato in Bollinger-only:
 - `/management` e' il cockpit operativo primario;
 - build/deploy dei moduli toccati completati;
 - REAL vietata.
+- il tempo di ML/round-robin/promozione non invalida il runtime successivo: dopo la promozione, BUY dipende solo da
+  contratto Bollinger/Context completo e budget/exchange sizing.
 
 Questo piano deve riusare quel lavoro, non reintrodurre un contratto parallelo.
 
@@ -69,6 +71,14 @@ Diagnostica Context V1 su candidati vicini al trigger:
 - 69 candidati focus;
 - 4 pass diagnostici;
 - nessuna evidenza conclusiva per miglioramento perche' non c'erano trade reali.
+
+Correzione vincolante successiva:
+
+- `WATCH_EXPIRED` era contaminazione runtime: la finestra WATCH autorizza osservazione ma non puo' chiudere o bloccare
+  un BUY;
+- `advice_valid_until`, `max_buy_age` e timeout WATCH sono metriche diagnostiche post-promozione, non condizioni BUY;
+- il ML puo' durare quanto necessario; dallo step successivo il solo vincolo temporale ammesso e' quello espresso come
+  valore di contratto non storico-decisionale, insieme alle condizioni Bollinger/Context.
 
 ### Finestra PAPER 30m RUN 82-91
 
@@ -179,7 +189,7 @@ AS-IS:
 
 - `PreBuyWatchService` ha gia' dispatch per `BB_REENTRY_MEAN_REVERSION_LONG` e `BB_SQUEEZE_BREAKOUT_LONG`;
 - il trigger audit controlla common pass, reentry contract e breakout contract;
-- le reason WATCH sono ancora generiche (`WATCH_WAITING_BUY_CONTRACT`, `WATCH_EXPIRED`, ecc.);
+- le reason WATCH devono restare legate a contratto incompleto o context gate, non a scadenza temporale;
 - `PaperRunService` scrive `policyJson` con setup/trigger e contratto Bollinger;
 - SELL e post-sell forensics sono gia' legati al contratto Bollinger.
 
