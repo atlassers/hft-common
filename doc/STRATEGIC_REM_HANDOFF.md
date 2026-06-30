@@ -1,19 +1,21 @@
-# Bollinger-Only Operational Handoff
+# Bollinger Context V1 Operational Handoff
 
-Data: 2026-06-29.
+Data: 2026-06-30.
 
 ## Scopo
 
-Manuale operativo compatto per il ciclo Bollinger-only.
+Manuale operativo compatto per il ciclo `BOLLINGER_CONTEXT_V1`.
 
 ## Vincoli
 
 - REAL vietata.
 - Validazione operativa solo su MySQL e container deployati.
 - `/management` e' l'interfaccia primaria.
-- Il contratto runtime usa solo campi `bb_*`.
-- La tabella advice runtime e' `hft.acdc_live_bb_advice`.
-- WATCH apre BUY solo se il trigger Bollinger setup-specifico e' vero.
+- La tabella advice runtime resta `hft.acdc_live_bb_advice`.
+- Bollinger resta obbligatorio: ogni advice deve avere `bb_setup`, `bb_trigger` e contratto `bb_*`.
+- Context V1 richiede feature esplicite di regime, trend, momentum, volume e risk.
+- WATCH apre BUY solo se passano trigger Bollinger e gate Context V1.
+- SELL fase 1 resta quello Bollinger-only, senza nuove logiche fino a evidenza PAPER.
 - La finestra WATCH autorizza osservazione, non e' una condizione BUY.
 - BUY e WATCH non hanno cap numerici concorrenti; il limite effettivo e' budget/exchange sizing al momento della BUY.
 
@@ -23,7 +25,7 @@ Manuale operativo compatto per il ciclo Bollinger-only.
 ML -> live-score -> WATCH -> BUY -> SELL -> forensics
 ```
 
-## Setup E Trigger
+## Setup, Trigger E Regimi
 
 Setup ammessi:
 
@@ -34,6 +36,15 @@ Trigger ammessi:
 
 - `BB_REENTRY_CONFIRMED`
 - `BB_UPPER_BREAKOUT_CONFIRMED`
+
+Regimi Context V1:
+
+- `REGIME_RANGE`
+- `REGIME_SQUEEZE`
+- `REGIME_EXPANSION`
+- `REGIME_TREND_UP`
+- `REGIME_TREND_DOWN`
+- `REGIME_CHAOS`
 
 ## Endpoint Primari FE
 
@@ -47,6 +58,8 @@ curl -sS -X POST -H 'Content-Type: application/json' \
 ```
 
 ## Action Approvate
+
+Operative gia' esistenti:
 
 - `AUTO_BOLLINGER_START`
 - `AUTO_BOLLINGER_STOP`
@@ -63,13 +76,20 @@ curl -sS -X POST -H 'Content-Type: application/json' \
 - `PAPER_STOP`
 - `SAVE_MANAGEMENT_CONFIG`
 
+Da introdurre solo quando DocBrown e ACDC sono compatibili:
+
+- `APPLY_BOLLINGER_ONLY`
+- `APPLY_BOLLINGER_CONTEXT_V1`
+
 ## Diagnostica Standard
 
 1. Leggere `/management/state`.
-2. Verificare `bbReady`, blocker, advice attive, PAPER running e posizioni aperte.
-3. Se non ci sono PAPER o posizioni aperte, usare `AUTO_BOLLINGER_START` per generare una nuova sequenza.
-4. Dopo run PAPER, leggere `/management/runs/{executionId}`.
-5. Attribuire ogni BUY/SELL a setup, trigger, reason e PnL.
+2. Verificare strategy family, `bbReady`, blocker, advice attive, PAPER running e posizioni aperte.
+3. Verificare count per setup/regime e readiness context.
+4. Se non ci sono PAPER o posizioni aperte, usare l'action approvata per generare una nuova sequenza PAPER.
+5. Dopo run PAPER, leggere `/management/runs/{executionId}`.
+6. Attribuire ogni BUY/SELL a setup, trigger, regime, gate context, reason e PnL.
+7. Separare sempre le metriche di breakout e reentry.
 
 ## Build
 

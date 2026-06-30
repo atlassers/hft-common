@@ -4,7 +4,7 @@ Data: 2026-06-30.
 
 ## Scopo
 
-Questo piano e' il candidato successivo a `BOLLINGER_ONLY_V2`.
+Questo piano e' il vincolo strategico successivo a `BOLLINGER_ONLY_V2`.
 
 Il runtime corrente resta:
 
@@ -26,8 +26,8 @@ Bollinger-only:
 La differenza e' decisionale: Bollinger resta il centro del segnale, ma trend, momentum, volume, volatilita',
 regime e liquidita' diventano feature contrattuali esplicite.
 
-Questo piano richiede conferma esplicita prima dell'implementazione perche' modifica il vincolo attuale
-`BOLLINGER_ONLY`.
+Conferma utente ricevuta il 2026-06-30: questo documento e' ora il charter tecnico-operativo vincolante.
+L'implementazione deve seguirlo alla lettera, con commit/push a ogni blocco coerente.
 
 ## Stato Di Partenza Consolidato
 
@@ -131,7 +131,7 @@ Mediano pragmatico:
 
 Decisione unica:
 
-`BOLLINGER_CONTEXT_V1` resta candidato, ma corretto cosi':
+`BOLLINGER_CONTEXT_V1` diventa vincolo operativo, corretto cosi':
 
 1. riusa i setup runtime gia' implementati;
 2. non introduce `BB_RANGE_REVERSION_LONG` come nuovo nome operativo nella prima fase;
@@ -201,7 +201,7 @@ AS-IS:
 
 Implicazione:
 
-- Context V1 deve essere introdotto come family selezionabile solo dopo approvazione;
+- Context V1 deve diventare family selezionabile solo dopo compatibilita' DocBrown/ACDC;
 - fino ad allora `/management` deve continuare a mostrare chiaramente `BOLLINGER_ONLY_V2`.
 
 ### influxer / InfluxDB
@@ -569,7 +569,7 @@ Interventi:
   - mostrare context pass/fail summary.
 - Actions:
   - mantenere orchestrazione PAPER-only;
-  - aggiungere action/config solo dopo approvazione:
+  - aggiungere action/config solo dopo compatibilita' DocBrown/ACDC:
     - `APPLY_BOLLINGER_ONLY`;
     - `APPLY_BOLLINGER_CONTEXT_V1`.
 - Diagnostics:
@@ -646,7 +646,7 @@ Test:
 
 ACDC:
 
-- aggiungere config `rem.ml.strategy.family=BOLLINGER_CONTEXT_V1` solo se piano approvato;
+- aggiungere config `rem.ml.strategy.family=BOLLINGER_CONTEXT_V1` come family target del piano approvato;
 - aggiungere config candidate-specific default per:
   - min/max RSI breakout;
   - max RSI reentry;
@@ -710,7 +710,8 @@ I pesi non devono diventare soglie globali nascoste. Devono essere:
 
 Fase 0 - Charter:
 
-- utente approva esplicitamente il cambio da `BOLLINGER_ONLY` a `BOLLINGER_CONTEXT_V1`.
+- completata il 2026-06-30: utente ha approvato esplicitamente il cambio da `BOLLINGER_ONLY` a
+  `BOLLINGER_CONTEXT_V1`.
 
 Fase 1 - Technical:
 
@@ -747,7 +748,7 @@ Metriche:
 
 ## Exit Criteria
 
-`BOLLINGER_CONTEXT_V1` e' candidato a proseguire solo se:
+`BOLLINGER_CONTEXT_V1` puo' proseguire oltre la prima validazione PAPER solo se:
 
 - almeno un setup riduce zero-MFE rispetto a Bollinger-only V2;
 - almeno un setup produce MFE positivo ripetuto;
@@ -767,9 +768,9 @@ Metriche:
 - Scartare WIN buone per soglie RSI/slope troppo rigide.
 - Usare forensics post-exit non conclusiva come prova forte quando microbar ha gap larghi.
 
-## Decisione Richiesta
+## Decisione Operativa
 
-Scegliere questo piano se si accetta di cambiare il vincolo strategico attuale da:
+Il vincolo strategico attuale e' cambiato da:
 
 ```text
 solo Bollinger
@@ -781,5 +782,5 @@ a:
 Bollinger come segnale centrale + contesto regime/trend/momentum/volume/risk
 ```
 
-Questo piano e' piu' promettente del Bollinger-only puro secondo la RUN 82-91, ma non e' ancora validato:
-riduce la perdita diagnostica, resta negativo e richiede una implementazione disciplinata del regime.
+Questo piano e' piu' promettente del Bollinger-only puro secondo la RUN 82-91, ma non e' ancora validato
+finanziariamente: riduce la perdita diagnostica, resta negativo e richiede una implementazione disciplinata del regime.
