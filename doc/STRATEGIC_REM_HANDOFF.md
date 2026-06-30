@@ -52,6 +52,8 @@ Regimi Context V1:
 curl -sS 'http://localhost:5173/backoffice/management/state?profileKey=REM_CURRENT' | jq '.'
 curl -sS 'http://localhost:5173/backoffice/management/runs?limit=20' | jq '.'
 curl -sS 'http://localhost:5173/backoffice/management/runs/{executionId}' | jq '.'
+curl -sS 'http://localhost:5173/backoffice/management/trades?profileKey=REM_CURRENT&limit=50' | jq '.'
+curl -sS 'http://localhost:5173/backoffice/management/trades/{executionId}/{symbol}' | jq '.'
 curl -sS -X POST -H 'Content-Type: application/json' \
   'http://localhost:5173/backoffice/management/actions/REFRESH_DIAGNOSTICS' \
   -d '{"profileKey":"REM_CURRENT","payload":{}}' | jq '.'
@@ -90,6 +92,7 @@ Da introdurre solo quando DocBrown e ACDC sono compatibili:
 5. Dopo run PAPER, leggere `/management/runs/{executionId}`.
 6. Attribuire ogni BUY/SELL a setup, trigger, regime, gate context, reason e PnL.
 7. Separare sempre le metriche di breakout e reentry.
+8. Per analisi visiva usare `/trades`: lista trade/WATCH, replay candle persistito, bande Bollinger e punti decisionali.
 
 ## Build
 
