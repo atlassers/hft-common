@@ -1,66 +1,144 @@
 # Bollinger Context V1 Plan
 
-Data: 2026-06-28.
+Data: 2026-06-30.
 
 ## Scopo
 
-Questo piano modella lo scenario:
+Questo piano e' il candidato successivo a `BOLLINGER_ONLY_V2`.
 
-```text
-Regime -> Trend -> Bollinger -> Momentum -> Volume -> Trigger -> Risk management
-```
-
-Il processo operativo resta:
+Il runtime corrente resta:
 
 ```text
 ML -> live-score -> WATCH -> BUY -> SELL -> forensics
 ```
 
-Ma il vincolo strategico cambia: Bollinger non e' piu' l'unica famiglia decisionale. Bollinger resta il centro del
-segnale, mentre trend, momentum, volume, volatilita' e liquidita' diventano feature decisionali del contratto.
+`BOLLINGER_CONTEXT_V1` non sostituisce la pipeline. Estende il contratto operativo gia' stabilizzato in
+Bollinger-only:
+
+- PAPER-only da `/management`;
+- tabella runtime `hft.acdc_live_bb_advice`;
+- advice setup-specifiche con `bb_setup` e `bb_trigger`;
+- WATCH fail-closed su contratto incompleto;
+- BUY senza cap numerici concorrenti, limitata solo da budget/sizing exchange;
+- SELL e forensics leggibili per setup, trigger, ingresso e uscita;
+- nessun ramo SHADOW o REAL operativo.
+
+La differenza e' decisionale: Bollinger resta il centro del segnale, ma trend, momentum, volume, volatilita',
+regime e liquidita' diventano feature contrattuali esplicite.
 
 Questo piano richiede conferma esplicita prima dell'implementazione perche' modifica il vincolo attuale
-`Bollinger-only`.
+`BOLLINGER_ONLY`.
 
-## Diagnosi AS-IS
+## Stato Di Partenza Consolidato
 
-Le PAPER `37` e `38` mostrano che un solo trigger Bollinger non basta:
+Completato in Bollinger-only:
 
-- `bb_buy_contract_pass=1` ha autorizzato BUY;
-- `SUSDC` ha prodotto MFE netto `0`;
-- entrambe le run sono finite in loss-cap;
-- nella run `38`, piu' pulita, `entry_drift=0` e il risultato e' comunque negativo.
+- runtime contract rinominato a `LiveBbAdvice` / `acdc_live_bb_advice`;
+- readiness `BB_READY`;
+- namespace operativo `bb.*`;
+- setup:
+  - `BB_REENTRY_MEAN_REVERSION_LONG`;
+  - `BB_SQUEEZE_BREAKOUT_LONG`;
+- trigger:
+  - `BB_REENTRY_CONFIRMED`;
+  - `BB_UPPER_BREAKOUT_CONFIRMED`;
+- `PreBuyWatchService` dispatcha per setup e compra solo se il trigger setup-specifico passa;
+- `policyJson` conserva `entry_bb_setup`, `entry_bb_trigger` e contratto `bb_*`;
+- SELL usa target/loss/no-MFE/trailing derivati dal contratto Bollinger;
+- `/management` e' il cockpit operativo primario;
+- build/deploy dei moduli toccati completati;
+- REAL vietata.
 
-Conclusione:
+Questo piano deve riusare quel lavoro, non reintrodurre un contratto parallelo.
 
-- WATCH funziona tecnicamente;
-- il contratto Bollinger e' troppo povero per filtrare contesto e qualita' del movimento;
-- serve distinguere il setup e validarlo con segnali che misurano cose diverse.
+## Evidenza Operativa Recente
+
+### RUN Brevi 79-81
+
+Tre RUN PAPER brevi hanno prodotto:
+
+- 300 decisioni;
+- 0 BUY;
+- motivi dominanti:
+  - `WATCH_WAITING_BUY_CONTRACT`;
+  - `WATCH_EXPIRED`;
+  - `PAPER_BUY_STOPPED` nella RUN fermata subito.
+
+Diagnostica Context V1 su candidati vicini al trigger:
+
+- 69 candidati focus;
+- 4 pass diagnostici;
+- nessuna evidenza conclusiva per miglioramento perche' non c'erano trade reali.
+
+### Finestra PAPER 30m RUN 82-91
+
+La finestra di circa 30 minuti ha prodotto 10 execution automatiche (`82`-`91`) e 9 trade reali:
+
+- WIN: 3;
+- LOSS: 6;
+- PnL netto: `-0.5464600973`;
+- `BB_SQUEEZE_BREAKOUT_LONG`: 2 trade, 0 WIN, 2 LOSS, netto `-0.0823747351`;
+- `BB_REENTRY_MEAN_REVERSION_LONG`: 7 trade, 3 WIN, 4 LOSS, netto `-0.4640853622`.
+
+Motivi delle WIN:
+
+- tutte le WIN sono reentry;
+- vincono quando generano MFE rapidamente e `EXIT_BB_DYNAMIC_TRAILING` conserva parte del movimento.
+
+Motivi delle LOSS:
+
+- prevalgono zero-MFE e loss-cap;
+- breakout senza trend confermato produce falsi segnali;
+- reentry in contesto non abbastanza range o gia' deteriorato compra movimenti senza recupero.
+
+Forensics:
+
+- utili per attribuzione;
+- spesso `INCONCLUSIVE_GRANULARITY` per gap microbar 41-60s;
+- la granularita' va migliorata prima di usare post-exit come prova forte di SELL second-level.
+
+Diagnostica Context V1 sugli ingressi reali:
+
+- trade attuali: 9;
+- trade che passerebbero i gate diagnostici Context V1: 2;
+- PnL effettivo: `-0.5464600973`;
+- PnL dei soli trade tenuti dal filtro diagnostico: `-0.1464585003`;
+- trade bloccati: 7, PnL aggregato `-0.4000015969`.
+
+Conclusione: Context V1 avrebbe migliorato il risultato numerico della finestra, ma sarebbe rimasto negativo e avrebbe
+scartato anche alcune WIN. Il piano quindi va corretto: non basta aggiungere EMA/RSI/volume come gate semplici; serve
+un contratto di regime piu' severo, soprattutto per reentry.
 
 ## Decisione Del Consiglio
 
 Saggio ascoltatore:
 
-- passare a un contesto piu' ricco ha senso, ma senza stravolgere la pipeline.
+- il lavoro Bollinger-only e' una base buona: non va buttato;
+- Context V1 deve essere un'estensione disciplinata, non una riscrittura.
 
 Scienziato severo:
 
-- e' vietato aggiungere indicatori come filtri opachi;
-- ogni nuovo campo deve avere semantica, fonte, timeframe e ruolo nel contratto.
+- i nuovi indicatori non possono essere filtri opachi;
+- ogni campo deve dichiarare fonte, timeframe, ruolo e soglia candidate-specific;
+- il filtro diagnostico ha ridotto perdita ma non ha prodotto expectancy positiva;
+- e' obbligatorio separare breakout e reentry nelle metriche.
 
 Mediano pragmatico:
 
-- non introdurre subito venti indicatori;
-- prima versione con set minimo: EMA, RSI, volume ratio, ATR/liquidita'.
+- implementare prima un V1 minimo;
+- usare solo OHLCV 1m gia' disponibile e microbar come supporto forensics;
+- non introdurre order-flow/spread come gate finche' la fonte non e' affidabile.
 
 Decisione unica:
 
-Implementare `BOLLINGER_CONTEXT_V1` con due setup long separati:
+`BOLLINGER_CONTEXT_V1` resta candidato, ma corretto cosi':
 
-- `BB_SQUEEZE_BREAKOUT_LONG`
-- `BB_RANGE_REVERSION_LONG`
-
-Ogni advice deve dichiarare setup, regime, trigger, feature storiche, feature live e risk contract.
+1. riusa i setup runtime gia' implementati;
+2. non introduce `BB_RANGE_REVERSION_LONG` come nuovo nome operativo nella prima fase;
+3. estende `BB_REENTRY_MEAN_REVERSION_LONG` con regime/range/context gate;
+4. estende `BB_SQUEEZE_BREAKOUT_LONG` con trend/momentum/volume gate;
+5. mantiene SELL esistente nella fase 1;
+6. valuta il miglioramento solo per setup e solo dopo PAPER con trade reali.
 
 ## Setup Ammessi
 
@@ -68,13 +146,13 @@ Ogni advice deve dichiarare setup, regime, trigger, feature storiche, feature li
 
 Obiettivo:
 
-- comprare espansione di volatilita' dopo compressione.
+- comprare espansione di volatilita' dopo compressione solo se il contesto conferma movimento long.
 
 ML identifica:
 
-- squeeze recente;
-- bandwidth percentile basso;
+- squeeze recente o bandwidth percentile basso;
 - espansione iniziale;
+- rottura superiore;
 - trend non contrario;
 - volume e momentum compatibili.
 
@@ -82,48 +160,81 @@ WATCH compra solo se:
 
 ```text
 setup = BB_SQUEEZE_BREAKOUT_LONG
-AND regime IN (REGIME_SQUEEZE, REGIME_EXPANSION, REGIME_TREND_UP)
-AND close_1m > bb_upper
-AND bb_bandwidth_delta > 0
-AND volume_ratio_1m_20m >= contract_min_volume_ratio
+AND trigger = BB_UPPER_BREAKOUT_CONFIRMED
+AND market_regime IN (REGIME_SQUEEZE, REGIME_EXPANSION, REGIME_TREND_UP)
+AND current bb_upper_breach=1
+AND current bb_percent_b >= contract_min_breakout_percent_b
+AND current bb_bandwidth_delta > 0
+AND current bb_expansion=1
+AND current bb_middle_slope >= contract_min_middle_slope
 AND ema9 > ema21
-AND close > ema50
-AND rsi14 >= contract_min_rsi
-AND rsi14 <= contract_max_rsi
-AND liquidity/spread contract pass
+AND close_1m > ema50
+AND rsi14 >= contract_min_breakout_rsi
+AND rsi14 <= contract_max_breakout_rsi
+AND volume_ratio_1m_20m >= contract_min_volume_ratio
+AND liquidity contract pass, if reliable source exists
 ```
 
-### BB_RANGE_REVERSION_LONG
+Correzione da evidenza RUN 82-91:
+
+- breakout con `bb_upper_breach` e `bb_bandwidth_delta > 0` ma `ema9 <= ema21` o `close <= ema50` va bloccato;
+- il volume ratio da solo non basta;
+- zero-MFE breakout deve diventare metrica primaria.
+
+### BB_REENTRY_MEAN_REVERSION_LONG
 
 Obiettivo:
 
-- comprare rientro dentro le bande solo in regime laterale.
+- comprare rientro dentro le bande solo in regime laterale controllato.
 
 ML identifica:
 
-- range o assenza di trend forte;
 - banda inferiore violata;
-- rientro o probabilita' di rientro;
-- momentum non ancora deteriorato;
-- rischio operativo compatibile.
+- rientro confermato;
+- assenza di trend down o trend troppo ripido;
+- recupero non gia' esausto;
+- volatilita' controllata.
 
 WATCH compra solo se:
 
 ```text
-setup = BB_RANGE_REVERSION_LONG
-AND regime = REGIME_RANGE
+setup = BB_REENTRY_MEAN_REVERSION_LONG
+AND trigger = BB_REENTRY_CONFIRMED
+AND market_regime = REGIME_RANGE
 AND bb_lower_breach=1
 AND bb_reentry_confirmed=1
-AND rsi14 <= contract_max_oversold_recovery_rsi
+AND bb_percent_b >= contract_min_reentry_percent_b
+AND bb_percent_b <= contract_max_reentry_percent_b
+AND abs(bb_middle_slope) <= contract_max_middle_slope_abs
 AND abs(ema50_slope) <= contract_max_ema50_slope_abs
-AND volume_sell_pressure_not_increasing = true, if available
-AND liquidity/spread contract pass
+AND rsi14 <= contract_max_oversold_recovery_rsi
+AND volume_ratio_1m_20m <= contract_max_reentry_volume_spike_ratio
+AND atr_pct <= contract_max_atr_pct
+AND liquidity contract pass, if reliable source exists
 ```
 
-## Nuove Famiglie Feature
+Correzione da evidenza RUN 82-91:
+
+- reentry con RSI troppo alto o slope eccessiva va bloccato;
+- reentry in spike di volume non e' automaticamente bullish;
+- il range regime deve essere esplicito, non inferito solo da `bb_reentry_confirmed`;
+- il setup produce WIN, ma anche le LOSS piu' pesanti: serve contratto piu' severo.
+
+## Feature Del Contratto
+
+Ogni feature operativa nuova deve essere pubblicata in blocchi coerenti:
+
+- `history_*`: valutazione research/promotion;
+- `live_*`: snapshot usato da live-score/WATCH;
+- `entry_*`: snapshot immutabile al BUY;
+- `exit_*`: opzionale, snapshot SELL/forensics.
+
+Le feature canoniche runtime devono essere valorizzate da `live_*`; `entry_*` va scritto nel `policyJson`.
 
 ### Bollinger
 
+- `bb_setup`
+- `bb_trigger`
 - `bb_percent_b`
 - `bb_bandwidth`
 - `bb_bandwidth_percentile`
@@ -146,6 +257,31 @@ AND liquidity/spread contract pass
 - `regime_trend_down`
 - `regime_chaos`
 
+Prima classificazione ammessa:
+
+```text
+REGIME_RANGE:
+  abs(ema50_slope) <= contract_max_ema50_slope_abs
+  AND bb_bandwidth_percentile <= contract_max_range_bandwidth_percentile
+  AND atr_pct <= contract_max_range_atr_pct
+
+REGIME_EXPANSION:
+  bb_bandwidth_delta > 0
+  AND bb_expansion=1
+
+REGIME_TREND_UP:
+  ema9 > ema21
+  AND close_1m > ema50
+
+REGIME_TREND_DOWN:
+  ema9 < ema21
+  AND close_1m < ema50
+
+REGIME_CHAOS:
+  atr_pct > contract_max_chaos_atr_pct
+  OR volume_ratio_1m_20m > contract_max_chaos_volume_ratio
+```
+
 ### Trend
 
 - `ema9`
@@ -167,6 +303,7 @@ AND liquidity/spread contract pass
 
 - `volume_ratio_1m_20m`
 - `volume_confirmation`
+- `volume_spike_risk`
 - `volume_score`
 
 ### Risk / Liquidity
@@ -179,34 +316,37 @@ AND liquidity/spread contract pass
 - `max_spread_pct`;
 - `min_quote_volume_5m`, se disponibile.
 
+Regola: se spread/liquidita' non hanno fonte affidabile, marcare `UNKNOWN` e non usarli come gate hard.
+
 ## Interventi Per Modulo
 
 ### hft-common
 
 Interventi:
 
-- aggiungere enum `RemStrategyFamily` o estendere equivalente:
-  - `BOLLINGER_ONLY`
-  - `BOLLINGER_CONTEXT_V1`
-- aggiungere enum `RemSetupType`:
-  - `BB_SQUEEZE_BREAKOUT_LONG`
-  - `BB_RANGE_REVERSION_LONG`
+- aggiungere/estendere enum strategy family:
+  - `BOLLINGER_ONLY`;
+  - `BOLLINGER_CONTEXT_V1`.
+- riusare i setup gia' operativi:
+  - `BB_SQUEEZE_BREAKOUT_LONG`;
+  - `BB_REENTRY_MEAN_REVERSION_LONG`.
+- riusare i trigger gia' operativi:
+  - `BB_UPPER_BREAKOUT_CONFIRMED`;
+  - `BB_REENTRY_CONFIRMED`.
 - aggiungere enum `RemMarketRegime`:
-  - `REGIME_TREND_UP`
-  - `REGIME_TREND_DOWN`
-  - `REGIME_RANGE`
-  - `REGIME_SQUEEZE`
-  - `REGIME_EXPANSION`
-  - `REGIME_CHAOS`
-- aggiungere enum `RemEntryTriggerType`:
-  - `BB_BREAKOUT_CONFIRMED`
-  - `BB_REENTRY_CONFIRMED`
-- aggiungere costanti JSON in `RemConstants` per tutte le nuove feature.
+  - `REGIME_TREND_UP`;
+  - `REGIME_TREND_DOWN`;
+  - `REGIME_RANGE`;
+  - `REGIME_SQUEEZE`;
+  - `REGIME_EXPANSION`;
+  - `REGIME_CHAOS`.
+- aggiungere costanti JSON in `RemConstants` per tutte le nuove feature context.
 
 Note:
 
-- niente stringhe operative nei moduli consumer;
-- ogni nuova key `history_*`, `live_*`, `entry_*`, `exit_*` deve avere costante condivisa o shim locale verso common.
+- niente stringhe operative nei consumer;
+- nessun ritorno a nomi `ml_*` o contratti runtime legacy;
+- nessun payload operativo nuovo deve emettere `reversal_*`.
 
 ### docbrown
 
@@ -216,29 +356,29 @@ Interventi:
   - calcolare EMA 9/21/50 su 1m;
   - calcolare RSI 14;
   - calcolare volume ratio 1m/20m;
-  - calcolare ATR 14 o proxy su OHLC disponibile;
-  - calcolare feature Bollinger estese: percentile, delta, middle slope.
-- `BlankRemCandidateService`:
-  - separare candidate per setup;
-  - classificare regime per ogni riga;
-  - calcolare score per setup;
-  - salvare `setup`, `market_regime`, `entry_trigger`;
-  - promuovere solo candidate con contratto completo.
+  - calcolare ATR 14 e `atr_pct`;
+  - mantenere feature Bollinger gia' introdotte: percentile, delta, middle slope.
+- candidate generation:
+  - riusare candidate setup-specifiche Bollinger-only;
+  - aggiungere classificazione regime;
+  - calcolare score per setup e regime;
+  - non promuovere candidate senza contratto context completo.
 - `RollingPaperPromotion`:
-  - produrre advice setup-specific;
-  - pubblicare blocchi `history_*` e `live_*` per Bollinger, regime, trend, momentum, volume e risk;
-  - includere soglie candidate-specific nel contratto:
-    - min/max RSI;
-    - min volume ratio;
-    - max spread;
-    - ATR/loss/target;
-    - trigger setup-specifico.
+  - pubblicare `history_*` e `live_*` per Bollinger, regime, trend, momentum, volume, risk;
+  - includere soglie candidate-specific:
+    - RSI min/max per breakout;
+    - RSI max per reentry;
+    - min volume ratio breakout;
+    - max volume spike reentry;
+    - max EMA50 slope;
+    - max ATR pct;
+    - target/loss/timeout.
 
 Test:
 
 - calcolo EMA/RSI/ATR/volume ratio;
-- setup breakout distinto da setup reversion;
-- advice senza setup o regime deve essere non promotable;
+- regime range/trend/expansion/chaos;
+- advice senza setup, trigger o regime non promotable;
 - payload nuovi senza `reversal_*`.
 
 ### acdc
@@ -246,35 +386,40 @@ Test:
 Interventi:
 
 - `OutcomeQualityModelService`:
-  - consumare e propagare le nuove feature `history_*` e `live_*`;
-  - valorizzare campi canonici runtime solo da `live_*`;
-  - scrivere `entry_*` al BUY.
+  - consumare e propagare `history_*` e `live_*`;
+  - valorizzare i campi canonici runtime solo da `live_*`;
+  - scrivere `entry_*` nel `policyJson`.
 - `PreBuyWatchService`:
-  - introdurre dispatch per `setup`;
-  - implementare trigger breakout;
-  - implementare trigger range reversion;
-  - fail-closed se setup/regime/trigger manca;
+  - mantenere dispatch per setup gia' implementato;
+  - aggiungere gate context dopo il trigger Bollinger setup-specifico;
+  - fail-closed se setup/regime/trigger/context manca;
+  - non reintrodurre cap numerici su WATCH o BUY;
   - reason distinte:
-    - `WATCH_WAITING_BB_BREAKOUT_CONTEXT`
-    - `WATCH_WAITING_BB_REENTRY_CONTEXT`
-    - `WATCH_CONTEXT_CONTRACT_INCOMPLETE`
-    - `WATCH_REGIME_BLOCKED`
-    - `WATCH_LIQUIDITY_BLOCKED`
+    - `WATCH_WAITING_BB_BREAKOUT_CONTEXT`;
+    - `WATCH_WAITING_BB_REENTRY_CONTEXT`;
+    - `WATCH_CONTEXT_CONTRACT_INCOMPLETE`;
+    - `WATCH_REGIME_BLOCKED`;
+    - `WATCH_TREND_BLOCKED`;
+    - `WATCH_MOMENTUM_BLOCKED`;
+    - `WATCH_VOLUME_BLOCKED`;
+    - `WATCH_LIQUIDITY_BLOCKED`.
 - `PaperRunService`:
-  - salvare setup e regime nelle decisioni/posizioni;
-  - includere nuove feature in `policy_json`.
+  - salvare setup, trigger, regime e context gates nelle decisioni;
+  - includere nuove feature in `policyJson`;
+  - esporre Context V1 pass/fail in forensics.
 - SELL:
-  - fase 1: mantenere loss-cap/target/no-MFE/trailing esistenti, ma derivare target/loss dal contratto context;
-  - fase 2: aggiungere SELL setup-specific:
-    - breakout: trailing ATR/middle band;
-    - reversion: target middle band.
+  - fase 1: mantenere SELL Bollinger-only esistente;
+  - fase 2: aggiungere SELL setup-specific solo dopo campione PAPER:
+    - breakout: trailing ATR o middle-band failure;
+    - reentry: target middle band e invalidazione range.
 
 Test:
 
 - fail-closed su contratto context incompleto;
 - breakout compra solo con trend/momentum/volume coerenti;
-- reversion compra solo in range;
-- no BUY se regime `REGIME_TREND_DOWN` o `REGIME_CHAOS`.
+- reentry compra solo in range;
+- no BUY se regime `REGIME_TREND_DOWN` o `REGIME_CHAOS`;
+- BUY continua a rispettare solo budget/sizing, non cap arbitrari.
 
 ### kenshiro
 
@@ -283,22 +428,23 @@ Interventi:
 - `/management/state`:
   - esporre strategy family;
   - esporre count per setup/regime;
-  - mostrare latest setup selected;
-  - mostrare zero-MFE/loss-cap per setup.
+  - esporre latest setup/regime selected;
+  - mostrare zero-MFE/loss-cap per setup;
+  - mostrare context pass/fail summary.
 - Actions:
-  - mantenere `AUTO_AB_START` come orchestrazione;
-  - non reintrodurre SHADOW;
-  - aggiungere eventuale action config per scegliere strategy family solo se approvata:
-    - `APPLY_BOLLINGER_ONLY`
-    - `APPLY_BOLLINGER_CONTEXT_V1`
+  - mantenere orchestrazione PAPER-only;
+  - aggiungere action/config solo dopo approvazione:
+    - `APPLY_BOLLINGER_ONLY`;
+    - `APPLY_BOLLINGER_CONTEXT_V1`.
 - Diagnostics:
-  - report attribution per setup/regime;
-  - summary `expectancy`, win/loss, MFE, zero-MFE.
+  - attribution per setup/regime;
+  - expectancy, win/loss, MFE, zero-MFE, loss-cap;
+  - confronto "actual vs Context V1 filtered" per run PAPER.
 
 Test:
 
-- current state mostra family/setup;
-- PAPER resta bloccata se `ML_READY=false`;
+- state summary include family/setup/regime;
+- PAPER resta bloccata se readiness non passa;
 - REAL resta bloccata.
 
 ### hft-fe
@@ -307,12 +453,14 @@ Interventi:
 
 - `/management`:
   - mostrare strategy family;
-  - mostrare setup/regime su advice;
+  - mostrare setup, trigger e regime su advice;
   - mostrare WATCH reason context-specific;
   - aggiungere sezioni compatte:
     - setup distribution;
-    - latest PAPER by setup;
-    - zero-MFE/loss-cap by setup.
+    - regime distribution;
+    - latest PAPER by setup/regime;
+    - zero-MFE/loss-cap by setup/regime;
+    - Context V1 diagnostic comparison.
 - Nessuna nuova pagina.
 
 Test:
@@ -324,15 +472,16 @@ Test:
 
 Interventi:
 
-- nessun cambio obbligatorio per fase 1 se OHLCV 1m e microbar 1m sono gia' disponibili;
-- verificare copertura OHLCV su `binance` e `binance-microbar`;
-- se spread/liquidita' non disponibili, marcare `spread_pct` come `UNKNOWN` e non usarlo come gate finche' non c'e'
-  fonte affidabile.
+- nessun cambio obbligatorio per fase 1 se OHLCV 1m e microbar sono disponibili;
+- verificare copertura OHLCV 1m su `binance-realtime`;
+- migliorare continuita' microbar se si vuole usare forensics second-level come prova SELL;
+- non usare spread/order-flow come gate finche' non c'e' fonte affidabile.
 
 Test:
 
-- query Influx su OHLCV 1m per almeno 2h;
-- verifica gap massimi per simboli USDC.
+- query OHLCV 1m per almeno 2h;
+- verifica gap massimi per simboli USDC;
+- report gap microbar per trade con forensics inconclusive.
 
 ### DB / Migration
 
@@ -340,10 +489,13 @@ ACDC:
 
 - aggiungere config `rem.ml.strategy.family=BOLLINGER_CONTEXT_V1` solo se piano approvato;
 - aggiungere config candidate-specific default per:
-  - min volume ratio;
-  - RSI bounds;
-  - max spread/liquidity se disponibili;
-  - ATR multiplier per SELL fase 2.
+  - min/max RSI breakout;
+  - max RSI reentry;
+  - min volume ratio breakout;
+  - max volume spike reentry;
+  - max EMA50 slope;
+  - max ATR pct;
+  - ATR multiplier opzionale per SELL fase 2.
 - non creare nuove tabelle al primo step se JSON contract basta.
 
 DocBrown:
@@ -367,7 +519,7 @@ score =
 - 0.30 * chaos_risk
 ```
 
-Score reversion indicativo:
+Score reentry indicativo:
 
 ```text
 score =
@@ -378,6 +530,7 @@ score =
 + 0.10 * liquidity_score
 - 0.25 * trend_down_risk
 - 0.20 * chaos_risk
+- 0.15 * volume_spike_risk
 ```
 
 I pesi non devono diventare soglie globali nascoste. Devono essere:
@@ -397,13 +550,17 @@ Fase 1 - Technical:
 - build/deploy di tutti i moduli toccati;
 - diagnostics clean;
 - payload senza `reversal_*`;
-- advice con setup/regime completi.
+- advice con setup, trigger e regime completi;
+- `policyJson` con `entry_*` context completo;
+- management mostra context pass/fail.
 
 Fase 2 - PAPER:
 
-- PAPER solo se `ML_READY=true`;
-- almeno 5 run per setup prima di giudicare;
-- non aggregare breakout e reversion nella stessa metrica.
+- PAPER solo da `/management`;
+- almeno 5 run con trade reali per setup prima di giudicare;
+- non aggregare breakout e reentry nella stessa metrica;
+- ogni run deve produrre report actual vs Context V1 filtered;
+- ogni loss-cap e zero-MFE deve indicare setup, regime e gate context.
 
 Metriche:
 
@@ -416,6 +573,7 @@ Metriche:
 - zero-MFE rate;
 - loss-cap rate;
 - WATCH expired rate;
+- context pass rate;
 - performance per setup;
 - performance per regime;
 - performance per simbolo.
@@ -424,11 +582,12 @@ Metriche:
 
 `BOLLINGER_CONTEXT_V1` e' candidato a proseguire solo se:
 
-- almeno un setup riduce zero-MFE rispetto a PAPER `37`/`38`;
+- almeno un setup riduce zero-MFE rispetto a Bollinger-only V2;
 - almeno un setup produce MFE positivo ripetuto;
 - loss-cap rate non domina;
 - expectancy per setup e' non negativa su campione minimo;
-- forensics complete distinguono setup/regime;
+- Context V1 filtered migliora PnL e non scarta in modo sistematico le WIN migliori;
+- forensics complete distinguono setup, trigger, regime e gate context;
 - runtime finale resta pulito.
 
 ## Rischi
@@ -437,11 +596,13 @@ Metriche:
 - Troppe soglie candidate-specific poco leggibili.
 - Riduzione eccessiva del numero di trade.
 - Dati spread/order-flow non disponibili o non affidabili.
-- Confondere setup breakout e setup reversion.
+- Confondere reentry valido con coltello che cade.
+- Scartare WIN buone per soglie RSI/slope troppo rigide.
+- Usare forensics post-exit non conclusiva come prova forte quando microbar ha gap larghi.
 
 ## Decisione Richiesta
 
-Scegliere questo piano se si accetta di cambiare il vincolo strategico attuale e passare da:
+Scegliere questo piano se si accetta di cambiare il vincolo strategico attuale da:
 
 ```text
 solo Bollinger
@@ -450,8 +611,8 @@ solo Bollinger
 a:
 
 ```text
-Bollinger come segnale centrale + contesto trend/momentum/volume/risk
+Bollinger come segnale centrale + contesto regime/trend/momentum/volume/risk
 ```
 
-Questo piano e' piu' promettente dal punto di vista finanziario, ma piu' rischioso dal punto di vista scientifico:
-richiede piu' feature, piu' contratti, piu' forensics e maggiore disciplina contro l'overfitting.
+Questo piano e' piu' promettente del Bollinger-only puro secondo la RUN 82-91, ma non e' ancora validato:
+riduce la perdita diagnostica, resta negativo e richiede una implementazione disciplinata del regime.
