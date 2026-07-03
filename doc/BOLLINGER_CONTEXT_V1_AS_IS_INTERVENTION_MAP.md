@@ -33,6 +33,49 @@ storico -> contratto setup-specifico -> WATCH realtime -> BUY -> SELL invalidati
 
 Il ML/DocBrown puo' dedurre soglie dal passato. Il WATCH ACDC deve decidere usando solo stato vivo ricalcolato.
 
+## Revisione Del Consiglio 2026-07-03
+
+Rilettura dopo prima stesura:
+
+- il documento era coerente sul runtime `WATCH -> BUY -> SELL`, ma incompleto sul layer `ML`;
+- mancava la mappa esplicita degli script che invocano DocBrown;
+- mancava una separazione chiara tra workflow ML Quarkus, endpoint `/management` e wrapper shell;
+- la sezione script era troppo generica e poteva lasciare credere che gli script possano diventare un ramo operativo
+  parallelo.
+
+Correzione vincolante:
+
+```text
+ML = workflow DocBrown Quarkus + orchestrazione /management.
+Gli script shell possono essere solo wrapper diagnostici/manuali, mai un canale decisionale parallelo.
+```
+
+Lo script attuale:
+
+```text
+acdc/scripts/acdc-run-rem-ml.sh
+```
+
+invoca direttamente:
+
+```text
+POST ${DOCBROWN_BASE_URL}/rem/research/${PROFILE_KEY}/run
+```
+
+e salva il JSON in:
+
+```text
+acdc/target/rem-ml/latest.json
+```
+
+Questo e' utile come diagnostica, ma non puo':
+
+- promuovere advice;
+- avviare PAPER;
+- saltare `/management`;
+- scrivere contratti runtime;
+- diventare requisito per BUY.
+
 ## Vincoli Da Non Rompere
 
 - REAL vietata.
@@ -109,6 +152,62 @@ Gap:
   - `atr_pct <= 0.015`;
   - chaos `atr_pct > 0.025` o volume ratio `> 3.00`.
   Queste soglie devono diventare o candidate-specific, o dichiarate come default con audit.
+
+### ML / Research / Script Layer
+
+AS-IS:
+
+- non esiste piu' `docbrown/python`; il laboratorio Python storico e' stato rimosso e non va ripristinato;
+- il processo ML operativo e' nel runtime Quarkus DocBrown;
+- endpoint DocBrown rilevanti:
+  - `POST /rem/research/{profileKey}/run`;
+  - `GET /rem/research/{profileKey}/status`;
+  - `POST /rem/blank-candidates/{profileKey}/generate`;
+  - `POST /rem/blank-candidates/{profileKey}/rolling-validation`;
+  - `POST /rem/blank-candidates/{profileKey}/universe-triage`;
+  - `POST /rem/blank-candidates/{profileKey}/universe-scheduler`;
+  - `POST /rem/blank-candidates/{profileKey}/rolling-paper-promotion`;
+  - `POST /rem/live-advice/{profileKey}/score`;
+- endpoint Kenshiro `/management` rilevanti:
+  - `RUN_RESEARCH`;
+  - `RESEARCH_STATUS`;
+  - `UNIVERSE_PREFILTER`;
+  - `LIVE_SCORE`;
+  - `ROLLING_VALIDATION`;
+  - `ROLLING_PROMOTION`;
+  - `AUTO_BOLLINGER_START`;
+- script esistenti:
+  - `acdc/scripts/acdc-run-rem-ml.sh`;
+  - `acdc/scripts/lib/rem_contracts.sh`;
+  - `acdc/scripts/check-script-contracts.py`.
+
+Gap:
+
+- `acdc-run-rem-ml.sh` chiama DocBrown direttamente e non passa da Kenshiro `/management`;
+- il nome dello script contiene ancora `ml`, ma oggi il contratto strategico e' Bollinger Context V1;
+- lo script salva solo l'output research, senza legare in modo esplicito:
+  - source generation;
+  - rolling validation;
+  - live-score;
+  - promotion;
+  - readiness `/management`;
+- il documento precedente non indicava se questo script fosse operativo, diagnostico o legacy.
+
+Decisione:
+
+- lo script resta ammesso solo come diagnostica/manual run research;
+- l'orchestrazione operativa PAPER deve passare da `/management`;
+- se lo script resta, va rinominato o affiancato con un nome coerente, ad esempio:
+  - `run-bollinger-context-research.sh`;
+  - `run-docbrown-research.sh`;
+- se viene mantenuto, deve stampare chiaramente:
+  - `DIAGNOSTIC_ONLY`;
+  - profile;
+  - endpoint invocato;
+  - output file;
+  - avviso che non promuove e non avvia PAPER;
+- un eventuale script end-to-end puo' invocare solo endpoint `/management`, non direttamente DocBrown, salvo
+  diagnostica esplicita.
 
 ### acdc
 
@@ -331,6 +430,48 @@ Test:
 - candidate senza barre sufficienti non e' promotable;
 - payload non contiene `reversal_*`.
 
+### 2B. ML / Script Orchestration
+
+File:
+
+- `acdc/scripts/acdc-run-rem-ml.sh`
+- `acdc/scripts/lib/rem_contracts.sh`
+- `acdc/scripts/check-script-contracts.py`
+- eventuale nuovo script in `acdc/scripts` o `hft-common/scripts`.
+
+Interventi:
+
+1. Classificare `acdc-run-rem-ml.sh` come `DIAGNOSTIC_ONLY`.
+2. Rinominare o creare alias coerente:
+   - preferito: `run-docbrown-research.sh`;
+   - alternativa: mantenere il nome attuale ma aggiungere banner e documentazione.
+3. Vietare allo script di:
+   - invocare promotion;
+   - invocare PAPER;
+   - scrivere DB runtime;
+   - bypassare `/management` per qualunque passaggio operativo.
+4. Aggiungere output JSON/metadata minimo:
+   - `profileKey`;
+   - `docbrownBaseUrl`;
+   - `endpoint`;
+   - `runStartedAt`;
+   - `outputFile`;
+   - `diagnosticOnly=true`.
+5. Se serve uno script operativo end-to-end, deve chiamarsi diversamente e usare solo:
+   - `POST /backoffice/management/actions/RUN_RESEARCH`;
+   - `POST /backoffice/management/actions/LIVE_SCORE`;
+   - `POST /backoffice/management/actions/ROLLING_VALIDATION`;
+   - `POST /backoffice/management/actions/ROLLING_PROMOTION`;
+   - `POST /backoffice/management/actions/PAPER_BOLLINGER_START` o `AUTO_BOLLINGER_START`,
+     solo quando lo stato e' pronto.
+6. Aggiornare `check-script-contracts.py` per coprire eventuali nuove stringhe operative introdotte negli script.
+
+Test:
+
+- `python3 acdc/scripts/check-script-contracts.py`;
+- dry run dello script diagnostico con endpoint non distruttivo o ambiente locale;
+- verifica che nessuno script contenga `REAL` hard-coded fuori da `rem_contracts.sh`.
+
 ### 3. acdc
 
 File:
@@ -506,7 +647,12 @@ Posizione consigliata:
 
 Interventi:
 
-1. Script forensics execution:
+1. Script ML/research:
+   - non deve essere operativo di trading;
+   - deve essere `DIAGNOSTIC_ONLY`;
+   - deve invocare DocBrown direttamente solo per research/status;
+   - deve demandare promotion/PAPER a `/management`.
+2. Script forensics execution:
    - input `executionId`;
    - output per symbol:
      - setup;
@@ -518,10 +664,10 @@ Interventi:
      - reason BUY/SELL;
      - loss quote;
      - proposed block reason.
-2. Script gap replay:
+3. Script gap replay:
    - input `executionId` + symbol;
    - confronta expected interval vs actual bucket times.
-3. Script actual-vs-proposed:
+4. Script actual-vs-proposed:
    - non cambia DB;
    - simula soglie nuove su decisioni/candles persistiti.
 
@@ -542,6 +688,7 @@ Deliverable:
 - `/management` mostra metriche setup/regime/context.
 - `/trades` mostra cadenza dati e contract/current/entry/exit.
 - report actual-vs-proposed su RUN `111`.
+- classificazione script ML/research: diagnostico o rimosso dal percorso operativo.
 
 Validazione:
 
@@ -662,4 +809,3 @@ Dopo implementazione:
    - breakout: limite overextension e trailing fase 2.
 7. Dati microbar:
    - decidere se bloccare validazione scientifica fine finche' gap > 5-10s.
-

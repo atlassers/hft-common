@@ -35,6 +35,118 @@ BUY = current_state soddisfa contract
 
 Il contratto non e' la decisione. La decisione e' solo il confronto vivo dentro WATCH.
 
+## ML / Research Workflow
+
+Nel ciclo attuale, `ML` non significa script Python o laboratorio esterno. Il laboratorio storico `docbrown/python` non
+e' piu' parte del runtime ed e' stato rimosso.
+
+Nel processo scientifico `ML` significa:
+
+```text
+DocBrown Quarkus research + candidate generation + rolling validation + rolling promotion
+```
+
+Gli output ammessi del layer ML sono:
+
+- candidate;
+- setup;
+- trigger atteso;
+- soglie contrattuali;
+- regime ammesso;
+- metriche storiche;
+- advice PAPER-eligible.
+
+Gli output vietati del layer ML sono:
+
+- BUY diretto;
+- SELL diretto;
+- avvio PAPER fuori `/management`;
+- uso di valori storici/advice come verita' realtime del BUY.
+
+### Endpoint Scientifici DocBrown
+
+Endpoint del layer research/selection:
+
+```text
+POST /rem/research/{profileKey}/run
+GET  /rem/research/{profileKey}/status
+POST /rem/blank-candidates/{profileKey}/generate
+POST /rem/blank-candidates/{profileKey}/rolling-validation
+POST /rem/blank-candidates/{profileKey}/universe-triage
+POST /rem/blank-candidates/{profileKey}/universe-scheduler
+POST /rem/blank-candidates/{profileKey}/rolling-paper-promotion
+POST /rem/live-advice/{profileKey}/score
+```
+
+Questi endpoint possono costruire e validare il contratto. Non possono autorizzare BUY senza WATCH.
+
+### Endpoint Operativi Kenshiro
+
+Endpoint operativo primario:
+
+```text
+POST /backoffice/management/actions/{action}
+```
+
+Azioni rilevanti:
+
+```text
+RUN_RESEARCH
+RESEARCH_STATUS
+UNIVERSE_PREFILTER
+LIVE_SCORE
+ROLLING_VALIDATION
+ROLLING_PROMOTION
+AUTO_BOLLINGER_START
+PAPER_BOLLINGER_START
+PAPER_STOP
+```
+
+Regola:
+
+```text
+ogni sequenza operativa che puo' portare a PAPER deve passare da /management
+```
+
+### Script ML
+
+Script attuale:
+
+```text
+acdc/scripts/acdc-run-rem-ml.sh
+```
+
+Comportamento:
+
+```text
+curl -X POST ${DOCBROWN_BASE_URL}/rem/research/${PROFILE_KEY}/run
+```
+
+Output:
+
+```text
+acdc/target/rem-ml/candidate-*.json
+acdc/target/rem-ml/latest.json
+```
+
+Classificazione scientifica:
+
+```text
+DIAGNOSTIC_ONLY
+```
+
+Motivo:
+
+- invoca solo research;
+- non esegue rolling validation;
+- non esegue live-score;
+- non esegue promotion;
+- non verifica `/management/state`;
+- non puo' garantire readiness PAPER.
+
+Un eventuale script operativo end-to-end deve invocare solo `/management/actions/*`, cosi' la sequenza resta
+tracciata, bloccabile e coerente con le regole PAPER-only.
+
 ## Fonti Scientifiche
 
 Riferimenti usati:
@@ -657,4 +769,3 @@ La modifica piu' importante non e' reintrodurre MFE. E':
 ```text
 impedire BUY semanticamente sbagliati e limitare la perdita economica massima senza usare MFE come uscita
 ```
-
