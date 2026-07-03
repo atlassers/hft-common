@@ -43,20 +43,11 @@ Cambiano le definizioni decisionali:
 
 ## Regole Sacre
 
-1. REAL e' vietata.
-2. Il ciclo operativo e' PAPER-only da `/management`.
-3. SHADOW non e' un ramo operativo della strategia.
-4. Nessuna logica legacy puo' selezionare, ordinare, bloccare o confermare BUY.
-5. I nuovi payload operativi non devono emettere `reversal_*`.
-6. Bollinger resta il segnale centrale: ogni advice deve dichiarare `bb_setup` e `bb_trigger`.
-7. Le decisioni operative Context V1 possono usare solo contratto Bollinger `bb_*` e feature context esplicite:
-   `market_regime`, EMA, RSI, volume ratio, ATR/risk e relative soglie contrattuali.
-8. WATCH deve fallire chiusa se setup, trigger, regime o soglie context richieste sono mancanti.
-9. La finestra temporale WATCH autorizza solo l'osservazione; non e' una condizione BUY.
-10. WATCH e BUY non possono essere limitate da cap numerici su posizioni o osservazioni concorrenti; l'unico limite
-    ammesso all'acquisto e' la disponibilita' di budget/exchange sizing al momento della BUY.
-11. Nessuna soglia DB `rem_*` legacy puo' diventare guardia di trading.
-12. Stringhe operative, payload key, status, reason e action devono stare in enum/costanti.
+Le regole vincolanti sono centralizzate in:
+
+```text
+hft-common/doc/RULES.md
+```
 
 ## Setup Ammessi
 
