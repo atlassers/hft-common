@@ -9,13 +9,13 @@ Manuale operativo compatto per il ciclo `BOLLINGER_CONTEXT_V1`.
 Il charter strategico operativo primario e':
 
 ```text
-hft-common/doc/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md
+hft-common/doc/archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md
 ```
 
 La base scientifica di riferimento e':
 
 ```text
-hft-common/doc/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md
+hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md
 ```
 
 ## Vincoli
