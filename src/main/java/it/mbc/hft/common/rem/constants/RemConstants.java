@@ -370,10 +370,13 @@ public final class RemConstants {
     public static final String BB_BUY_CONTRACT_PASS = "bb_buy_contract_pass";
     public static final String BB_TARGET_NET_RETURN = "bb_target_net_return";
     public static final String BB_LOSS_CAP_NET_RETURN = "bb_loss_cap_net_return";
+    public static final String BB_MAX_NET_LOSS_QUOTE = "bb_max_net_loss_quote";
     public static final String BB_NO_MFE_TIMEOUT_SECONDS = "bb_no_mfe_timeout_seconds";
     public static final String BB_WATCH_TIMEOUT_SECONDS = "bb_watch_timeout_seconds";
     public static final String BB_MIN_PERCENT_B = "bb_min_percent_b";
     public static final String BB_MAX_PERCENT_B = "bb_max_percent_b";
+    public static final String BB_MIN_REENTRY_PERCENT_B = "bb_min_reentry_percent_b";
+    public static final String BB_MAX_REENTRY_PERCENT_B = "bb_max_reentry_percent_b";
     public static final String BB_MIN_BREAKOUT_PERCENT_B = "bb_min_breakout_percent_b";
     public static final String BB_MAX_BANDWIDTH_PERCENTILE = "bb_max_bandwidth_percentile";
     public static final String BB_MAX_MIDDLE_SLOPE_ABS = "bb_max_middle_slope_abs";
@@ -426,6 +429,9 @@ public final class RemConstants {
     public static final String CONTRACT_MAX_RANGE_ATR_PCT = "contract_max_range_atr_pct";
     public static final String CONTRACT_MAX_CHAOS_ATR_PCT = "contract_max_chaos_atr_pct";
     public static final String CONTRACT_MAX_CHAOS_VOLUME_RATIO = "contract_max_chaos_volume_ratio";
+    public static final String CONTRACT_MIN_REENTRY_PERCENT_B = "contract_min_reentry_percent_b";
+    public static final String CONTRACT_MAX_REENTRY_PERCENT_B = "contract_max_reentry_percent_b";
+    public static final String CONTRACT_MAX_NET_LOSS_QUOTE = "contract_max_net_loss_quote";
     public static final String WATCH_WAITING_BB_BREAKOUT_CONTEXT = "WATCH_WAITING_BB_BREAKOUT_CONTEXT";
     public static final String WATCH_WAITING_BB_REENTRY_CONTEXT = "WATCH_WAITING_BB_REENTRY_CONTEXT";
     public static final String WATCH_CONTEXT_CONTRACT_INCOMPLETE = "WATCH_CONTEXT_CONTRACT_INCOMPLETE";
@@ -434,6 +440,9 @@ public final class RemConstants {
     public static final String WATCH_MOMENTUM_BLOCKED = "WATCH_MOMENTUM_BLOCKED";
     public static final String WATCH_VOLUME_BLOCKED = "WATCH_VOLUME_BLOCKED";
     public static final String WATCH_LIQUIDITY_BLOCKED = "WATCH_LIQUIDITY_BLOCKED";
+    public static final String WATCH_REENTRY_OVEREXTENDED = "WATCH_REENTRY_OVEREXTENDED";
+    public static final String WATCH_BREAKOUT_WEAK_CONFIRMATION = "WATCH_BREAKOUT_WEAK_CONFIRMATION";
+    public static final String EXIT_BB_CONTEXT_INVALIDATED = "EXIT_BB_CONTEXT_INVALIDATED";
     public static final String FEATURE_BB_BANDWIDTH_Q50 = "feature:bb_bandwidth>=0.50q";
     public static final String FEATURE_BB_PERCENT_B_Q25 = "feature:bb_percent_b>=0.25q";
     public static final String FEATURE_BB_LOWER_BREACH = "feature:bb_lower_breach=1";
@@ -445,10 +454,13 @@ public final class RemConstants {
     public static final String HISTORY_BB_TRIGGER = "history_bb_trigger";
     public static final String HISTORY_BB_TARGET_NET_RETURN = "history_bb_target_net_return";
     public static final String HISTORY_BB_LOSS_CAP_NET_RETURN = "history_bb_loss_cap_net_return";
+    public static final String HISTORY_BB_MAX_NET_LOSS_QUOTE = "history_bb_max_net_loss_quote";
     public static final String HISTORY_BB_NO_MFE_TIMEOUT_SECONDS = "history_bb_no_mfe_timeout_seconds";
     public static final String HISTORY_BB_WATCH_TIMEOUT_SECONDS = "history_bb_watch_timeout_seconds";
     public static final String HISTORY_BB_MIN_PERCENT_B = "history_bb_min_percent_b";
     public static final String HISTORY_BB_MAX_PERCENT_B = "history_bb_max_percent_b";
+    public static final String HISTORY_BB_MIN_REENTRY_PERCENT_B = "history_bb_min_reentry_percent_b";
+    public static final String HISTORY_BB_MAX_REENTRY_PERCENT_B = "history_bb_max_reentry_percent_b";
     public static final String HISTORY_BB_MIN_BREAKOUT_PERCENT_B = "history_bb_min_breakout_percent_b";
     public static final String HISTORY_BB_MAX_BANDWIDTH_PERCENTILE = "history_bb_max_bandwidth_percentile";
     public static final String HISTORY_BB_MAX_MIDDLE_SLOPE_ABS = "history_bb_max_middle_slope_abs";
@@ -488,14 +500,20 @@ public final class RemConstants {
     public static final String HISTORY_CONTRACT_MAX_RANGE_ATR_PCT = "history_contract_max_range_atr_pct";
     public static final String HISTORY_CONTRACT_MAX_CHAOS_ATR_PCT = "history_contract_max_chaos_atr_pct";
     public static final String HISTORY_CONTRACT_MAX_CHAOS_VOLUME_RATIO = "history_contract_max_chaos_volume_ratio";
+    public static final String HISTORY_CONTRACT_MIN_REENTRY_PERCENT_B = "history_contract_min_reentry_percent_b";
+    public static final String HISTORY_CONTRACT_MAX_REENTRY_PERCENT_B = "history_contract_max_reentry_percent_b";
+    public static final String HISTORY_CONTRACT_MAX_NET_LOSS_QUOTE = "history_contract_max_net_loss_quote";
     public static final String LIVE_BB_SETUP = "live_bb_setup";
     public static final String LIVE_BB_TRIGGER = "live_bb_trigger";
     public static final String LIVE_BB_TARGET_NET_RETURN = "live_bb_target_net_return";
     public static final String LIVE_BB_LOSS_CAP_NET_RETURN = "live_bb_loss_cap_net_return";
+    public static final String LIVE_BB_MAX_NET_LOSS_QUOTE = "live_bb_max_net_loss_quote";
     public static final String LIVE_BB_NO_MFE_TIMEOUT_SECONDS = "live_bb_no_mfe_timeout_seconds";
     public static final String LIVE_BB_WATCH_TIMEOUT_SECONDS = "live_bb_watch_timeout_seconds";
     public static final String LIVE_BB_MIN_PERCENT_B = "live_bb_min_percent_b";
     public static final String LIVE_BB_MAX_PERCENT_B = "live_bb_max_percent_b";
+    public static final String LIVE_BB_MIN_REENTRY_PERCENT_B = "live_bb_min_reentry_percent_b";
+    public static final String LIVE_BB_MAX_REENTRY_PERCENT_B = "live_bb_max_reentry_percent_b";
     public static final String LIVE_BB_MIN_BREAKOUT_PERCENT_B = "live_bb_min_breakout_percent_b";
     public static final String LIVE_BB_MAX_BANDWIDTH_PERCENTILE = "live_bb_max_bandwidth_percentile";
     public static final String LIVE_BB_MAX_MIDDLE_SLOPE_ABS = "live_bb_max_middle_slope_abs";
@@ -535,6 +553,9 @@ public final class RemConstants {
     public static final String LIVE_CONTRACT_MAX_RANGE_ATR_PCT = "live_contract_max_range_atr_pct";
     public static final String LIVE_CONTRACT_MAX_CHAOS_ATR_PCT = "live_contract_max_chaos_atr_pct";
     public static final String LIVE_CONTRACT_MAX_CHAOS_VOLUME_RATIO = "live_contract_max_chaos_volume_ratio";
+    public static final String LIVE_CONTRACT_MIN_REENTRY_PERCENT_B = "live_contract_min_reentry_percent_b";
+    public static final String LIVE_CONTRACT_MAX_REENTRY_PERCENT_B = "live_contract_max_reentry_percent_b";
+    public static final String LIVE_CONTRACT_MAX_NET_LOSS_QUOTE = "live_contract_max_net_loss_quote";
     public static final String ENTRY_BB_SETUP = "entry_bb_setup";
     public static final String ENTRY_BB_TRIGGER = "entry_bb_trigger";
     public static final String ENTRY_BB_BUY_CONTRACT_PASS = "entry_bb_buy_contract_pass";
@@ -571,5 +592,12 @@ public final class RemConstants {
     public static final String DEFENSIVE_LEARNED = "defensiveLearned";
     public static final String DOCUMENTATION_UPDATED = "documentationUpdated";
     public static final String FORENSIC_REPORT_AVAILABLE = "forensicReportAvailable";
+    public static final String BB_CONTEXT_BREAKOUT_MAX_RSI = "bb.context.breakout.max_rsi";
+    public static final String BB_CONTEXT_BREAKOUT_MIN_VOLUME_RATIO = "bb.context.breakout.min_volume_ratio";
+    public static final String BB_CONTEXT_REENTRY_MAX_PERCENT_B = "bb.context.reentry.max_percent_b";
+    public static final String BB_CONTEXT_REENTRY_MAX_RSI = "bb.context.reentry.max_rsi";
+    public static final String BB_LIVE_ADVICE_LOSS_CAP_MAX_ABS = "bb.live_advice.loss_cap.max_abs";
+    public static final String BB_LIVE_ADVICE_LOSS_CAP_MAX_QUOTE = "bb.live_advice.loss_cap.max_quote";
+    public static final String BB_LIVE_ADVICE_LOSS_CAP_MIN_BUFFER = "bb.live_advice.loss_cap.min_buffer";
 
 }

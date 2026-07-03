@@ -9,20 +9,26 @@ Questo documento e' il charter strategico vincolante del ciclo REM.
 Il vincolo operativo primario e' ora:
 
 ```text
-hft-common/doc/BOLLINGER_CONTEXT_V1_PLAN.md
+hft-common/doc/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md
 ```
+
+`BOLLINGER_CONTEXT_V1_PLAN.md` resta baseline tecnica consolidata del ciclo Context V1. Non e' piu' il charter
+strategico primario.
 
 `BOLLINGER_ONLY_PLAN.md` resta baseline storica consolidata. Non e' piu' il piano strategico primario.
 
 ## Gerarchia Documentale
 
 1. `STRATEGIC_REM_RECOVERY_PLAN.md`: charter sintetico e gerarchia vincolante.
-2. `BOLLINGER_CONTEXT_V1_PLAN.md`: piano tecnico-operativo vincolante.
-3. `CURRENT_CONTEXT.md`: snapshot corrente cross-modulo.
-4. `STRATEGIC_REM_HANDOFF.md`: manuale operativo stabile.
-5. `BOLLINGER_ONLY_PLAN.md`: baseline storica e riferimento di regressione.
+2. `BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`: charter strategico operativo e mappa degli interventi.
+3. `BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`: base scientifica del processo e delle formule.
+4. `BOLLINGER_CONTEXT_V1_PLAN.md`: baseline tecnica Context V1 precedente.
+5. `CURRENT_CONTEXT.md`: snapshot corrente cross-modulo.
+6. `STRATEGIC_REM_HANDOFF.md`: manuale operativo stabile.
+7. `BOLLINGER_ONLY_PLAN.md`: baseline storica e riferimento di regressione.
 
-Se i documenti confliggono, prevale questo charter; poi `BOLLINGER_CONTEXT_V1_PLAN.md`.
+Se i documenti confliggono, prevale questo charter; poi `BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`; poi
+`BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`; poi `BOLLINGER_CONTEXT_V1_PLAN.md`.
 
 ## Processo Vincolante
 
@@ -80,9 +86,9 @@ Il Consiglio resta attivo con tre ruoli:
 
 Decisione unica del Consiglio:
 
-`BOLLINGER_CONTEXT_V1` e' il nuovo vincolo strategico. Va implementato come estensione disciplinata del runtime
-Bollinger-only: nessuna riscrittura della pipeline, nessun ramo operativo parallelo, nessun ritorno a nomi `ml_*` o
-contratti legacy.
+`BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md` e' il vincolo strategico charter. Va implementato come estensione
+disciplinata del runtime Bollinger-only: nessuna riscrittura della pipeline, nessun ramo operativo parallelo, nessun
+ritorno a nomi `ml_*` o contratti legacy.
 
 ## Stato Strategico
 

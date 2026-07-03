@@ -2,15 +2,16 @@
 
 Data: 2026-07-03.
 
-Documento di analisi operativo. Non sostituisce `BOLLINGER_CONTEXT_V1_PLAN.md`.
-Il piano vincolante resta:
+Documento charter strategico operativo.
+
+Dal 2026-07-03 questo documento sostituisce `BOLLINGER_CONTEXT_V1_PLAN.md` come vincolo strategico primario. La base
+scientifica obbligatoria e':
 
 ```text
-hft-common/doc/BOLLINGER_CONTEXT_V1_PLAN.md
+hft-common/doc/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md
 ```
 
-Questo documento integra l'AS-IS corrente del codice e dettaglia i punti di intervento da autorizzare prima
-dell'implementazione.
+`BOLLINGER_CONTEXT_V1_PLAN.md` resta baseline tecnica precedente e riferimento di regressione.
 
 ## Decisione Operativa
 

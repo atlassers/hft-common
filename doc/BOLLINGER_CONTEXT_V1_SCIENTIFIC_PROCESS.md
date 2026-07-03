@@ -2,7 +2,11 @@
 
 Data: 2026-07-03.
 
-Documento scientifico di supporto. Non sostituisce `BOLLINGER_CONTEXT_V1_PLAN.md`.
+Documento scientifico di supporto al charter strategico operativo:
+
+```text
+hft-common/doc/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md
+```
 
 Scopo: descrivere il processo completo, le formule degli indicatori, la responsabilita' di ogni step e il motivo per
 cui i valori vanno dedotti dallo storico ma applicati in realtime.

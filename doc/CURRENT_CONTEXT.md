@@ -7,12 +7,15 @@ Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 ## Gerarchia Documentale
 
 1. `hft-common/doc/STRATEGIC_REM_RECOVERY_PLAN.md`
-2. `hft-common/doc/BOLLINGER_CONTEXT_V1_PLAN.md`
-3. `hft-common/doc/CURRENT_CONTEXT.md`
-4. `hft-common/doc/STRATEGIC_REM_HANDOFF.md`
-5. `hft-common/doc/BOLLINGER_ONLY_PLAN.md`
+2. `hft-common/doc/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`
+3. `hft-common/doc/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`
+4. `hft-common/doc/BOLLINGER_CONTEXT_V1_PLAN.md`
+5. `hft-common/doc/CURRENT_CONTEXT.md`
+6. `hft-common/doc/STRATEGIC_REM_HANDOFF.md`
+7. `hft-common/doc/BOLLINGER_ONLY_PLAN.md`
 
-Se i documenti confliggono, prevale il charter; poi `BOLLINGER_CONTEXT_V1_PLAN.md`.
+Se i documenti confliggono, prevale il charter; poi `BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`; poi
+`BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`; poi `BOLLINGER_CONTEXT_V1_PLAN.md`.
 
 ## Vincoli Correnti
 
@@ -64,11 +67,12 @@ Completato e pushato:
 - pulizia dei residui management in Kenshiro;
 - rimozione del laboratorio Python DocBrown non usato dal runtime Quarkus;
 - documentazione root FE/Kenshiro riallineata al ciclo Bollinger-only;
-- piano `BOLLINGER_CONTEXT_V1_PLAN.md` armonizzato con l'AS-IS dopo le RUN PAPER.
+- piano `BOLLINGER_CONTEXT_V1_PLAN.md` armonizzato con l'AS-IS dopo le RUN PAPER;
+- `BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md` promosso a charter strategico operativo.
 
 In corso:
 
-- promozione di `BOLLINGER_CONTEXT_V1_PLAN.md` a vincolo strategico;
+- implementazione del charter strategico `BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`;
 - implementazione delle costanti/enum condivise;
 - pubblicazione feature context da DocBrown;
 - gate Context V1 in ACDC;
@@ -99,9 +103,9 @@ Context V1 avrebbe tenuto 2 trade con netto `-0.1464585003`, migliorando il camp
 
 ## Prossimo Step Operativo
 
-1. Completare hft-common con `BOLLINGER_CONTEXT_V1`, `RemMarketRegime`, feature key e reason.
-2. Estendere DocBrown per calcolare e pubblicare EMA/RSI/ATR/volume/regime.
-3. Estendere ACDC con ContextGateAudit fail-closed e policyJson `entry_*`.
-4. Estendere Kenshiro e FE per strategy family, regime e diagnostica context.
-5. Buildare, pushare e deployare ogni blocco coerente.
-6. Avviare PAPER solo dopo stato `/management` pulito e contract completo.
+1. Eseguire i blocchi A-D del charter AS-IS.
+2. Verificare build/test cross-repo.
+3. Deployare ogni modulo toccato.
+4. Fare check del Consiglio contro `BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md` e
+   `BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`.
+5. Avviare PAPER solo dopo stato `/management` pulito e contract completo.
