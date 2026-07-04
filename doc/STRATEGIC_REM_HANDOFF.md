@@ -287,6 +287,12 @@ Ultima verifica Consiglio: 2026-07-04.
   - `EXIT_BB_REENTRY_FAILED`;
   - `EXIT_BB_BREAKOUT_FAILED`;
   - `EXIT_BB_BREAKOUT_PROTECT`.
+- Dettaglio vincolante:
+  - reentry capture usa middle/SMA20 come primo target di mean-reversion e area `%B >= 0.80` come capture alta;
+  - `net_return` e' gia' al netto delle fee, quindi il floor Bollinger/economico minimo e' `net_return >= 0` salvo
+    buffer positivo dichiarato separatamente;
+  - breakout protect usa Chandelier/ATR come trailing primario; `%B < 0.80` non e' trigger isolato;
+  - breakout failed copre rientro sotto upper solo se una conferma del breakout viene meno.
 - Queste regole non sono nuovi blocker BUY: agiscono solo su posizioni aperte e devono ridurre loss-cap tardivi,
   preservando la possibilita' di micro-loss compensate da win nette piu' frequenti o piu' grandi.
 

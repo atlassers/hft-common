@@ -269,6 +269,10 @@ Stato SELL post-RUN 122:
 - Correzione documentale approvata dal Consiglio in
   `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`: introdurre SELL setup-specifica solo su posizioni gia' aperte:
   `EXIT_BB_REENTRY_CAPTURE`, `EXIT_BB_REENTRY_FAILED`, `EXIT_BB_BREAKOUT_FAILED`, `EXIT_BB_BREAKOUT_PROTECT`.
+- Reentry capture deve riconoscere la middle band/SMA20 come primo target naturale della mean-reversion e area `0.80`
+  come capture alta, sempre con `net_return >= 0` perche' il netto include gia' le fee.
+- Breakout protect deve usare Chandelier/ATR come protezione primaria delle posizioni vincenti; `%B < 0.80` e' solo
+  conferma Bollinger di perdita della fascia alta, non trigger isolato.
 - Le nuove regole non sono nuovi blocker BUY; devono ridurre uscite tardive a loss-cap e impedire che target nullo
   lasci la posizione affidata solo a loss-cap/timeout.
 - Nessuna nuova PAPER come evidenza finanziaria prima dell'implementazione/deploy/verifica della SELL setup-specifica

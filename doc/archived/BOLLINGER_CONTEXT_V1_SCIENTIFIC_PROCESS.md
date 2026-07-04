@@ -162,6 +162,7 @@ Riferimenti usati:
 - RSI / Wilder RSI, TC2000: https://help.tc2000.com/m/69404/l/747071-rsi-wilder-s-rsi
 - RSI formula, Investopedia: https://www.investopedia.com/terms/r/rsi.asp
 - ATR, StockCharts: https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-indicators/average-true-range-atr
+- ATR Trailing Stops, StockCharts: https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-indicators/atr-trailing-stops
 - ATR formula, Wikipedia: https://en.wikipedia.org/wiki/Average_true_range
 - EMA formula, CMC Markets: https://www.cmcmarkets.com/en-gb/technical-analysis/exponential-moving-average
 - OBV/volume confirmation, StockCharts: https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-indicators/on-balance-volume-obv
@@ -494,7 +495,8 @@ Proposta:
 
 - reentry: `atr_pct` deve stare sotto limite range/chaos;
 - breakout: `atr_pct` deve essere sufficiente ma non caotico;
-- SELL fase 2: possibile stop tipo Chandelier, non in fase immediata.
+- SELL breakout/profit-protection: stop tipo Chandelier/ATR ammesso solo come trailing su posizioni gia' aperte e gia'
+  favorevoli, mai come filtro BUY.
 
 ### Volume Ratio
 
@@ -735,7 +737,7 @@ Fonti tecniche da rispettare:
 - Bollinger Bands ChartSchool: le bande identificano posizione relativa, pattern M/W e forza del trend; l'uso corretto
   richiede contesto.
 - Bollinger Band Squeeze ChartSchool: la compressione anticipa espansione di volatilita'; la rottura della banda da'
-  la direzione iniziale, ma va gestito il fallimento del breakout.
+  la direzione iniziale, le rotture non confermate falliscono e il "head fake" e' un caso noto.
 - Chandelier/ATR trailing: e' un trailing stop volatility-based per proteggere trend favorevoli, non un filtro di BUY.
 
 Regola generale anti-rumore:
@@ -776,20 +778,26 @@ Regola `EXIT_BB_REENTRY_CAPTURE`:
 
 ```text
 setup == BB_REENTRY_MEAN_REVERSION_LONG
-AND current percent_b >= reentry_capture_percent_b
-AND net_return >= min_exit_net_return
+AND (
+  current percent_b >= reentry_mean_capture_percent_b
+  OR current percent_b >= reentry_upper_capture_percent_b
+)
+AND net_return >= min_reentry_capture_net_return
 ```
 
 Valori iniziali ammessi dal documento scientifico:
 
 ```text
-reentry_capture_percent_b = 0.80
-min_exit_net_return = max(0, round_trip_fee_return)
+reentry_mean_capture_percent_b = 0.50
+reentry_upper_capture_percent_b = 0.80
+min_reentry_capture_net_return = 0
 ```
 
-Motivo: `0.80` e' gia' il limite massimo usato per evitare BUY reentry estese verso upper. Se una posizione reentry
-arriva a quell'area con netto non negativo, il movimento di mean-reversion e' stato catturato. Non e' una soglia nuova
-rumorosa: e' la soglia gia' usata per non comprare troppo tardi, applicata simmetricamente all'uscita.
+Motivo: la middle band e' la SMA20 e rappresenta il ritorno al valore medio relativo. Per una reentry long, arrivare
+alla mediana con netto non negativo significa che il primo obiettivo di mean-reversion e' stato raggiunto. `0.80` resta
+la zona di capture alta, gia' usata come limite per evitare BUY reentry troppo estesi. La soglia economica e' `0`
+perche' `net_return` e' gia' al netto di fee buy/sell: aggiungere `round_trip_fee_return` qui conterebbe due volte le
+fee. Un eventuale buffer positivo e' una scelta economica separata, non una regola Bollinger.
 
 Regola `EXIT_BB_REENTRY_FAILED`:
 
@@ -811,6 +819,15 @@ Motivo: la mediana e' la SMA20. Per una reentry long, perdere la mediana dopo av
 verso il valore medio non sta producendo follow-through. La condizione `previous percent_b >= 0.50` evita di vendere
 solo perche' una posizione non ha ancora recuperato. La condizione `net_return <= 0` fa uscire da un setup fallito
 prima del loss cap, senza tagliare una posizione ancora profittevole.
+
+Regola da non introdurre:
+
+```text
+SELL reentry solo per current percent_b < 0.50
+```
+
+Motivo: sotto la mediana una reentry puo' essere ancora nella fase iniziale del recupero. Serve prima aver raggiunto la
+mediana oppure avere un'altra invalidazione esplicita.
 
 Regola vietata:
 
@@ -836,33 +853,41 @@ Regola `EXIT_BB_BREAKOUT_FAILED`:
 setup == BB_SQUEEZE_BREAKOUT_LONG
 AND had_percent_b_above_one_since_entry == true
 AND current percent_b < 1
-AND bandwidth_delta <= 0
+AND (
+  current percent_b < 0.50
+  OR close < middle
+  OR bandwidth_delta <= 0
+  OR volume_confirmation_decays == true
+)
 AND net_return <= 0
 ```
 
 Motivo: per breakout, `%B > 1` puo' essere continuazione, quindi non si vende sul tag upper. Si vende solo se il prezzo
-rientra sotto upper, l'espansione non prosegue e il trade non sta pagando netto. Questa e' invalidazione del setup, non
-rumore.
+rientra sotto upper e almeno una conferma del breakout viene meno. Questo copre il caso di head fake descritto nella
+letteratura Bollinger Squeeze senza vendere il normale pullback sotto upper in un trend ancora sano.
 
 Regola `EXIT_BB_BREAKOUT_PROTECT`:
 
 ```text
 setup == BB_SQUEEZE_BREAKOUT_LONG
 AND max_net_return >= breakout_min_protect_net_return
+AND close <= chandelier_long_stop
 AND current percent_b < 0.80
-AND net_return >= min_exit_net_return
+AND net_return >= 0
 ```
 
 Valori iniziali:
 
 ```text
-breakout_min_protect_net_return = max(0.0005, round_trip_fee_return)
-min_exit_net_return = 0
+chandelier_long_stop = highest_high_since_entry - atr_multiplier * ATR
+atr_multiplier = 3
+breakout_min_protect_net_return = 0.0005
 ```
 
-Motivo: se il breakout ha generato MFE netto sufficiente, il rientro sotto area 0.80 indica perdita del movimento
-direzionale. Qui MFE non e' condizione SELL autonoma: e' solo armamento di protezione per una posizione gia' vincente,
-coerente con trailing/profit protection.
+Motivo: se il breakout ha generato MFE netto sufficiente, la letteratura sui trailing stop volatility-based suggerisce
+di proteggere il movimento lasciandolo correre finche' non viola uno stop dinamico. La formula Chandelier/ATR e' la
+protezione primaria; `%B < 0.80` e' solo conferma Bollinger di perdita della fascia alta e non puo' scattare da sola.
+Qui MFE non e' condizione SELL autonoma: e' solo armamento di protezione per una posizione gia' vincente.
 
 #### Target Nullo Non Operativo
 
@@ -904,7 +929,12 @@ loss-cap e timeout.
   - `SELL_PREVIOUS_PERCENT_B`;
   - `SELL_HAD_PERCENT_B_ABOVE_ONE`;
   - `SELL_REENTRY_CAPTURE_PERCENT_B`;
-  - `SELL_MIN_EXIT_NET_RETURN`;
+  - `SELL_REENTRY_MEAN_CAPTURE_PERCENT_B`;
+  - `SELL_REENTRY_UPPER_CAPTURE_PERCENT_B`;
+  - `SELL_MIN_REENTRY_CAPTURE_NET_RETURN`;
+  - `SELL_BREAKOUT_CHANDELIER_LONG_STOP`;
+  - `SELL_HIGHEST_HIGH_SINCE_ENTRY`;
+  - `SELL_ATR_MULTIPLIER`;
   - `SELL_TARGET_ZERO_TAKE_PROFIT_DISABLED`.
 
 `acdc/src/main/java/it/mbc/hft/acdc/service/PaperRunService.java`
@@ -913,7 +943,8 @@ loss-cap e timeout.
   - setup congelato da `position.policyJson`;
   - `previous percent_b` per simbolo/posizione;
   - flag `had_percent_b_above_one_since_entry`;
-  - `round_trip_fee_return`;
+  - `highest_high_since_entry`;
+  - `chandelier_long_stop`;
   - `target_zero_take_profit_disabled`;
   - metadata decision/execution gia' richiesti.
 - non cambiare il path BUY.
@@ -1012,34 +1043,37 @@ Motivo:
 - se questa guardia legge prezzo/microbar 5s, la reason deve dichiarare che e' protezione economica di esecuzione e deve
   esporre `sell_execution_interval_seconds`, senza riclassificarla come segnale strategico 5s.
 
-SELL fase 2, solo dopo evidenza:
+SELL setup-specifica da implementare:
 
 Reentry invalidation:
 
 ```text
-sell if price < lower
-OR percent_b < 0
-OR close < middle AND rsi14 deteriorates
+sell if prior percent_b >= 0.50
+AND current percent_b < 0.50
+AND net_return <= 0
 ```
 
 Breakout invalidation:
 
 ```text
-sell if price falls back below upper
-AND bandwidth_delta <= 0
-AND volume_confirmation decays
+sell if had percent_b > 1 since entry
+AND current percent_b < 1
+AND (current percent_b < 0.50 OR close < middle OR bandwidth_delta <= 0 OR volume confirmation decays)
+AND net_return <= 0
 ```
 
-Chandelier/ATR opzionale:
+Chandelier/ATR breakout protect:
 
 ```text
 long_stop = highest_high_since_entry - k * ATR
+sell if close <= long_stop
+AND percent_b < 0.80
+AND net_return >= 0
 ```
 
-Tutte le invalidazioni e gli stop indicator-based della fase 2 devono essere calcolati su candele 1m chiuse. La
-microbar 5s resta ammessa solo per execution timing, slippage, gap e forensics.
-
-Questa fase non deve essere implementata senza autorizzazione successiva.
+Tutte le invalidazioni e gli stop indicator-based devono essere calcolati su candele chiuse della cadence decisionale
+dichiarata. Una microbar diversa resta ammessa solo per execution timing, slippage, gap, loss cap meccanico e
+forensics.
 
 ## Storico Vs Realtime
 
@@ -1158,6 +1192,8 @@ Fonti di riferimento operative:
   https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-indicators/true-range
 - ATR, StockCharts:
   https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-indicators/average-true-range-atr
+- ATR Trailing Stops, StockCharts:
+  https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-indicators/atr-trailing-stops
 - Chandelier Exit, StockCharts:
   https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-overlays/chandelier-exit
 

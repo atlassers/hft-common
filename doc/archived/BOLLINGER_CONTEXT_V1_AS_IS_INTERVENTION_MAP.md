@@ -915,10 +915,13 @@ Interventi in `GuardEvaluator` / SELL:
    - non attivarlo su microbar sintetiche.
 4. Implementare la parte mancante della SELL gia' richiesta dal documento scientifico: target/loss/invalidation.
    L'invalidation non deve essere un nuovo filtro BUY e non deve vendere sul semplice tag della banda:
-   - reentry capture: `%B >= 0.80` solo se il netto e' almeno non negativo dopo fee;
+   - reentry capture: `%B >= 0.50` o `%B >= 0.80` solo se il netto e' almeno non negativo dopo fee; la mediana e' il
+     primo target naturale della mean-reversion, upper/0.80 e' capture alta;
    - reentry failed: perdita della mediana dopo averla recuperata, con `net_return <= 0` e hold minimo;
-   - breakout failed: rientro sotto upper solo se l'espansione non prosegue e il netto non e' positivo;
-   - breakout protect: dopo MFE netto sufficiente, proteggere il movimento se rientra sotto area `%B < 0.80`.
+   - breakout failed: rientro sotto upper solo se una conferma viene meno (`%B < 0.50`, close sotto middle,
+     `bandwidth_delta <= 0` o volume in decadimento) e il netto non e' positivo;
+   - breakout protect: dopo MFE netto sufficiente, proteggere il movimento con Chandelier/ATR e usare `%B < 0.80` solo
+     come conferma Bollinger, non come trigger isolato.
    Tutte queste regole devono usare candele chiuse sulla cadence decisionale dichiarata; la microbar resta solo
    esecuzione/loss cap meccanico/replay.
 
@@ -1387,7 +1390,7 @@ Dopo implementazione:
    - proposta: min `1.3` o `1.5` rispetto a baseline, da calibrare.
 6. Uso di ATR:
    - reentry: limite volatilita'/chaos;
-   - breakout: limite overextension e trailing fase 2.
+   - breakout: limite overextension e trailing/profit-protection Chandelier su posizioni gia' aperte.
 7. Dati microbar:
    - decidere se bloccare validazione scientifica fine finche' gap > 5-10s.
 8. Allineamento 1m:
