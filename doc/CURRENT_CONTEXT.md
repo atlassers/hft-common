@@ -259,6 +259,21 @@ Stato A2.1 implementato e verificato il 2026-07-04:
 - Warning residuo da analizzare dopo RUN 122: `A0_DECISION_GAP_TOO_WIDE` compare in `a1BuyDiagnostics`; non blocca il
   fix A2.1, ma va trattato come prossimo punto di qualita' dati/cadence.
 
+Stato SELL post-RUN 122:
+
+- Analisi Consiglio su SOL/XRP/BTC/DOGE/ADA: tutte le uscite RUN 122 sono state `EXIT_BB_LOSS_CAP`.
+- La SELL attiva copre target, trailing, loss-cap e timeout, ma non implementa ancora l'invalidation/capture
+  setup-specifica richiesta dal documento scientifico (`SELL/ACDC: esce per target/loss/invalidation`).
+- Il semplice tag della upper band non deve diventare segnale SELL autonomo: la regola ufficiale Bollinger vieta di
+  trattare il tag banda come signal isolato.
+- Correzione documentale approvata dal Consiglio in
+  `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`: introdurre SELL setup-specifica solo su posizioni gia' aperte:
+  `EXIT_BB_REENTRY_CAPTURE`, `EXIT_BB_REENTRY_FAILED`, `EXIT_BB_BREAKOUT_FAILED`, `EXIT_BB_BREAKOUT_PROTECT`.
+- Le nuove regole non sono nuovi blocker BUY; devono ridurre uscite tardive a loss-cap e impedire che target nullo
+  lasci la posizione affidata solo a loss-cap/timeout.
+- Nessuna nuova PAPER come evidenza finanziaria prima dell'implementazione/deploy/verifica della SELL setup-specifica
+  mancante.
+
 ## Stato Live Verificato
 
 Ultimo stato consolidato prima dell'implementazione Context V1:
@@ -288,13 +303,15 @@ Context V1 avrebbe tenuto 2 trade con netto `-0.1464585003`, migliorando il camp
    `blockers=[]`, `paperRunning=false`, `openPositions=0`.
 2. A1 e' implementato: ogni nuova PAPER deve essere analizzata tramite `a1BuyDiagnostics` e `/trades` prima di
    qualunque giudizio finanziario.
-3. Avviare PAPER solo tramite `/management`, mai da script.
-4. Dopo ogni PAPER classificare separatamente:
+3. Implementare prima la SELL setup-specifica definita nel documento scientifico: capture/invalidation/protect su
+   posizioni gia' aperte, senza trasformare tag upper/middle in signal autonomi e senza aggiungere nuovi blocker BUY.
+4. Avviare PAPER solo tramite `/management`, mai da script.
+5. Dopo ogni PAPER classificare separatamente:
    - evidenza A0/readiness;
    - evidenza WATCH/BUY;
    - evidenza SELL/forensics;
    - evidenza finanziaria.
-5. Se una RUN non apre BUY/SELL, classificarla `INCONCLUSIVE` per performance anche se valida come evidenza tecnica A0;
+6. Se una RUN non apre BUY/SELL, classificarla `INCONCLUSIVE` per performance anche se valida come evidenza tecnica A0;
    se trigger full-pass = 0, classificarla anche `NEGATIVE_OPERATIONAL_SIGNAL` per BUY trigger.
-6. Monitorare densita' replay microbar: `interval_seconds` effettivo e `max_gap_seconds` devono essere letti come
+7. Monitorare densita' replay microbar: `interval_seconds` effettivo e `max_gap_seconds` devono essere letti come
    diagnostica di timing, non come fonte strategica.

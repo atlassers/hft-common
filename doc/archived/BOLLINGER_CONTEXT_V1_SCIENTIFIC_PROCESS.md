@@ -682,16 +682,18 @@ Non deve essere condizione SELL.
 Granularita' scientifica SELL:
 
 ```text
-SELL strategic evaluation = completed 1m bar
+SELL strategic evaluation = completed bar on declared decision cadence
 SELL execution/forensics observation = optional 5s microbar
 ```
 
 Razionale scientifico:
 
 - Bollinger Bands, `%B`, RSI, EMA, ATR e Chandelier Exit sono definiti su serie di barre/candele. Nel ciclo Context V1
-  la barra decisionale e' la candela 1m chiusa, quindi anche l'uscita strategica deve usare la stessa barra.
+  la barra decisionale e' la candela chiusa sulla cadence dichiarata, quindi anche l'uscita strategica deve usare la
+  stessa barra.
 - Cambiare granularita' tra BUY e SELL trasformerebbe il test in un esperimento misto: ingresso su indicatori 1m,
-  uscita su rumore/oscillazione 5s. Questa evidenza non e' confrontabile con rolling validation e contratto storico.
+  uscita su rumore/oscillazione di altra cadence. Questa evidenza non e' confrontabile con rolling validation e
+  contratto storico.
 - La microbar 5s puo' descrivere quanto bene o male viene eseguita una SELL gia' decisa, ma non puo' creare una
   invalidazione Bollinger/context autonoma.
 - Un loss cap quote-aware puo' osservare il prezzo eseguibile intraminuto solo come protezione economica meccanica:
@@ -707,6 +709,273 @@ EXIT_BB_TAKE_PROFIT
 EXIT_BB_DYNAMIC_TRAILING
 EXIT_BB_LOSS_CAP
 EXIT_BB_TIMEOUT
+```
+
+Questa lista e' incompleta rispetto alla responsabilita' scientifica dichiarata sopra:
+
+```text
+SELL/ACDC: esce per target/loss/invalidation, senza MFE come condizione.
+```
+
+Il runtime corrente copre `target`, `loss` e `timeout`, ma non copre ancora `invalidation` setup-specifica Bollinger.
+La correzione non deve introdurre un nuovo filtro BUY e non deve trasformare il semplice tag della banda in segnale:
+la regola ufficiale Bollinger dice che un tag della upper band non e' automaticamente un segnale SELL e che, nei trend,
+il prezzo puo' camminare lungo la upper band. La SELL quindi deve distinguere:
+
+- target/capture del setup;
+- invalidazione del setup;
+- protezione economica meccanica.
+
+### SELL Setup-Specifica Mancante
+
+Fonti tecniche da rispettare:
+
+- Bollinger official rules: i tag delle bande non sono segnali autonomi; le chiusure fuori banda sono inizialmente
+  segnali di continuazione, non di inversione.
+- Bollinger Bands ChartSchool: le bande identificano posizione relativa, pattern M/W e forza del trend; l'uso corretto
+  richiede contesto.
+- Bollinger Band Squeeze ChartSchool: la compressione anticipa espansione di volatilita'; la rottura della banda da'
+  la direzione iniziale, ma va gestito il fallimento del breakout.
+- Chandelier/ATR trailing: e' un trailing stop volatility-based per proteggere trend favorevoli, non un filtro di BUY.
+
+Regola generale anti-rumore:
+
+```text
+nessuna SELL strategica nuova puo' scattare solo per:
+- percent_b >= 1;
+- percent_b <= 0.5;
+- un singolo tick/microbar;
+- MFE assente;
+- target storico nullo.
+```
+
+Le nuove regole agiscono solo su posizioni gia' aperte e non possono ridurre il numero di BUY utili. Devono invece
+ridurre uscite tardive a loss-cap quando il setup e' gia' stato catturato o invalidato.
+
+#### Reentry Mean-Reversion Long
+
+Obiettivo letteratura/setup:
+
+```text
+ingresso: recupero controllato da lower verso middle/upper
+uscita: catturare il ritorno verso il valore relativo alto o uscire quando il recupero fallisce
+```
+
+Formule disponibili:
+
+```text
+percent_b = (price - lower) / (upper - lower)
+middle = SMA(close, 20)
+upper = middle + 2 * stddev(close, 20)
+lower = middle - 2 * stddev(close, 20)
+net_return = (sell_quote - buy_quote - buy_fee - sell_fee) / buy_quote
+net_loss_quote = abs(min(net_profit, 0))
+```
+
+Regola `EXIT_BB_REENTRY_CAPTURE`:
+
+```text
+setup == BB_REENTRY_MEAN_REVERSION_LONG
+AND current percent_b >= reentry_capture_percent_b
+AND net_return >= min_exit_net_return
+```
+
+Valori iniziali ammessi dal documento scientifico:
+
+```text
+reentry_capture_percent_b = 0.80
+min_exit_net_return = max(0, round_trip_fee_return)
+```
+
+Motivo: `0.80` e' gia' il limite massimo usato per evitare BUY reentry estese verso upper. Se una posizione reentry
+arriva a quell'area con netto non negativo, il movimento di mean-reversion e' stato catturato. Non e' una soglia nuova
+rumorosa: e' la soglia gia' usata per non comprare troppo tardi, applicata simmetricamente all'uscita.
+
+Regola `EXIT_BB_REENTRY_FAILED`:
+
+```text
+setup == BB_REENTRY_MEAN_REVERSION_LONG
+AND hold_seconds >= min_reentry_failure_hold_seconds
+AND previous percent_b >= 0.50
+AND current percent_b < 0.50
+AND net_return <= 0
+```
+
+Valori iniziali:
+
+```text
+min_reentry_failure_hold_seconds = 60
+```
+
+Motivo: la mediana e' la SMA20. Per una reentry long, perdere la mediana dopo averla raggiunta indica che il recupero
+verso il valore medio non sta producendo follow-through. La condizione `previous percent_b >= 0.50` evita di vendere
+solo perche' una posizione non ha ancora recuperato. La condizione `net_return <= 0` fa uscire da un setup fallito
+prima del loss cap, senza tagliare una posizione ancora profittevole.
+
+Regola vietata:
+
+```text
+SELL if percent_b >= 1
+```
+
+Motivo: l'upper band tag non e' un sell signal autonomo. Per reentry puo' diventare capture solo se il netto e' almeno
+non negativo; altrimenti resta forensics e non trigger.
+
+#### Squeeze Breakout Long
+
+Obiettivo letteratura/setup:
+
+```text
+ingresso: breakout sopra upper dopo squeeze/espansione
+uscita: lasciare correre se il breakout prosegue, uscire se il breakout rientra nella banda e perde conferma
+```
+
+Regola `EXIT_BB_BREAKOUT_FAILED`:
+
+```text
+setup == BB_SQUEEZE_BREAKOUT_LONG
+AND had_percent_b_above_one_since_entry == true
+AND current percent_b < 1
+AND bandwidth_delta <= 0
+AND net_return <= 0
+```
+
+Motivo: per breakout, `%B > 1` puo' essere continuazione, quindi non si vende sul tag upper. Si vende solo se il prezzo
+rientra sotto upper, l'espansione non prosegue e il trade non sta pagando netto. Questa e' invalidazione del setup, non
+rumore.
+
+Regola `EXIT_BB_BREAKOUT_PROTECT`:
+
+```text
+setup == BB_SQUEEZE_BREAKOUT_LONG
+AND max_net_return >= breakout_min_protect_net_return
+AND current percent_b < 0.80
+AND net_return >= min_exit_net_return
+```
+
+Valori iniziali:
+
+```text
+breakout_min_protect_net_return = max(0.0005, round_trip_fee_return)
+min_exit_net_return = 0
+```
+
+Motivo: se il breakout ha generato MFE netto sufficiente, il rientro sotto area 0.80 indica perdita del movimento
+direzionale. Qui MFE non e' condizione SELL autonoma: e' solo armamento di protezione per una posizione gia' vincente,
+coerente con trailing/profit protection.
+
+#### Target Nullo Non Operativo
+
+Il contratto non deve promuovere una posizione con target operativo nullo se la SELL attiva interpreta:
+
+```text
+bb_target_net_return <= 0 => EXIT_BB_TAKE_PROFIT disabilitato
+```
+
+Regola:
+
+```text
+se bb_target_net_return <= 0:
+  - DocBrown non puo' classificare il contratto come take-profit operativo;
+  - ACDC deve usare capture/invalidation setup-specifica;
+  - forensics deve marcare target_zero_take_profit_disabled = true.
+```
+
+Motivo: un target nullo puo' essere un risultato storico/audit, ma non puo' lasciare la posizione affidata solo a
+loss-cap e timeout.
+
+### Punti Codice Da Intervenire
+
+`hft-common/src/main/java/it/mbc/hft/common/rem/enums/GuardOperator.java`
+
+- aggiungere operatori:
+  - `BB_REENTRY_CAPTURE_EXIT`;
+  - `BB_REENTRY_FAILED_EXIT`;
+  - `BB_BREAKOUT_FAILED_EXIT`;
+  - `BB_BREAKOUT_PROTECT_EXIT`.
+
+`hft-common/src/main/java/it/mbc/hft/common/rem/constants/RemConstants.java`
+
+- aggiungere costanti feature/reason, senza stringhe inline:
+  - `EXIT_BB_REENTRY_CAPTURE`;
+  - `EXIT_BB_REENTRY_FAILED`;
+  - `EXIT_BB_BREAKOUT_FAILED`;
+  - `EXIT_BB_BREAKOUT_PROTECT`;
+  - `SELL_PREVIOUS_PERCENT_B`;
+  - `SELL_HAD_PERCENT_B_ABOVE_ONE`;
+  - `SELL_REENTRY_CAPTURE_PERCENT_B`;
+  - `SELL_MIN_EXIT_NET_RETURN`;
+  - `SELL_TARGET_ZERO_TAKE_PROFIT_DISABLED`.
+
+`acdc/src/main/java/it/mbc/hft/acdc/service/PaperRunService.java`
+
+- in `exitSnapshot(...)` aggiungere le feature SELL derivate dalla posizione aperta e dallo snapshot corrente:
+  - setup congelato da `position.policyJson`;
+  - `previous percent_b` per simbolo/posizione;
+  - flag `had_percent_b_above_one_since_entry`;
+  - `round_trip_fee_return`;
+  - `target_zero_take_profit_disabled`;
+  - metadata decision/execution gia' richiesti.
+- non cambiare il path BUY.
+- non usare microbar sintetiche per calcolare invalidazioni strategiche.
+
+`acdc/src/main/java/it/mbc/hft/acdc/service/GuardEvaluator.java`
+
+- aggiungere branch per i quattro operatori nuovi;
+- implementare le condizioni esattamente come sopra;
+- mantenere `BB_ADVICE_LOSS_CAP_EXIT` come protezione economica separata;
+- non riattivare `BB_ADVICE_NO_MFE_DECAY_EXIT`.
+
+`acdc/src/main/resources/db/migration/*`
+
+- aggiungere guard EXIT attive con priority prima del loss-cap e dopo take-profit/trailing:
+  - capture/protect prima del loss-cap;
+  - failed breakout/reentry prima del loss-cap;
+  - timeout resta ultimo.
+- le guard devono avere `metadata_json` con soglie dichiarate, non hardcoded invisibili.
+
+`docbrown/src/main/java/.../BlankRemCandidateService.java` e servizi contract/live-score correlati
+
+- impedire che `bb_target_net_return <= 0` sia trattato come take-profit operativo;
+- non bloccare automaticamente la candidatura solo per target nullo, ma marcare il contratto come richiedente
+  capture/invalidation SELL;
+- mantenere selection BUY separata: queste regole non sono nuovi blocker ingresso.
+
+`acdc/src/main/java/it/mbc/hft/acdc/service/PaperExecutionScoringService.java`
+
+- classificare separatamente:
+  - capture profittevole;
+  - invalidation scratch/small loss;
+  - loss-cap;
+  - timeout.
+
+`kenshiro` e `hft-fe`
+
+- esporre nei dettagli run/trade:
+  - exit setup-specifica;
+  - `%B` entry/exit;
+  - previous `%B`;
+  - target zero disabilitato;
+  - reason capture/invalidation/protection/loss-cap;
+  - net return e net loss quote al trigger.
+
+### Criterio Di Successo
+
+Le nuove regole non devono essere giudicate dal singolo trade, ma dalla distribuzione PAPER per setup:
+
+```text
+net_profit_quote_total > 0
+AND avg_win_quote * win_count > abs(avg_loss_quote) * loss_count
+AND loss-cap exits diminuiscono rispetto a capture/protect/invalidation exits
+AND accepted BUY count non diminuisce per effetto delle nuove SELL rules
+```
+
+Sono accettabili micro-perdite se:
+
+```text
+avg_loss_quote e' contenuta dal loss cap quote-aware
+AND win_count e avg_win_quote compensano le perdite
+AND le uscite loss-cap non restano la reason dominante
 ```
 
 Correzione richiesta:
@@ -901,13 +1170,13 @@ Conclusione del Consiglio:
 - ATR/True Range usa high, low e close del periodo corrente e close precedente; Chandelier usa high/low di periodo e
   ATR dello stesso periodo. Una microbar sintetica interpolata da 1m non contiene vera informazione intraminuto su
   high/low/close e non puo' validare timing o stop 5s;
-- se il contratto storico e' calcolato su 1m, WATCH, BUY e SELL strategica devono restare su 1m chiuso. Una SELL su 5s
-  sarebbe un esperimento diverso, non una variante di Context V1.
+- se il contratto storico e' calcolato su una cadence dichiarata, WATCH, BUY e SELL strategica devono restare sulla
+  stessa cadence chiusa. Una SELL su cadence diversa sarebbe un esperimento diverso, non una variante di Context V1.
 
 Classificazione scientifica delle prove:
 
 ```text
-VALID_STRATEGIC_EVIDENCE = DocBrown + ACDC + SELL strategica su 1m chiuso con metadata completi
+VALID_STRATEGIC_EVIDENCE = DocBrown + ACDC + SELL strategica sulla stessa cadence chiusa dichiarata con metadata completi
 NEGATIVE_OPERATIONAL_SIGNAL = provenance valida ma nessun BUY/SELL per blocker operativo dominante misurato
 DIAGNOSTIC_ONLY = replay/live microbar 5s con source metadata completi
 INCONCLUSIVE = replay 1m, gap eccessivi, synthetic backfill, metadata mancanti

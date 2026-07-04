@@ -270,6 +270,26 @@ Ultima verifica Consiglio: 2026-07-04.
 - Punto residuo: analizzare `A0_DECISION_GAP_TOO_WIDE` in `a1BuyDiagnostics` dopo la chiusura o lo stop governato
   della RUN 122.
 
+## Stato SELL Setup-Specifica
+
+Ultima verifica Consiglio: 2026-07-04.
+
+- La letteratura Bollinger non autorizza una SELL sul semplice tag della upper band: i tag sono posizione relativa, non
+  segnali autonomi.
+- Il documento scientifico richiede pero' che SELL esca per `target/loss/invalidation`.
+- Il runtime attuale copre `EXIT_BB_TAKE_PROFIT`, `EXIT_BB_DYNAMIC_TRAILING`, `EXIT_BB_LOSS_CAP` e `EXIT_BB_TIMEOUT`,
+  ma non copre ancora invalidation/capture setup-specifica.
+- RUN 122 ha dimostrato il buco: 5/5 uscite sono state `EXIT_BB_LOSS_CAP`, con `max_net_return=0` e diversi target
+  operativi nulli.
+- Prima della prossima PAPER finanziaria implementare le regole documentate in
+  `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`:
+  - `EXIT_BB_REENTRY_CAPTURE`;
+  - `EXIT_BB_REENTRY_FAILED`;
+  - `EXIT_BB_BREAKOUT_FAILED`;
+  - `EXIT_BB_BREAKOUT_PROTECT`.
+- Queste regole non sono nuovi blocker BUY: agiscono solo su posizioni aperte e devono ridurre loss-cap tardivi,
+  preservando la possibilita' di micro-loss compensate da win nette piu' frequenti o piu' grandi.
+
 ## Build
 
 Ordine consigliato:
