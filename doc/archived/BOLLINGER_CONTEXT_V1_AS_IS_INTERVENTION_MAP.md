@@ -77,6 +77,62 @@ Questo e' utile come diagnostica, ma non puo':
 - scrivere contratti runtime;
 - diventare requisito per BUY.
 
+## Revisione Del Consiglio 2026-07-04 - Allineamento Decisionale 1m
+
+Rilettura dopo RUN PAPER globalmente positive su campione cumulato e dopo decisione di non passare ora a
+`5s/20s/30s/40s` come base strategica.
+
+La domanda non e' piu':
+
+```text
+usiamo 1m o 5s?
+```
+
+La decisione architetturale e':
+
+```text
+indicatori / contract / WATCH / BUY = 1m
+microbar 5s = replay, diagnostica, timing, gap detection
+```
+
+### Posizione Del Consiglio
+
+Saggio ascoltatore:
+
+- consolidare la base 1m prima di introdurre nuove cadenze;
+- le ultime evidenze PAPER non giustificano una migrazione strategica immediata a frequenze piu' basse;
+- il rischio maggiore ora e' rendere il risultato non interpretabile mescolando basi temporali.
+
+Scienziato severo:
+
+- un contratto calcolato su 1m e un WATCH calcolato su 5s non sono lo stesso esperimento;
+- `%B`, RSI, EMA, ATR, regime e `volume_ratio_1m_20m` devono avere la stessa semantica temporale in DocBrown e ACDC;
+- la candela 1m corrente non chiusa puo' cambiare valore e non deve essere trattata come equivalente storico della
+  candela chiusa.
+
+Mediano pragmatico:
+
+- non serve riscrivere la pipeline;
+- serve separare esplicitamente le API e i payload:
+  - decisionale 1m;
+  - replay microbar;
+  - diagnostica realtime;
+- se la base dichiarata non e' disponibile o non combacia, WATCH deve fallire chiusa.
+
+Decisione unica:
+
+```text
+Decision interval: 60s.
+Decision bucket: binance, candele 1m chiuse.
+Decision timestamp: open time della candela Binance 1m chiusa, persistito in Influx come _time.
+Decision freshness: l'ultima candela usabile e' l'ultima candela chiusa disponibile.
+Current 1m realtime bucket: non decisionale per contract/WATCH; ammesso solo per stato UI o diagnostica esplicita.
+Microbar bucket: non decisionale per indicatori strategici; ammesso per replay, gap detection, timing e forensics.
+Synthetic microbar backfill: mai equivalente a microbar live; deve essere marcato come synthetic_backfill.
+```
+
+Fino a chiusura dell'allineamento 1m end-to-end, non avviare nuove RUN PAPER.
+
 ## Vincoli Da Non Rompere
 
 - REAL vietata.
@@ -90,6 +146,11 @@ Questo e' utile come diagnostica, ma non puo':
   - `BB_UPPER_BREAKOUT_CONFIRMED`.
 - `WATCH` non puo' usare tempo ML, promotion age, watch timeout o max buy age come condizione BUY.
 - `WATCH` deve fallire chiusa se manca contratto o current state richiesto.
+- `WATCH` e DocBrown devono usare la stessa base dati decisionale 1m chiusa per indicatori, contract e BUY.
+- `binance-realtime` non puo' alimentare BUY: rappresenta la candela corrente non chiusa e resta diagnostico/UI.
+- `binance-microbar` non puo' alimentare indicatori strategici Context V1: resta replay/diagnostica/timing/gap.
+- microbar sintetiche da backfill 1m espanso a 5s devono essere marcate e non possono diventare evidenza di micro
+  timing.
 - Nessun ritorno a nomi o logiche `ml_*` legacy.
 - Nessuna soglia DB `rem_*` legacy puo' diventare guardia di trading.
 - Le stringhe operative devono restare in costanti/enum.
@@ -274,6 +335,7 @@ Gia' presenti:
 Gap:
 
 - Il grafico/replay puo' ancora essere troppo rado se ACDC riceve punti Influx aggregati a 1 minuto.
+- Il grafico/replay non deve far credere che la base decisionale sia 5s quando il BUY e' 1m.
 - Serve rendere visibili i gate context e le soglie del contratto intorno a WATCH/BUY/SELL:
   - `%B`;
   - RSI;
@@ -301,6 +363,11 @@ Gap:
 - Prima di usare il replay come prova forte di micro timing SELL, serve una diagnostica gap per simbolo/run.
 - Per WATCH/BUY e indicatori, la fonte 1m/microbar deve essere coerente tra DocBrown e ACDC. Non possiamo avere
   contratto su un campionamento e decisione live su un altro senza audit.
+- `binance`, `binance-realtime` e `binance-microbar` devono avere ruoli non sovrapponibili:
+  - `binance`: candele 1m chiuse decisionale;
+  - `binance-realtime`: candela 1m corrente non decisionale;
+  - `binance-microbar`: replay/forensics, non contract.
+- Il backfill short-retention puo' produrre microbar sintetiche da candele 1m; queste non sono microbar live.
 
 ## Strategia Di Intervento
 
@@ -345,6 +412,29 @@ SELL deve usare:
 - target/trailing coerente col setup;
 - timeout solo se contrattuale e non in conflitto col charter.
 
+### Principio 4: Una Sola Base Temporale Decisionale
+
+La base temporale decisionale del ciclo Context V1 e' 1 minuto.
+
+Contratto dati vincolante:
+
+```text
+source_bucket = binance
+interval_seconds = 60
+candle_state = CLOSED
+timestamp_semantics = BINANCE_OPEN_TIME
+```
+
+Regole:
+
+1. DocBrown calcola storico, candidate, contract, rolling validation, promotion e live-score su candele 1m chiuse.
+2. ACDC WATCH ricalcola il current state sulla stessa base 1m chiusa.
+3. BUY congela in `policyJson` e negli `entry_*` valori calcolati dalla stessa base 1m.
+4. `binance-realtime` puo' essere usato solo per UI/stato live diagnostico, non per autorizzare BUY.
+5. `binance-microbar` puo' essere usato solo per replay, post-sell forensics, gap detection e timing.
+6. Se il dato replay e' 1m o sintetico, non puo' spiegare decisioni a precisione 5s.
+7. Se il contratto non dichiara la granularita' o se ACDC osserva una granularita' diversa, WATCH deve fallire chiusa.
+
 ## Mappa Interventi Per Modulo
 
 ### 1. hft-common
@@ -368,6 +458,14 @@ Interventi:
    - `CONTRACT_MAX_NET_LOSS_QUOTE`;
    - `LIVE_CONTRACT_MAX_NET_LOSS_QUOTE`;
    - `ENTRY_CONTRACT_MAX_NET_LOSS_QUOTE`;
+   - `DECISION_SOURCE_BUCKET`;
+   - `DECISION_INTERVAL_SECONDS`;
+   - `DECISION_CANDLE_STATE`;
+   - `DECISION_FEATURE_WINDOW_MINUTES`;
+   - `ENTRY_DECISION_SOURCE_BUCKET`;
+   - `ENTRY_DECISION_INTERVAL_SECONDS`;
+   - `ENTRY_DECISION_CANDLE_STATE`;
+   - `WATCH_DECISION_GRANULARITY_MISMATCH`;
    - `WATCH_REENTRY_OVEREXTENDED`;
    - `WATCH_BREAKOUT_WEAK_CONFIRMATION`;
    - `EXIT_BB_CONTEXT_INVALIDATED`, solo se verra' implementata SELL fase 2.
@@ -395,11 +493,27 @@ Interventi in `InfluxSnapshotService`:
    - RSI: 14;
    - ATR: 14;
    - volume ratio: 1m/20m o microbar equivalente dichiarato.
-2. Estrarre soglie regime hard-coded in costanti private nominate, oppure config condivisa se gia' pattern.
-3. Aggiungere audit feature per granularita':
+2. Per il percorso operativo Context V1, rimuovere l'equivoco "microbar equivalente": la base ammessa e' 1m chiusa.
+3. Separare i metodi per ruolo:
+   - lettura decisionale 1m chiusa;
+   - lettura replay microbar;
+   - lettura diagnostica realtime.
+4. Dichiarare nel contract/advice:
+   - `decision_source_bucket`;
+   - `decision_interval_seconds`;
+   - `decision_candle_state`;
+   - `decision_feature_window_minutes`.
+5. Estrarre soglie regime hard-coded in costanti private nominate, oppure config condivisa se gia' pattern.
+6. Aggiungere audit feature per granularita':
    - numero barre disponibili;
    - feature window seconds/minutes;
-   - microbar gap massimo, se disponibile.
+   - max gap 1m decisionale;
+   - source bucket decisionale.
+7. Live-score non deve promuovere advice se:
+   - manca la base 1m chiusa;
+   - `interval_seconds != 60`;
+   - il contratto non dichiara la granularita';
+   - la sorgente e' `binance-realtime` o `binance-microbar`.
 
 Interventi in `BlankRemCandidateService`:
 
@@ -429,6 +543,7 @@ Test:
 - reentry candidate con RSI alto viene esclusa o produce contract bloccante;
 - breakout senza volume/trend non viene promosso Context V1;
 - candidate senza barre sufficienti non e' promotable;
+- candidate con metadata decisionale mancante non e' promotable;
 - payload non contiene `reversal_*`.
 
 ### 2B. ML / Script Orchestration
@@ -489,32 +604,44 @@ File:
 
 Interventi in `InfluxSnapshotService`:
 
-1. Allineare formule e periodi a DocBrown.
-2. Esporre bar count/gap diagnostics se necessario per replay.
-3. Evitare che `putEmptyContext` produca falsi pass. Mancanza feature deve fallire chiusa in WATCH.
+1. Allineare formule, periodi e base dati a DocBrown.
+2. Separare esplicitamente:
+   - snapshot decisionale 1m chiuso;
+   - replay microbar;
+   - diagnostica realtime.
+3. Impedire che `binance-microbar` alimenti WATCH/BUY.
+4. Impedire che `binance-realtime` alimenti WATCH/BUY.
+5. Esporre bar count/gap diagnostics per replay e forensics.
+6. Evitare che `putEmptyContext` produca falsi pass. Mancanza feature deve fallire chiusa in WATCH.
 
 Interventi in `PreBuyWatchService`:
 
-1. In `reentryTriggerAudit`:
+1. Prima di `triggerAudit` e `contextGateAudit`, validare metadata decisionale:
+   - source bucket ammesso;
+   - interval seconds = 60;
+   - candle state = `CLOSED`;
+   - feature window coerente con contract;
+   - max gap decisionale compatibile con 1m.
+2. In `reentryTriggerAudit`:
    - mantenere lower breach e reentry confirmed;
    - aggiungere controllo hard anti-overextension se disponibile:
      - `%B <= contract_max_reentry_percent_b`;
      - fallback massimo non oltre `0.80` se autorizzato;
      - bloccare `%B > 1` come `WATCH_REENTRY_OVEREXTENDED` o `WATCH_MOMENTUM_BLOCKED`.
-2. In `reentryContextAudit`:
+3. In `reentryContextAudit`:
    - mantenere regime range, no chaos, no trend down;
    - mantenere `ema50_slope`, RSI, volume ratio, ATR%, bandwidth;
    - aggiungere controllo esplicito di prezzo non sopra upper/middle oltre soglia;
    - reason dominante specifica, non generica.
-3. In `breakoutContextAudit`:
+4. In `breakoutContextAudit`:
    - mantenere squeeze/expansion/trend up;
    - mantenere EMA9>EMA21 e close>EMA50;
    - rendere volume ratio minimo obbligatorio e setup-specifico;
    - aggiungere eventuale max extension ATR per evitare comprare breakout gia' troppo lontani.
-4. In `watchDecision`:
+5. In `watchDecision`:
    - assicurare `entry_*` completo al BUY;
    - aggiungere soglie contratto effettivamente usate, non solo feature osservate.
-5. Non reintrodurre `BB_ADVICE_NO_MFE_DECAY_EXIT`.
+6. Non reintrodurre `BB_ADVICE_NO_MFE_DECAY_EXIT`.
 
 Interventi in `GuardEvaluator` / SELL:
 
@@ -528,9 +655,15 @@ Interventi in `GuardEvaluator` / SELL:
 
 Interventi in `TradeReplayLiveService`:
 
-1. Esporre `source`, `intervalSeconds`, `candlesCount`.
+1. Esporre:
+   - `source_bucket`;
+   - `interval_seconds`;
+   - `candle_count`;
+   - `max_gap_seconds`;
+   - `synthetic_backfill`.
 2. Se i dati tornano a passo 1m, il FE deve saperlo.
-3. Non usare replay rado come prova scientifica di micro timing.
+3. Se i dati sono synthetic backfill, il FE deve saperlo.
+4. Non usare replay rado o sintetico come prova scientifica di micro timing.
 
 Test:
 
@@ -539,6 +672,7 @@ Test:
 - breakout senza volume bloccato.
 - breakout con trend down bloccato.
 - missing context -> `WATCH_CONTEXT_CONTRACT_INCOMPLETE`.
+- mismatch base decisionale -> `WATCH_DECISION_GRANULARITY_MISMATCH`.
 - loss quote cap chiude prima di perdite `> 0.08 USDC` se autorizzato.
 - no-MFE SELL resta disabilitato.
 
@@ -566,11 +700,17 @@ Interventi:
    - entry values;
    - exit values;
    - source cadence/replay metadata.
-3. Aggiungere diagnostica "stricter proposal" senza cambiare runtime:
+3. I metadata replay obbligatori sono:
+   - `source_bucket`;
+   - `interval_seconds`;
+   - `candle_count`;
+   - `max_gap_seconds`;
+   - `synthetic_backfill`.
+4. Aggiungere diagnostica "stricter proposal" senza cambiare runtime:
    - quanti BUY della run sarebbero bloccati dalle nuove soglie;
    - PnL dei trade mantenuti/scartati;
    - motivi di blocco.
-4. `APPLY_BOLLINGER_CONTEXT_V1` resta disponibile solo se readiness context completa.
+5. `APPLY_BOLLINGER_CONTEXT_V1` resta disponibile solo se readiness context completa.
 
 Test:
 
@@ -598,6 +738,11 @@ Interventi:
 2. `/trades`:
    - overlay contract/current/entry/exit;
    - mostrare cadenza dati Influx (`5s`, `60s`, gap);
+   - mostrare `source_bucket`, `interval_seconds`, `candle_count`, `max_gap_seconds`, `synthetic_backfill`;
+   - mostrare chiaramente se il replay e':
+     - `5s live`;
+     - `60s`;
+     - `synthetic`;
    - mostrare marker BUY/SELL con tooltip:
      - `%B`;
      - RSI;
@@ -625,13 +770,18 @@ File:
 
 Interventi:
 
-1. Verificare che `binance-microbar` contenga davvero punti 5s e non solo 1m.
-2. Aggiungere diagnostica gap:
+1. Verificare e documentare i ruoli bucket:
+   - `binance`: candele 1m chiuse, fonte decisionale;
+   - `binance-realtime`: candela 1m corrente, diagnostica/UI;
+   - `binance-microbar`: microbar 5s, replay/forensics.
+2. Verificare che `binance` contenga candele 1m chiuse sufficienti per DocBrown e ACDC.
+3. Verificare che `binance-microbar` contenga davvero punti 5s e non solo 1m.
+4. Aggiungere diagnostica gap:
    - per simbolo;
    - per bucket;
    - per finestra trade.
-3. Se il backfill usa candele 1m espanse a 5s, marcarle come synthetic/backfill; non confonderle con microbar live.
-4. Non introdurre spread/order-flow finche' la fonte non e' affidabile.
+5. Se il backfill usa candele 1m espanse a 5s, marcarle come synthetic/backfill; non confonderle con microbar live.
+6. Non introdurre spread/order-flow finche' la fonte non e' affidabile.
 
 Test:
 
@@ -671,8 +821,45 @@ Interventi:
 4. Script actual-vs-proposed:
    - non cambia DB;
    - simula soglie nuove su decisioni/candles persistiti.
+5. Ogni script che legge bucket deve stampare:
+   - `DIAGNOSTIC_ONLY`;
+   - `source_bucket`;
+   - `interval_seconds`;
+   - `candle_count`;
+   - `max_gap_seconds`;
+   - `synthetic_backfill`.
 
 ## Sequenza Di Implementazione Proposta
+
+### Blocco A0 - Allineamento 1m Decisionale
+
+Obiettivo: rendere coerente la base temporale prima di nuove RUN.
+
+Moduli:
+
+- hft-common;
+- influxer;
+- docbrown;
+- acdc;
+- kenshiro;
+- hft-fe;
+- script/diagnostiche.
+
+Deliverable:
+
+- contract/advice dichiara source bucket, interval, candle state e feature window.
+- DocBrown calcola contract e live-score su candele 1m chiuse.
+- ACDC WATCH calcola current state su candele 1m chiuse.
+- ACDC fallisce chiusa su mismatch di granularita'.
+- `/trades` mostra source bucket, interval seconds, candle count, max gap seconds e synthetic backfill.
+- microbar 5s resta confinata a replay/diagnostica/timing/gap detection.
+
+Validazione:
+
+- audit statico dei lettori Influx.
+- test mirati DocBrown/ACDC.
+- build FE/Kenshiro se cambia payload/UI.
+- nessuna PAPER RUN finche' `1m_alignment_ready` non e' vero.
 
 ### Blocco A - Diagnostica Zero-Risk
 
@@ -783,11 +970,14 @@ Prima dell'implementazione:
 
 Dopo implementazione:
 
+- allineamento 1m dichiarato e verificato end-to-end;
+- DocBrown e WATCH usano la stessa base 1m chiusa;
+- `binance-realtime` e `binance-microbar` non alimentano BUY;
 - no-MFE SELL resta disabilitato;
 - reentry overextended non compra;
 - breakout senza volume/trend non compra;
 - loss quote massimo e' visibile e applicato;
-- `/trades` indica chiaramente se il replay e' 5s reale o 1m/backfill;
+- `/trades` indica chiaramente se il replay e' 5s reale, 1m o backfill sintetico;
 - ogni decisione BUY ha `entry_*` completo;
 - ogni blocco ha reason specifica;
 - build/test/deploy completati;
@@ -810,3 +1000,8 @@ Dopo implementazione:
    - breakout: limite overextension e trailing fase 2.
 7. Dati microbar:
    - decidere se bloccare validazione scientifica fine finche' gap > 5-10s.
+8. Allineamento 1m:
+   - confermare `binance` come bucket decisionale 1m chiuso;
+   - confermare `binance-realtime` come non decisionale;
+   - confermare `binance-microbar` come replay/diagnostica;
+   - definire soglia max gap 1m ammessa prima di bloccare WATCH.
