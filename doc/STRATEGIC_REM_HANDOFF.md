@@ -263,8 +263,10 @@ Ultima verifica Consiglio: 2026-07-04.
   `management-rolling-20260704T154310Z` aveva `breakout_old=863` e `breakout_a2=1552`.
 - Validazione post-deploy:
   `management-rolling-20260704T180407Z`, `PASS_CANDIDATE`, `PROMOTED=30`, RUN PAPER `122` avviata da `/management`.
-- RUN 122 ha aperto BUY (`acceptedBuys=2`, `positions=2`, `openPositions=2` al controllo iniziale).
-- Notifiche Telegram BUY idempotenti confermate: RUN 122 `buy_notified=2` su `2` posizioni, nessuna SELL ancora.
+- RUN 122 ha ripristinato il ciclo operativo BUY/SELL: `positions=5`, `closedPositions=5`, `openPositions=0`,
+  stato finale `COMPLETED`.
+- Notifiche Telegram BUY/SELL idempotenti confermate: RUN 122 `buy_notified=5`, `sell_notified=5`.
+- PnL RUN 122: `net_profit_quote=-0.415733138049780000`; evidenza tecnica A2.1 valida, evidenza finanziaria negativa.
 - Punto residuo: analizzare `A0_DECISION_GAP_TOO_WIDE` in `a1BuyDiagnostics` dopo la chiusura o lo stop governato
   della RUN 122.
 

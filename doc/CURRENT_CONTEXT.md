@@ -250,9 +250,12 @@ Stato A2.1 implementato e verificato il 2026-07-04:
 - Nuovo ciclo `/management` dopo deploy:
   `management-rolling-20260704T180407Z`, `PASS_CANDIDATE`, selected
   `feature:bb_setup=squeeze_breakout_long`, `PROMOTED=30`.
-- RUN PAPER 122 avviata da `/management`, stato osservato: `RUNNING`, `positions=2`, `openPositions=2`,
-  `acceptedBuys=2`.
-- Telegram BUY idempotente verificato su RUN 122: `positions=2`, `buy_notified=2`, `sell_notified=0`.
+- RUN PAPER 122 avviata da `/management`, stop-buy e stop governati da `/management`, poi drain completato:
+  `COMPLETED`, `positions=5`, `openPositions=0`, `closedPositions=5`.
+- Telegram BUY/SELL idempotente verificato su RUN 122: `buy_notified=5`, `sell_notified=5`, una notifica per posizione
+  aperta/chiusa.
+- RUN 122 PnL finale: `net_profit_quote=-0.415733138049780000`. Classificazione Consiglio:
+  `VALID_STRATEGIC_EVIDENCE` per fix A2.1 e ripristino BUY/SELL; `NEGATIVE_FINANCIAL_SIGNAL` sul campione RUN 122.
 - Warning residuo da analizzare dopo RUN 122: `A0_DECISION_GAP_TOO_WIDE` compare in `a1BuyDiagnostics`; non blocca il
   fix A2.1, ma va trattato come prossimo punto di qualita' dati/cadence.
 
