@@ -1043,6 +1043,614 @@ Checklist aggiunta:
 - nessun `candidate_p10/p90` nel runtime RT;
 - ogni valore soglia RT compare in hft-common o DB `rt.*`.
 
+## Refinement 5 - Inventario Legacy Da Rimuovere Dal Path RT
+
+Questa revisione rende esplicito cosa significa "togliamo tutto il resto".
+
+La rimozione richiesta non e' cancellazione indiscriminata di classi o tabelle. E' rimozione dal path operativo
+`REALTIME_BB_ADX_V1`. Dove il codice legacy resta nel repository, deve essere:
+
+- irraggiungibile dal path RT;
+- marcato legacy nella UI/documentazione;
+- escluso da readiness RT;
+- escluso da PAPER RT;
+- escluso da forensics RT, salvo vista storica.
+
+### Legacy hft-common Da Non Usare Nel Path RT
+
+Rimuovere dagli import e dai payload RT:
+
+- `BOLLINGER_CONTEXT_V1`;
+- `BOLLINGER_ONLY`;
+- `BOLLINGER_ONLY_V2`;
+- `BB_REENTRY_MEAN_REVERSION_LONG`;
+- `BB_SQUEEZE_BREAKOUT_LONG`;
+- `BB_REENTRY_CONFIRMED`;
+- `BB_UPPER_BREAKOUT_CONFIRMED`;
+- `PAPER_ELIGIBLE`;
+- `BB_ADVICE_*`;
+- `LIVE_BB_*`;
+- `HISTORY_BB_*`;
+- `CONTRACT_*` quando il valore deriva da DocBrown;
+- `SOURCE_GENERATION_ID`;
+- `BB_ADVICE_SOURCE_GENERATION_ID`;
+- `BB_ADVICE_PAPER_ELIGIBLE`;
+- `BB_ADVICE_PAPER_WATCH_ELIGIBLE`;
+- `BB_ADVICE_PAPER_BUY_ELIGIBLE`;
+- `BB_ADVICE_ECONOMIC_SAFE_PASS`;
+- `Q10_POSITIVE_MAX_NET_RETURN`;
+- `ENTRY_FRICTION_NET_RETURN` se prodotto da DocBrown.
+
+Sostituzioni:
+
+- `BOLLINGER_CONTEXT_V1` -> `REALTIME_BB_ADX_V1`;
+- `BB_REENTRY_MEAN_REVERSION_LONG` -> `RT_RANGE_REENTRY_LONG`;
+- `BB_SQUEEZE_BREAKOUT_LONG` -> `RT_TTM_SQUEEZE_BREAKOUT_LONG`;
+- `BB_REENTRY_CONFIRMED` -> `RT_REENTRY_CONFIRMED`;
+- `BB_UPPER_BREAKOUT_CONFIRMED` -> `RT_TTM_BREAKOUT_CONFIRMED`;
+- `bb_advice_*` -> `rt_*`.
+
+### Legacy ACDC Da Escludere O Rifattorizzare
+
+File/classi legacy operative:
+
+- `acdc/src/main/java/it/mbc/hft/acdc/repository/LiveBbAdviceRepository.java`;
+- `acdc/src/main/java/it/mbc/hft/acdc/service/OutcomeQualityModelService.java`;
+- `acdc/src/main/java/it/mbc/hft/acdc/service/PreBuyWatchService.java`;
+- `acdc/src/main/java/it/mbc/hft/acdc/service/CandidateSnapshotService.java`;
+- `acdc/src/main/java/it/mbc/hft/acdc/service/SnapshotRankingService.java`;
+- `acdc/src/main/java/it/mbc/hft/acdc/service/BbReadinessDiagnosticsService.java`;
+- `acdc/src/main/java/it/mbc/hft/acdc/service/BbAdviceFeatures.java`;
+- `acdc/src/main/java/it/mbc/hft/acdc/service/BbAdviceTrailingPolicy.java`;
+- metodi legacy in `PaperRunService`:
+  - `requireMlReady(...)`;
+  - `bindExpectedSourceGeneration(...)`;
+  - `expectedGenerationSnapshots(...)`;
+  - `stopIfExpectedGenerationExhausted(...)`;
+  - `sourceGenerationBlockReason(...)`;
+  - qualunque lookup su `LiveBbAdviceRepository`;
+  - qualunque filtro su `RemPromotionClass.PAPER_ELIGIBLE`;
+  - qualunque decisione basata su `source_generation_id`.
+
+Decisione implementativa:
+
+```text
+Per RT creare path parallelo esplicito dentro ACDC:
+RealtimePaperRunService oppure ramo PaperRunService isolato da strategy_family.
+```
+
+Scelta preferita:
+
+```text
+Creare RealtimePaperRunService.
+PaperRunService legacy resta per Context V1 finche' non viene spento.
+AcDcResource/Kenshiro chiamano RealtimePaperRunService solo per action RT.
+```
+
+Motivo:
+
+- riduce rischio di contaminazione legacy;
+- evita `if strategy == RT` sparsi in un servizio gia' molto carico;
+- rende testabile che il path RT non importi `LiveBbAdvice`.
+
+### Legacy GuardEvaluator Da Escludere
+
+Operator legacy da non usare nei guard RT:
+
+- `BB_ADVICE_TAKE_PROFIT_EXIT`;
+- `BB_ADVICE_DYNAMIC_TRAILING_EXIT`;
+- `BB_ADVICE_NO_MFE_DECAY_EXIT`;
+- `BB_ADVICE_POSITIVE_DURATION_EXIT`;
+- `BB_ADVICE_LOSS_CAP_EXIT`;
+- `BB_ADVICE_TIMEOUT_EXIT`;
+- `BB_REENTRY_CAPTURE_EXIT` se legge feature `bb_*`/contract legacy;
+- `BB_REENTRY_FAILED_EXIT` se legge feature `bb_*`/contract legacy;
+- `BB_BREAKOUT_FAILED_EXIT` se legge feature `bb_*`/contract legacy;
+- `BB_BREAKOUT_PROTECT_EXIT` se legge feature `bb_*`/contract legacy.
+
+Operator RT da creare o sostituire con feature booleane:
+
+- `RT_REENTRY_CAPTURE_EXIT`;
+- `RT_REENTRY_FAILED_EXIT`;
+- `RT_BREAKOUT_PROTECT_EXIT`;
+- `RT_BREAKOUT_FAILED_EXIT`;
+- `RT_BREAKOUT_TRAILING_EXIT`;
+- `RT_CHANDELIER_EXIT`;
+- `RT_LOSS_CAP_EXIT`;
+- `RT_TIMEOUT_EXIT`.
+
+Scelta preferita:
+
+```text
+Calcolare booleane in RealtimeIndicatorService/RealtimeExitFeatureService.
+Usare operator generici nei guard.
+Creare operator RT solo per Chandelier se il confronto richiede prezzo/stop dinamico non rappresentabile con FEATURE_LTE.
+```
+
+### Legacy DB ACDC Da Escludere
+
+Tabelle legacy da non leggere nel path RT:
+
+- `acdc_live_bb_advice`;
+- eventuali tabelle DocBrown mirrored/advice;
+- runtime config `bb.live_advice.*`;
+- runtime config `bb.context.*` per soglie Context V1;
+- runtime status `bb.management.round_robin.*`;
+- runtime status `bb.management.research.*`.
+
+Tabelle ancora ammesse:
+
+- `acdc_shared_runtime_config`, solo chiavi `rt.*`, `market.*`, PAPER/runtime comuni;
+- `acdc_guard_definition`, solo guard del profilo RT;
+- `acdc_guard_threshold_override`, solo override RT;
+- `acdc_paper_run`;
+- `acdc_paper_position`;
+- `acdc_paper_decision`;
+- `acdc_trade_candle`;
+- `acdc_paper_sell_diagnostics`;
+- `acdc_paper_post_sell_forensics`;
+- `acdc_run_execution`.
+
+Nuove chiavi DB obbligatorie:
+
+```text
+rt.strategy.enabled
+rt.strategy.family
+rt.bb.period
+rt.bb.stddev
+rt.keltner.period
+rt.keltner.atr_multiplier
+rt.adx.period
+rt.adx.range.max
+rt.adx.trend.min
+rt.adx.rising.lookback
+rt.volume.confirmation.min
+rt.obv.slope.lookback
+rt.chandelier.period
+rt.chandelier.atr_multiplier
+rt.loss_cap.max_quote
+rt.trailing.arm
+rt.trailing.distance
+rt.timeout.reentry.seconds
+rt.timeout.breakout.seconds
+```
+
+### Legacy Kenshiro Da Rimuovere Dal Workflow RT
+
+Action legacy da non mostrare come step RT:
+
+- `AUTO_BOLLINGER_START`;
+- `AUTO_BOLLINGER_STOP` se resta legata al ciclo DocBrown;
+- `RUN_RESEARCH`;
+- `RESEARCH_STATUS`;
+- `LIVE_SCORE`;
+- `ROLLING_VALIDATION`;
+- `ROLLING_SELECTION_ATTRIBUTION_AUDIT`;
+- `ROLLING_PROMOTION`;
+- `APPLY_BOLLINGER_CONTEXT_V1`;
+- `APPLY_BOLLINGER_ONLY`.
+
+Metodi/aree da non invocare dal workflow RT:
+
+- chiamate downstream verso DocBrown;
+- `rollingPromotion(...)`;
+- `autoAutomationStart(...)` legacy;
+- pre-promotion live score;
+- readiness basata su active advice;
+- conteggio `PAPER_ELIGIBLE`.
+
+Nuove action RT:
+
+- `APPLY_REALTIME_BB_ADX_V1`;
+- `REALTIME_PAPER_START`;
+- `REALTIME_PAPER_STOP_BUY`;
+- `REALTIME_PAPER_STOP`;
+- `REALTIME_REFRESH_DIAGNOSTICS`;
+- `REALTIME_READINESS`.
+
+### Legacy hft-fe Da Rimuovere Dalla Vista RT
+
+Elementi UI legacy da non mostrare nella pagina RT:
+
+- nav diretta DocBrown nel workflow operativo;
+- "Research";
+- "Live score";
+- "Rolling validation";
+- "Promotion";
+- "PAPER_ELIGIBLE";
+- "Advice age";
+- "Advice generation";
+- metriche `bb_advice_paper_watch_eligible`;
+- metriche `bb_advice_paper_buy_eligible`;
+- model status;
+- selection bias;
+- score breakdown DocBrown.
+
+Le pagine DocBrown possono restare nel menu legacy/config, ma devono essere etichettate come:
+
+```text
+Legacy / diagnostic only / not used by REALTIME_BB_ADX_V1
+```
+
+### Legacy Script Da Rimuovere Dal Path Operativo
+
+Script da non usare per RT:
+
+- `acdc/scripts/acdc-run-rem-ml.sh`;
+- `run-docbrown-research.sh`;
+- ogni script che chiama DocBrown research;
+- ogni script che legge `acdc_live_bb_advice` come sorgente operativa;
+- ogni script che menziona rolling/promotion senza `DIAGNOSTIC_ONLY`.
+
+Ogni script legacy deve avere una delle due destinazioni:
+
+1. archiviato/spostato sotto cartella legacy;
+2. lasciato dove si trova ma con banner:
+
+```text
+LEGACY_DIAGNOSTIC_ONLY
+NOT_USED_BY_REALTIME_BB_ADX_V1
+MUST_NOT_START_PAPER
+```
+
+## Refinement 6 - Sequenza Implementativa Senza Ambiguita'
+
+Questa revisione fissa l'ordine di sviluppo. Codex non deve scegliere un ordine diverso.
+
+### Fase 0 - Preflight Legacy
+
+Output richiesto prima del codice:
+
+- lista grep `LiveBbAdvice`;
+- lista grep `BB_ADVICE`;
+- lista grep `DocBrown`;
+- lista grep `PAPER_ELIGIBLE`;
+- lista grep `RUN_RESEARCH|LIVE_SCORE|ROLLING_PROMOTION`;
+- mappa file legacy da toccare.
+
+Stop condition:
+
+```text
+Se emerge un altro path operativo verso DocBrown non censito nel documento, aggiornare il documento prima del codice.
+```
+
+### Fase 1 - hft-common
+
+Implementare:
+
+- `REALTIME_BB_ADX_V1`;
+- feature key `rt_*`;
+- reason RT;
+- setup/trigger RT;
+- eventuali operator RT;
+- classificazioni evidenza RT:
+  - `VALID_REALTIME_STRATEGIC_EVIDENCE`;
+  - `NEGATIVE_REALTIME_ENTRY_SIGNAL`;
+  - `NEGATIVE_REALTIME_EXIT_SIGNAL`;
+  - `NEGATIVE_REALTIME_FINANCIAL_SIGNAL`;
+  - `INVALID_REALTIME_EVIDENCE`.
+
+Verifica:
+
+```bash
+cd hft-common && mvn -q -DskipTests install
+```
+
+### Fase 2 - ACDC Indicatori
+
+Implementare:
+
+- `RealtimeIndicatorService`;
+- record interno `RealtimeIndicatorSnapshot` se utile;
+- calcolo ADX/DMI;
+- calcolo Keltner;
+- calcolo TTM squeeze;
+- calcolo OBV;
+- calcolo Chandelier;
+- data quality RT.
+
+Test obbligatori:
+
+- serie piatta: ADX basso, no breakout;
+- serie trend up: +DI > -DI, ADX crescente;
+- squeeze on: Bollinger dentro Keltner;
+- squeeze fired up: Bollinger esce sopra Keltner e close sopra upper;
+- Chandelier: stop = highestHigh(period) - ATR * multiplier.
+
+### Fase 3 - ACDC Realtime Runtime
+
+Implementare:
+
+- `RealtimePaperRunService`;
+- `RealtimeWatchService`;
+- `RealtimeReadinessService`;
+- `RealtimeExitFeatureService` se separare exit features da indicatori migliora chiarezza.
+
+Il nuovo service deve:
+
+- leggere universo da config/snapshot, non da advice;
+- creare run PAPER;
+- valutare entry RT;
+- aprire posizioni;
+- valutare exit RT;
+- persistere decisioni e posizioni come oggi;
+- usare telegram idempotente esistente;
+- usare budget/sizing esistente.
+
+Il nuovo service non deve:
+
+- importare `LiveBbAdvice`;
+- importare `LiveBbAdviceRepository`;
+- importare `RemPromotionClass`;
+- importare `OutcomeQualityModelService`;
+- chiamare `candidateSnapshotService`;
+- chiamare `snapshotRankingService` se ranking deriva da advice/ML;
+- chiamare `BbReadinessDiagnosticsService`.
+
+### Fase 4 - DB ACDC
+
+Migration:
+
+```text
+V100__realtime_bb_adx_v1.sql
+```
+
+La migration deve:
+
+- aggiungere config `rt.*`;
+- aggiungere guard RT ENTRY/EXIT;
+- non modificare globalmente guard legacy;
+- non attivare RT se codice non pronto;
+- aggiungere descrizioni chiare per FE/config.
+
+### Fase 5 - Kenshiro
+
+Implementare:
+
+- action RT;
+- readiness RT;
+- workflow RT;
+- proxy verso ACDC RT endpoints;
+- stato senza DocBrown.
+
+Endpoint downstream ACDC da introdurre o usare:
+
+- `/acdc/realtime/readiness/{profileKey}`;
+- `/acdc/realtime/paper/start/{profileKey}`;
+- `/acdc/realtime/paper/stop-buy/{profileKey}`;
+- `/acdc/realtime/paper/stop/{profileKey}`;
+- `/acdc/realtime/diagnostics/{profileKey}`.
+
+### Fase 6 - FE
+
+Implementare:
+
+- tab/pagina RT;
+- pannello indicatori;
+- pannello readiness;
+- controlli PAPER RT;
+- trade detail RT;
+- marker legacy sulle vecchie superfici.
+
+### Fase 7 - Script
+
+Implementare:
+
+- `diagnose-rt-readiness.sh`;
+- `diagnose-rt-indicators.sh`;
+- `diagnose-rt-run.sh`;
+- `diagnose-rt-trade-forensics.sh`.
+
+Aggiornare script legacy con banner o spostamento.
+
+### Fase 8 - Verifica Finale Prima PAPER
+
+Comandi minimi:
+
+```bash
+cd hft-common && mvn -q -DskipTests install
+cd ../acdc && mvn -q test && mvn -q -DskipTests package
+cd ../kenshiro && mvn -q test && mvn -q -DskipTests package
+cd ../hft-fe && npm run check && npm run build
+```
+
+Poi:
+
+- deploy ACDC;
+- deploy Kenshiro;
+- deploy FE;
+- verificare MySQL;
+- verificare `/management/state`;
+- verificare readiness RT;
+- solo dopo avviare PAPER RT da `/management`.
+
+## Refinement 7 - Contratto Di Readiness RT
+
+Questa revisione elimina l'ambiguita' su cosa significhi "pronto".
+
+`REALTIME_BB_ADX_V1` e' pronto solo se tutti i campi sotto sono veri:
+
+```text
+rt_strategy_family_active = true
+rt_strategy_enabled = true
+rt_docbrown_path_disabled = true
+rt_live_advice_unused = true
+rt_indicator_lookback_ready = true
+rt_data_quality_ready = true
+rt_synthetic_backfill = false
+rt_entry_guards_ready = true
+rt_exit_guards_ready = true
+rt_management_actions_ready = true
+rt_fe_contract_ready = true
+paper_running = false
+open_positions = 0
+real_forbidden = true
+```
+
+Blocker obbligatori:
+
+- `RT_STRATEGY_NOT_ENABLED`;
+- `RT_DOCBROWN_PATH_STILL_ACTIVE`;
+- `RT_LIVE_ADVICE_STILL_REFERENCED`;
+- `RT_INDICATOR_LOOKBACK_INSUFFICIENT`;
+- `RT_DATA_GAP_TOO_WIDE`;
+- `RT_SYNTHETIC_BACKFILL_BLOCKED`;
+- `RT_ENTRY_GUARDS_MISSING`;
+- `RT_EXIT_GUARDS_MISSING`;
+- `RT_MANAGEMENT_ACTIONS_MISSING`;
+- `RT_FE_CONTRACT_MISSING`;
+- `RT_PAPER_ALREADY_RUNNING`;
+- `RT_OPEN_POSITIONS_PRESENT`;
+- `REAL_FORBIDDEN`.
+
+Kenshiro `/management/state` deve esporre:
+
+```json
+{
+  "strategyFamily": "REALTIME_BB_ADX_V1",
+  "rtReady": true,
+  "rtBlockers": [],
+  "rtDiagnostics": {
+    "sourceBucket": "binance-microbar",
+    "intervalSeconds": 5,
+    "candleState": "CLOSED",
+    "candleCount": 0,
+    "maxGapSeconds": 0,
+    "syntheticBackfill": false,
+    "docbrownPathDisabled": true,
+    "liveAdviceUnused": true,
+    "entryGuards": [],
+    "exitGuards": []
+  }
+}
+```
+
+ACDC readiness endpoint deve essere la fonte tecnica; Kenshiro aggrega e mostra.
+
+## Refinement 8 - Autonomia Implementativa E Cose Da Non Chiedere
+
+Questa revisione esplicita le decisioni gia' prese. Durante l'implementazione non serve chiedere conferma su questi
+punti:
+
+1. Il nuovo path si chiama `REALTIME_BB_ADX_V1`.
+2. DocBrown non viene rimosso dal repository.
+3. DocBrown e ML sono esclusi dal path decisionale RT.
+4. Il path RT non usa `acdc_live_bb_advice`.
+5. Il path RT non usa `PAPER_ELIGIBLE`.
+6. Il path RT non usa rolling validation/promotion.
+7. Il path RT non usa `q10_positive_max_net_return`.
+8. Il path RT non usa soglie adattive DocBrown.
+9. ACDC e' owner degli indicatori, WATCH, BUY, SELL RT.
+10. Influxer e' owner dei dati OHLCV, non della strategia.
+11. Kenshiro e' owner orchestrazione `/management`.
+12. FE e' owner visualizzazione/controlli, non logica strategica.
+13. REAL resta vietata.
+14. PAPER parte solo da `/management`.
+15. Nessuno script avvia PAPER.
+16. SELL RT deve esistere prima della prima PAPER RT.
+17. Se una feature richiesta manca, BUY fallisce chiusa.
+18. Se synthetic backfill e' true, BUY/SELL strategici falliscono chiusi.
+19. Se la run RT perde, non si cambia soglia al volo: si produce forensics.
+20. Se servono nuove soglie, vanno in documento + hft-common/DB `rt.*` + migration.
+
+Domande ancora ammesse solo se bloccanti:
+
+- fonte dati OHLCV assente o non verificabile;
+- formula di un indicatore non implementabile per dati mancanti;
+- conflitto tecnico tra schema DB reale e piano;
+- test formula fallito per ambiguita' matematica non risolta dalle fonti.
+
+## Refinement 9 - Definition Of Done Per Intervento
+
+Questa revisione dettaglia cosa deve essere vero alla fine di ogni gruppo di sviluppo.
+
+### DoD hft-common
+
+- `REALTIME_BB_ADX_V1` compilante.
+- Costanti `rt_*` presenti.
+- Reason RT presenti.
+- Nessun riuso necessario di `BB_ADVICE_*` nel nuovo codice.
+- Test/compile completato.
+- Commit/push MS.
+
+### DoD influxer
+
+- Dati OHLCV reali verificati.
+- `synthetic_backfill` preservato.
+- Nessun calcolo strategico aggiunto.
+- Diagnostica bucket/cadence aggiornata se necessario.
+- Deploy se codice toccato.
+
+### DoD ACDC Indicatori
+
+- Unit test formule passano.
+- Snapshot RT contiene tutte le feature obbligatorie.
+- Data quality blocker visibili.
+- Nessun import DocBrown/advice nei nuovi servizi RT.
+
+### DoD ACDC Runtime
+
+- PAPER RT parte senza righe active in `acdc_live_bb_advice`.
+- `RealtimePaperRunService` non importa classi advice/ML.
+- WATCH RT usa solo feature `rt_*`.
+- BUY RT salva policy `rt_*`.
+- SELL RT salva reason `EXIT_RT_*`.
+- Telegram BUY/SELL resta idempotente.
+- MySQL operativo, non H2, usato per verifica.
+
+### DoD Kenshiro
+
+- `/management/state` espone `rtReady`.
+- Workflow RT non mostra DocBrown.
+- Action RT invocano endpoint RT ACDC.
+- Action legacy restano solo legacy.
+- PAPER RT bloccata se `rtReady=false`.
+
+### DoD hft-fe
+
+- UI RT mostra indicatori e readiness.
+- UI RT non mostra live-score/promotion/research.
+- Trade detail mostra feature RT.
+- Vecchie pagine DocBrown marcate legacy.
+- `npm run check` e build passano.
+
+### DoD Script
+
+- Script RT sono `DIAGNOSTIC_ONLY`.
+- Script legacy sono marcati legacy/non operativi.
+- Nessuno script PAPER.
+- Contract script passano.
+
+### DoD PAPER
+
+- Avvio da `/management`.
+- Stato iniziale: `rtReady=true`, `paperRunning=false`, `openPositions=0`.
+- Stato finale: stop governato, no open positions.
+- Report per setup.
+- Distribuzione ENTRY blocker.
+- Distribuzione EXIT reason.
+- PnL netto.
+- MFE/MAE.
+- Classificazione evidenza.
+
+## Legacy Removal Checklist Finale
+
+Prima di dichiarare il path RT pronto, questi comandi devono dare zero occorrenze nei nuovi file RT o nelle superfici RT:
+
+```bash
+rg -n "LiveBbAdvice|LiveBbAdviceRepository|acdc_live_bb_advice" acdc/src/main/java/it/mbc/hft/acdc/service/*Realtime*
+rg -n "BB_ADVICE|bb_advice|PAPER_ELIGIBLE|source_generation_id|q10_positive" acdc/src/main/java/it/mbc/hft/acdc/service/*Realtime*
+rg -n "RUN_RESEARCH|LIVE_SCORE|ROLLING_VALIDATION|ROLLING_PROMOTION" kenshiro/src/main/java/it/mbc/hft/kenshiro/backoffice
+rg -n "DocBrown|docbrown|live-score|promotion|PAPER_ELIGIBLE|bb_advice" hft-fe/src/routes/management hft-fe/src/lib/components/management
+```
+
+Eccezioni ammesse:
+
+- file/documenti legacy;
+- pagine legacy esplicitamente etichettate;
+- diagnostiche `LEGACY_DIAGNOSTIC_ONLY`;
+- test che verificano che il path RT non usi legacy.
+
 ## Gate Finale - Cosa Deve Vedere Il Consiglio Prima Di Implementare
 
 Prima di scrivere codice, il Consiglio deve confermare:
