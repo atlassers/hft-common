@@ -7,13 +7,14 @@ Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 ## Gerarchia Documentale
 
 1. `hft-common/doc/STRATEGIC_REM_RECOVERY_PLAN.md`
-2. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`
-3. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`
-4. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`
-5. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_PLAN.md`
-6. `hft-common/doc/CURRENT_CONTEXT.md`
-7. `hft-common/doc/STRATEGIC_REM_HANDOFF.md`
-8. `hft-common/doc/archived/BOLLINGER_ONLY_PLAN.md`
+2. `hft-common/doc/archived/REALTIME_BOLLINGER_ADX_NO_ML_PLAN.md` come piano candidato non ancora implementato.
+3. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`
+4. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`
+5. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`
+6. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_PLAN.md`
+7. `hft-common/doc/CURRENT_CONTEXT.md`
+8. `hft-common/doc/STRATEGIC_REM_HANDOFF.md`
+9. `hft-common/doc/archived/BOLLINGER_ONLY_PLAN.md`
 
 Se i documenti confliggono, prevale il charter; poi
 `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`; poi
@@ -23,6 +24,10 @@ Se i documenti confliggono, prevale il charter; poi
 I documenti sotto `doc/acdc`, `doc/docbrown`, `doc/influxer`, `doc/hft-fe` e `doc/kenshiro` sono memoria storica di
 sessione. Possono spiegare perche' esistono microbar, REAL, SHADOW o reversal legacy, ma non sono fonte operativa se
 contraddicono la gerarchia sopra.
+
+Nota 2026-07-05: `REALTIME_BOLLINGER_ADX_NO_ML_PLAN.md` e' il documento candidato per sostituire l'AS-IS legacy con
+un path realtime rule-based senza DocBrown/ML nel decision path. Non e' ancora implementato e non autorizza PAPER RT
+finche' gli interventi del piano non sono completati.
 
 ## Vincoli Correnti
 

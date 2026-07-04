@@ -98,6 +98,23 @@ ritorno a nomi `ml_*` o contratti legacy.
 
 `BOLLINGER_CONTEXT_V1_A2_CADENCE_AND_OFFICIAL_THRESHOLDS_REQUIRED`.
 
+Aggiornamento Consiglio 2026-07-05:
+
+```text
+REALTIME_BB_ADX_V1 - Piano Candidato No-ML
+```
+
+Nuovo documento candidato:
+
+```text
+archived/REALTIME_BOLLINGER_ADX_NO_ML_PLAN.md
+```
+
+Il documento tratta l'AS-IS `BOLLINGER_CONTEXT_V1` come legacy e progetta una strategia realtime rule-based basata su
+Bollinger, Keltner/TTM Squeeze, ADX/DMI, volume/OBV, ATR/Chandelier. DocBrown/ML non viene rimosso dal workspace, ma
+viene escluso dal path decisionale target. Questo aggiornamento e' un piano progettuale: non dichiara ancora
+`REALTIME_BB_ADX_V1` implementato ne' autorizza PAPER fino a completamento degli interventi indicati.
+
 Aggiornamento Consiglio 2026-07-04:
 
 ```text
