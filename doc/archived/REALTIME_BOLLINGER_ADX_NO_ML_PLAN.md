@@ -1633,6 +1633,565 @@ Questa revisione dettaglia cosa deve essere vero alla fine di ogni gruppo di svi
 - MFE/MAE.
 - Classificazione evidenza.
 
+## Refinement 10 - WATCH RT: Perimetro, Candele, Indicatori
+
+Questa revisione separa WATCH da BUY. WATCH non decide ordini. WATCH osserva il mercato, calcola lo stato tecnico
+del simbolo e apre o mantiene un candidato solo quando esiste un setup Bollinger leggibile. La decisione di entrare
+resta in BUY.
+
+### Responsabilita' WATCH
+
+WATCH deve:
+
+- leggere solo candele reali dal profilo decisionale RT;
+- calcolare snapshot tecnico completo;
+- classificare il setup come `RT_RANGE_REENTRY_WATCH`, `RT_SQUEEZE_BREAKOUT_WATCH` o `RT_NO_SETUP`;
+- salvare campi diagnostici necessari a spiegare perche' un simbolo e' osservato;
+- scartare il simbolo se data quality, lookback o synthetic backfill non sono conformi;
+- non interrogare DocBrown;
+- non leggere `acdc_live_bb_advice`;
+- non usare `PAPER_ELIGIBLE`;
+- non usare score ML, quantili ML, promotion, rolling validation o `source_generation_id`;
+- non inviare BUY;
+- non inviare SELL.
+
+### Ampiezza Candela WATCH
+
+WATCH usa la stessa ampiezza candela del profilo RT attivo.
+
+Profilo operativo iniziale:
+
+```text
+rt.decision.source_bucket = binance-microbar
+rt.decision.interval_seconds = 5
+rt.decision.candle_state = CLOSED
+rt.decision.synthetic_backfill_allowed = false
+```
+
+Profilo alternativo ammesso solo se dichiarato end-to-end prima della run:
+
+```text
+rt.decision.source_bucket = binance
+rt.decision.interval_seconds = 60
+rt.decision.candle_state = CLOSED
+rt.decision.synthetic_backfill_allowed = false
+```
+
+Regola non negoziabile: WATCH, BUY e SELL devono usare lo stesso profilo decisionale nella stessa PAPER RUN. Non e'
+ammesso WATCH a 5s, BUY a 1m o SELL a 1m nella stessa strategia RT.
+
+### Indicatori WATCH Ammessi
+
+WATCH calcola solo indicatori pubblici e deterministici:
+
+- OHLCV base;
+- `candle_count`;
+- `max_gap_seconds`;
+- `synthetic_backfill`;
+- Bollinger Bands 20 periodi, deviazione standard 2;
+- `percent_b`;
+- `bb_bandwidth`;
+- `bb_bandwidth_delta`;
+- Keltner Channel EMA 20 con ATR multiplier 1.5;
+- stato TTM Squeeze: squeeze on, squeeze fired;
+- ADX 14;
+- `plus_di` e `minus_di`;
+- ATR 14;
+- `atr_pct`;
+- `volume_sma_20`;
+- `volume_ratio`;
+- OBV;
+- `obv_slope`;
+- spread/fee/slippage stimati solo come diagnostica di eseguibilita'.
+
+WATCH non puo' bloccare un setup solo perche' un indicatore secondario non e' "perfetto". Il suo compito e' aprire
+osservazione quando Bollinger mostra una condizione tecnica potenziale e quando gli indicatori di contesto non
+invalidano chiaramente il setup.
+
+### Setup WATCH Range Reentry
+
+WATCH apre `RT_RANGE_REENTRY_WATCH` quando:
+
+- esiste una violazione recente o un contatto significativo della lower band;
+- `percent_b` e' sotto area bassa o in recupero dalla lower band;
+- bandwidth non e' in espansione caotica;
+- ADX indica mercato laterale o trend non dominante;
+- volume e ATR non indicano shock ingestibile;
+- data quality e lookback sono validi.
+
+Indicatori usati:
+
+- Bollinger 20/2;
+- `percent_b`;
+- `bb_bandwidth`;
+- ADX 14;
+- DMI 14;
+- ATR 14;
+- `volume_ratio`;
+- OBV come contesto, non come veto primario.
+
+WATCH non compra sul primo tocco della lower band. Il tocco mette il simbolo in osservazione; BUY deve confermare il
+rientro.
+
+### Setup WATCH Squeeze Breakout
+
+WATCH apre `RT_SQUEEZE_BREAKOUT_WATCH` quando:
+
+- Bollinger Bands sono dentro Keltner Channel o appena uscite da squeeze;
+- bandwidth e' compressa rispetto alla storia recente;
+- esiste pressione direzionale potenziale;
+- volume e OBV non contraddicono la direzione;
+- data quality e lookback sono validi.
+
+Indicatori usati:
+
+- Bollinger 20/2;
+- Keltner EMA 20 + ATR 1.5;
+- TTM Squeeze;
+- `bb_bandwidth`;
+- `bb_bandwidth_delta`;
+- ADX/DMI 14;
+- `volume_ratio`;
+- OBV slope.
+
+WATCH non compra durante compressione. BUY compra solo dopo espansione confermata.
+
+### Punti Codice WATCH Da Preparare
+
+Interventi documentati per implementazione:
+
+- ACDC: introdurre `RealtimeWatchService` o equivalente separato da `PreBuyWatchService` legacy;
+- ACDC: introdurre DTO snapshot `RealtimeWatchSnapshot`;
+- ACDC: rendere `PreBuyWatchService` legacy-only per il path ML/DocBrown;
+- ACDC: impedire import di repository advice/DocBrown nei servizi `Realtime*`;
+- ACDC DB: salvare `setup_type`, `source_bucket`, `interval_seconds`, `candle_state`, `candle_count`,
+  `max_gap_seconds`, `synthetic_backfill`, indicatori WATCH e blocker;
+- hft-common: costanti `RT_RANGE_REENTRY_WATCH`, `RT_SQUEEZE_BREAKOUT_WATCH`, `RT_NO_SETUP`;
+- FE: mostrare WATCH come stato tecnico, non come raccomandazione ML;
+- Script: diagnostica WATCH solo read-only.
+
+## Refinement 11 - BUY RT: Perimetro, Candele, Indicatori
+
+Questa revisione separa BUY da WATCH. BUY e' l'unico punto che trasforma un setup osservato in ordine PAPER. BUY non
+eredita decisioni legacy e non legge DocBrown.
+
+### Responsabilita' BUY
+
+BUY deve:
+
+- ricevere uno snapshot WATCH valido;
+- ricalcolare o validare gli stessi indicatori sulla candela chiusa corrente;
+- verificare data quality;
+- verificare spread/fee/slippage minimi per evitare trade impossibili;
+- applicare una delle due regole entry RT;
+- salvare `entry_setup_type`, indicatori, blocker e reason;
+- inviare un solo BUY idempotente per simbolo/run/setup;
+- non interrogare ML;
+- non leggere advice;
+- non cambiare profilo candela rispetto a WATCH.
+
+### Ampiezza Candela BUY
+
+BUY usa esattamente:
+
+```text
+source_bucket = WATCH.source_bucket
+interval_seconds = WATCH.interval_seconds
+candle_state = CLOSED
+synthetic_backfill = false
+```
+
+Il prezzo eseguibile corrente puo' essere usato solo per sizing, fee/slippage e controllo di protezione. La conferma
+tecnica di BUY usa candele chiuse, non tick parziali.
+
+### BUY Range Reentry
+
+BUY `RT_ENTRY_RANGE_REENTRY` e' ammesso solo se:
+
+- WATCH e' `RT_RANGE_REENTRY_WATCH`;
+- la candela chiusa mostra rientro dalla zona lower band;
+- `percent_b` e' in recupero coerente rispetto alla candela precedente;
+- il close non continua a rompere la lower band;
+- ADX non indica trend ribassista forte;
+- DMI non e' dominato in modo netto da `minus_di`;
+- volume e ATR non indicano crash o spike ingestibile;
+- fee/slippage stimati lasciano spazio a un target realistico;
+- non esiste posizione aperta sul simbolo.
+
+Indicatori decisionali:
+
+- Bollinger 20/2;
+- `percent_b`;
+- close rispetto a lower band e middle band;
+- ADX 14;
+- `plus_di`/`minus_di`;
+- ATR 14 e `atr_pct`;
+- `volume_ratio`;
+- OBV slope.
+
+Soglie configurabili RT:
+
+```text
+rt.entry.range.adx_max = 20
+rt.entry.range.adx_soft_max = 25
+rt.entry.range.percent_b_recovery_required = true
+rt.entry.range.minus_di_dominance_block = true
+rt.entry.range.volume_chaos_block = true
+rt.entry.range.atr_chaos_block = true
+```
+
+Interpretazione: ADX sotto 20 e' condizione ideale di range. Tra 20 e 25 e' ammesso solo se DMI e recupero Bollinger
+non indicano prosecuzione ribassista. Sopra 25 il range reentry e' bloccato, salvo futura regola documentata e
+validata.
+
+### BUY Squeeze Breakout
+
+BUY `RT_ENTRY_SQUEEZE_BREAKOUT_LONG` e' ammesso solo se:
+
+- WATCH e' `RT_SQUEEZE_BREAKOUT_WATCH`;
+- squeeze e' fired o appena uscito dalla compressione;
+- close della candela chiusa supera la upper band;
+- `percent_b >= 1.0` o equivalente conferma di chiusura fuori upper band;
+- `bb_bandwidth_delta > 0`;
+- ADX e' almeno in rafforzamento o gia' sopra soglia trend;
+- `plus_di > minus_di`;
+- volume conferma espansione;
+- OBV non diverge negativamente;
+- fee/slippage stimati lasciano spazio al trade.
+
+Indicatori decisionali:
+
+- Bollinger 20/2;
+- Keltner EMA 20 + ATR 1.5;
+- TTM Squeeze;
+- `percent_b`;
+- `bb_bandwidth_delta`;
+- ADX 14;
+- `plus_di`/`minus_di`;
+- `volume_ratio`;
+- OBV slope;
+- ATR 14 per sizing/protezione.
+
+Soglie configurabili RT:
+
+```text
+rt.entry.breakout.adx_min = 25
+rt.entry.breakout.adx_rising_soft_min = 20
+rt.entry.breakout.volume_ratio_min = 1.30
+rt.entry.breakout.require_plus_di_gt_minus_di = true
+rt.entry.breakout.require_obv_non_negative = true
+```
+
+Interpretazione: il breakout richiede trend o trend nascente. ADX >= 25 e' conferma forte. ADX 20-25 e' accettabile
+solo se ADX sale, `plus_di > minus_di`, volume espande e Bollinger conferma uscita dalla banda.
+
+### Punti Codice BUY Da Preparare
+
+Interventi documentati per implementazione:
+
+- ACDC: introdurre `RealtimeEntryDecisionService`;
+- ACDC: separare `RealtimeEntryDecision` da eventuali DTO advice legacy;
+- ACDC: garantire idempotenza BUY per `run_id + symbol + setup_type`;
+- ACDC: salvare blocker `RT_ENTRY_*`;
+- ACDC: salvare indicator snapshot usato dal BUY;
+- hft-common: enum/costanti `RT_ENTRY_RANGE_REENTRY`, `RT_ENTRY_SQUEEZE_BREAKOUT_LONG`;
+- hft-common: reason `RT_ENTRY_BLOCKED_*`;
+- DB: config `rt.entry.*`;
+- Kenshiro: mostrare BUY RT come azione PAPER governata da `/management`;
+- FE: mostrare motivo BUY e indicatori usati, senza punteggi ML;
+- Script: diagnostica BUY senza inviare ordini.
+
+## Refinement 12 - SELL RT: Perimetro, Candele, Indicatori
+
+Questa revisione definisce SELL come parte della strategia, non come afterthought. SELL deve essere implementata prima
+della prima PAPER RT. Una strategia Bollinger senza uscita coerente non e' pronta.
+
+### Responsabilita' SELL
+
+SELL deve:
+
+- monitorare solo posizioni PAPER aperte dal path `REALTIME_BB_ADX_V1`;
+- usare lo stesso profilo candela decisionale di WATCH/BUY;
+- valutare exit su ogni candela chiusa;
+- usare prezzo corrente solo per protezione esecutiva, loss cap e calcolo net immediato;
+- salvare una sola SELL idempotente per posizione/reason;
+- non interrogare DocBrown;
+- non leggere ML/advice;
+- non usare trailing legacy se non ricondotto esplicitamente al contratto RT.
+
+### Ampiezza Candela SELL
+
+SELL usa:
+
+```text
+source_bucket = position.entry_source_bucket
+interval_seconds = position.entry_interval_seconds
+candle_state = CLOSED
+synthetic_backfill = false
+```
+
+SELL non puo' cambiare timeframe durante la posizione. Se la posizione e' nata su profilo 5s, SELL valuta indicatori
+su 5s. Se una futura run nasce su profilo 60s, SELL valuta su 60s. Questo evita contaminazioni tra microbar e candele
+aggregate.
+
+### SELL Range Reentry
+
+Per posizioni nate da `RT_ENTRY_RANGE_REENTRY`, SELL usa logica mean reversion:
+
+- presa profitto primaria su ritorno verso middle band;
+- presa profitto aggressiva se il prezzo raggiunge zona upper band;
+- uscita di fallimento se il rientro fallisce e il prezzo torna sotto lower band;
+- uscita di protezione se loss cap netto viene superato;
+- uscita di timeout se il setup non evolve entro il numero massimo di candele;
+- nessuna mediazione al ribasso automatica.
+
+Indicatori decisionali:
+
+- Bollinger 20/2;
+- `percent_b`;
+- close rispetto a lower/middle/upper band;
+- ADX/DMI 14 per riconoscere transizione da range a trend contrario;
+- ATR 14 per stop tecnico;
+- net PnL dopo fee/slippage;
+- tempo in posizione espresso in numero di candele decisionale.
+
+Reason SELL:
+
+```text
+RT_EXIT_RANGE_MIDDLE_BAND_PROFIT
+RT_EXIT_RANGE_UPPER_BAND_PROFIT
+RT_EXIT_RANGE_REENTRY_FAILED
+RT_EXIT_RANGE_TREND_AGAINST
+RT_EXIT_RANGE_LOSS_CAP
+RT_EXIT_RANGE_TIMEOUT
+```
+
+Soglie configurabili RT:
+
+```text
+rt.exit.range.middle_band_capture_percent_b = 0.50
+rt.exit.range.upper_band_capture_percent_b = 0.80
+rt.exit.range.fail_percent_b = 0.00
+rt.exit.range.loss_cap_net_pct = -0.35
+rt.exit.range.max_hold_candles = 36
+```
+
+Interpretazione: un reentry e' comprato per catturare ritorno verso la media, non per aspettare indefinitamente un
+trend. Se arriva profitto netto a middle band, SELL puo' chiudere. Se il prezzo prosegue verso upper band, SELL puo'
+chiudere con reason superiore. Se il prezzo rompe di nuovo in basso o il trend contrario prende forza, SELL deve
+proteggere.
+
+### SELL Squeeze Breakout
+
+Per posizioni nate da `RT_ENTRY_SQUEEZE_BREAKOUT_LONG`, SELL usa logica trend-following con stop tecnico:
+
+- trailing basato su Chandelier Exit long;
+- presa profitto o stop mobile se momentum si esaurisce;
+- uscita se prezzo rientra sotto upper band dopo falso breakout;
+- uscita se DMI perde direzione long;
+- uscita di protezione se loss cap netto viene superato;
+- uscita di timeout se il breakout non produce follow-through.
+
+Indicatori decisionali:
+
+- Chandelier Exit long: highest high periodo 22 meno ATR 22 moltiplicato 3;
+- ATR 22 per trailing;
+- Bollinger 20/2;
+- `percent_b`;
+- `bb_bandwidth_delta`;
+- ADX/DMI 14;
+- volume ratio;
+- OBV slope;
+- net PnL dopo fee/slippage;
+- tempo in posizione espresso in candele decisionale.
+
+Reason SELL:
+
+```text
+RT_EXIT_BREAKOUT_CHANDELIER_STOP
+RT_EXIT_BREAKOUT_FALSE_BREAKOUT
+RT_EXIT_BREAKOUT_DMI_REVERSAL
+RT_EXIT_BREAKOUT_MOMENTUM_EXHAUSTED
+RT_EXIT_BREAKOUT_LOSS_CAP
+RT_EXIT_BREAKOUT_TIMEOUT
+```
+
+Soglie configurabili RT:
+
+```text
+rt.exit.breakout.chandelier_period = 22
+rt.exit.breakout.chandelier_atr_multiplier = 3.0
+rt.exit.breakout.false_breakout_percent_b = 0.80
+rt.exit.breakout.require_plus_di_for_hold = true
+rt.exit.breakout.loss_cap_net_pct = -0.35
+rt.exit.breakout.max_hold_candles = 60
+```
+
+Interpretazione: un breakout non va chiuso appena tocca la upper band, perche' la upper band puo' accompagnare il
+trend. Va chiuso quando il trailing tecnico viene violato, quando il breakout fallisce rientrando sotto upper band
+senza profitto, quando DMI gira contro o quando il loss cap netto impone protezione.
+
+### Priorita' SELL
+
+SELL valuta le reason in ordine deterministico:
+
+1. data quality invalidante: blocca nuove decisioni e usa protezione esecutiva se rischio non calcolabile;
+2. loss cap netto;
+3. stop tecnico specifico del setup;
+4. falso breakout o reentry failed;
+5. profit capture;
+6. timeout;
+7. hold.
+
+La priorita' impedisce che un profit capture mascheri un loss cap o che un hold ignori uno stop tecnico.
+
+### Punti Codice SELL Da Preparare
+
+Interventi documentati per implementazione:
+
+- ACDC: introdurre `RealtimeExitDecisionService`;
+- ACDC: introdurre `RealtimePositionMonitorService` se necessario;
+- ACDC: salvare `entry_setup_type` sulla posizione;
+- ACDC: SELL deve scegliere regola in base a `entry_setup_type`;
+- ACDC: garantire idempotenza Telegram SELL e ordine SELL;
+- ACDC: rimuovere dal path RT ogni dipendenza da SELL legacy non spiegabile con reason RT;
+- hft-common: enum/costanti `RT_EXIT_*`;
+- DB: config `rt.exit.*`;
+- Kenshiro: mostrare exit readiness e reason distribuite;
+- FE: dettaglio trade deve mostrare entry setup, exit reason, indicatori exit, candle width;
+- Script: forensics SELL deve ricostruire candela decisionale, indicatori e reason.
+
+## Refinement 13 - Matrice Candele E Indicatori Per Fase
+
+Questa revisione e' la tabella di controllo da usare durante implementazione e audit. Se un modulo devia da questa
+matrice, e' legacy o bug.
+
+### Matrice Candle Width
+
+| Fase | Owner | Source bucket | Interval | Stato candela | Synthetic | Uso prezzo corrente |
+| --- | --- | --- | --- | --- | --- | --- |
+| Influxer ingest | influxer | exchange/raw | n/a | tick/source | false | acquisizione dati |
+| Microbar build | influxer | `binance-microbar` | 5s | closed OHLCV | false | nessuna strategia |
+| WATCH RT default | ACDC | `binance-microbar` | 5s | CLOSED | false | no |
+| BUY RT default | ACDC | `binance-microbar` | 5s | CLOSED | false | solo sizing/protezione |
+| SELL RT default | ACDC | `binance-microbar` | 5s | CLOSED | false | loss cap/esecuzione |
+| WATCH RT 60s opzionale | ACDC | `binance` | 60s | CLOSED | false | no |
+| BUY RT 60s opzionale | ACDC | `binance` | 60s | CLOSED | false | solo sizing/protezione |
+| SELL RT 60s opzionale | ACDC | `binance` | 60s | CLOSED | false | loss cap/esecuzione |
+| Replay FE | hft-fe | run source | run interval | come run | visibile | visualizzazione |
+| Diagnostica | script/FE | dichiarato | dichiarato | dichiarato | visibile | nessun ordine |
+
+Regole:
+
+- il default RT operativo e' 5s su `binance-microbar` reale;
+- 60s e' ammesso solo come profilo alternativo completo, non come mix;
+- synthetic backfill e' vietato per WATCH/BUY/SELL strategici;
+- replay e diagnostica possono mostrare synthetic solo marcandolo chiaramente;
+- tutti i trade salvano `source_bucket`, `interval_seconds`, `candle_count`, `max_gap_seconds`,
+  `synthetic_backfill`.
+
+### Matrice Indicatori
+
+| Indicatore | WATCH | BUY Range | BUY Breakout | SELL Range | SELL Breakout | Note |
+| --- | --- | --- | --- | --- | --- | --- |
+| OHLCV | required | required | required | required | required | fonte dati base |
+| Bollinger 20/2 | required | required | required | required | required | cuore della strategia |
+| Percent B | required | required | required | required | required | posizione rispetto alle bande |
+| Bandwidth | required | context | required | context | required | compressione/espansione |
+| Bandwidth delta | required | context | required | context | required | conferma espansione |
+| Keltner 20/1.5 | required per squeeze | no | required | no | context | TTM squeeze |
+| TTM Squeeze | required per squeeze | no | required | no | context | setup breakout |
+| ADX 14 | required | required | required | required | required | regime |
+| DMI 14 | required | required | required | required | required | direzione |
+| ATR 14 | required | required | sizing/protection | required | context | rischio e volatilita' |
+| ATR 22 | no | no | no | no | required | Chandelier |
+| Volume SMA 20 | required | required | required | context | required | conferma |
+| Volume ratio | required | required | required | context | required | shock/conferma |
+| OBV slope | required | context | required | context | required | conferma flusso |
+| Net PnL after fees | no | protection | protection | required | required | SELL e protezione |
+| MFE/MAE | no | no | no | diagnostics | diagnostics | forensics |
+| ML score | forbidden | forbidden | forbidden | forbidden | forbidden | legacy |
+| DocBrown advice | forbidden | forbidden | forbidden | forbidden | forbidden | legacy |
+
+### Lookback Minimo
+
+Lookback minimo per simbolo prima di qualunque decisione RT:
+
+```text
+rt.data.min_decision_candles = 60
+rt.data.max_gap_seconds = interval_seconds * 2
+rt.data.synthetic_backfill_allowed = false
+```
+
+Motivo:
+
+- Bollinger e Keltner richiedono almeno 20 periodi;
+- ADX/DMI 14 richiede warmup superiore al periodo nominale;
+- volume/OBV hanno bisogno di contesto;
+- Chandelier breakout richiede 22 periodi;
+- 60 candele danno margine operativo senza inventare ML.
+
+### Legacy Da Escludere Per Fase
+
+WATCH RT non deve usare:
+
+- `PreBuyWatchService` se contiene advice/ML legacy;
+- `LiveBbAdviceRepository`;
+- `acdc_live_bb_advice`;
+- `PAPER_ELIGIBLE`;
+- score DocBrown;
+- quantili DocBrown;
+- rolling validation.
+
+BUY RT non deve usare:
+
+- `BuyCandidate` legacy se include advice;
+- `source_generation_id`;
+- `q10_positive_max_net_return`;
+- policy `BB_ADVICE_*`;
+- soglie importate da ML;
+- esiti di promotion.
+
+SELL RT non deve usare:
+
+- exit legacy senza reason RT;
+- trailing non configurato come Chandelier o regola RT;
+- stato Telegram non idempotente;
+- euristiche non documentate;
+- timeframe diverso da quello di entry.
+
+FE RT non deve mostrare come strategici:
+
+- live-score ML;
+- promotion;
+- paper eligibility;
+- q10;
+- source generation;
+- DocBrown confidence.
+
+Kenshiro RT non deve esporre azioni:
+
+- start paper legacy sul path RT;
+- research run;
+- rolling validation;
+- rolling promotion;
+- real trading.
+
+### Checklist Revisione Prima Del Codice
+
+Prima di implementare, il Consiglio deve verificare:
+
+- WATCH, BUY e SELL hanno stessa candle width;
+- WATCH non compra;
+- BUY non legge ML;
+- SELL esiste prima di PAPER;
+- ogni soglia operativa e' `rt.*`;
+- ogni reason e' in hft-common;
+- FE mostra source/cadence/synthetic;
+- script sono diagnostici;
+- DocBrown resta installato ma fuori path RT;
+- PAPER parte solo da `/management`.
+
 ## Legacy Removal Checklist Finale
 
 Prima di dichiarare il path RT pronto, questi comandi devono dare zero occorrenze nei nuovi file RT o nelle superfici RT:
