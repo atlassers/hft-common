@@ -7,6 +7,10 @@ public record InfluxTick(
         String symbol,
         Instant observedAt,
         BigDecimal price,
-        BigDecimal volume
+        BigDecimal volume,
+        boolean syntheticBackfill
 ) {
+    public InfluxTick(String symbol, Instant observedAt, BigDecimal price, BigDecimal volume) {
+        this(symbol, observedAt, price, volume, false);
+    }
 }

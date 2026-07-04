@@ -135,6 +135,9 @@ Da introdurre solo quando DocBrown e ACDC sono compatibili:
 4. Verificare script e diagnostiche:
    - ogni script operativo deve stampare `DIAGNOSTIC_ONLY` se non passa da `/management`;
    - ogni script che legge bucket deve stampare bucket, interval, candle state, max gap e synthetic flag;
+   - `acdc/scripts/acdc-run-rem-ml.sh` e alias `run-docbrown-research.sh` sono diagnostici DocBrown-only: stampano
+     `DIAGNOSTIC_ONLY`, endpoint, source bucket atteso `binance`, `interval_seconds=60`, `candle_state=CLOSED`,
+     timestamp semantics e `synthetic_backfill=false`; promotion e PAPER restano solo da `/management`;
    - nessuno script puo' avviare PAPER direttamente.
 5. Se `/management/state` non espone ancora `1m_alignment_ready`, trattarlo come `false`.
 6. Verificare count per setup/regime e readiness context.
@@ -148,6 +151,28 @@ Da introdurre solo quando DocBrown e ACDC sono compatibili:
 13. Per analisi visiva usare `/trades`: selezione data, execution del giorno, simboli per execution, filtri fase
    WATCH/BUY/SELL, replay candle persistito e replay live Influx con refresh 1s.
 
+## Stato A0 Verificato
+
+Ultima verifica Consiglio: 2026-07-04.
+
+- A0 implementato, buildato e deployato su `hft-common`, `influxer`, `docbrown`, `acdc`, `kenshiro`, `hft-fe`.
+- `/management/state` deve essere letto via FE proxy:
+  `http://localhost:5173/backoffice/management/state?profileKey=REM_CURRENT`.
+- Stato verificato: `BB_READY`, `oneMinuteAlignmentReady=true`, `1m_alignment_ready=true`, `a0Blockers=[]`,
+  `blockers=[]`.
+- Advice attive PAPER_ELIGIBLE con decision metadata su `binance` 1m chiusa:
+  `decision_source_bucket=binance`, `decision_interval_seconds=60`, `decision_candle_state=CLOSED`,
+  `decision_candle_count=89`, `decision_max_gap_seconds=60`, `decision_synthetic_backfill=0`.
+- RUN PAPER 118 avviata e fermata solo tramite `/management`.
+- RUN PAPER 118: `STOPPED`, 0 posizioni, 0 BUY, 0 SELL, PnL `0`, 100 decisioni `HOLD`.
+- Le WATCH della RUN 118 sono state riconciliate a `ABANDONED` con
+  `WATCH_ABANDONED_BY_PAPER_TERMINAL_RECONCILIATION`.
+- Classificazione RUN 118:
+  - `VALID_STRATEGIC_EVIDENCE` per readiness/contratto A0 e governance PAPER;
+  - `INCONCLUSIVE` per performance finanziaria per assenza di BUY/SELL.
+- Replay detail espone `source_bucket`, `interval_seconds` effettivo, `candle_count`, `max_gap_seconds`,
+  `synthetic_backfill`; microbar replay resta diagnostica/timing e non fonte strategica.
+
 ## Build
 
 Ordine consigliato:
@@ -158,6 +183,7 @@ cd ../docbrown && mvn -q -DskipTests package
 cd ../acdc && mvn -q -DskipTests package
 cd ../kenshiro && mvn -q test && mvn -q -DskipTests package
 cd ../hft-fe && npm run check && npm run build
+cd ../acdc && python3 scripts/check-script-contracts.py
 ```
 
 ## Deploy

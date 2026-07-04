@@ -80,12 +80,10 @@ Completato e pushato:
 
 In corso:
 
-- implementazione del charter strategico `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`;
-- allineamento decisionale 1m end-to-end introdotto dal Consiglio il 2026-07-04;
-- implementazione delle costanti/enum condivise;
-- pubblicazione feature context da DocBrown;
-- gate Context V1 in ACDC;
-- diagnostica `/management` e UI.
+- osservazione PAPER su base A0 pronta, senza nuove modifiche di codice prima di una nuova RUN approvata da
+  `/management`;
+- analisi dei prossimi campioni PAPER distinguendo evidenza tecnica A0, evidenza strategica BUY/SELL ed evidenza
+  finanziaria.
 
 Blocco corrente vincolante:
 
@@ -106,7 +104,7 @@ Policy corrente:
 - microbar synthetic da backfill 1m espanso a 5s devono essere marcate e non usate come evidenza di micro timing;
 - nessuna nuova RUN PAPER prima di `1m_alignment_ready = true`.
 
-AS-IS codice verificato:
+AS-IS codice verificato prima dell'intervento A0:
 
 - DocBrown `InfluxSnapshotService` usa ancora `microbarBucketName()` per storico/live feature;
 - ACDC `InfluxSnapshotService` usa ancora `microbarBucketName()` per historical/current snapshot e preferisce microbar
@@ -124,6 +122,46 @@ AS-IS codice verificato:
 - `acdc_shared_runtime_config` descrive ancora microbar come condivisa da trading e ML;
 - hft-fe contiene superfici legacy con selettore REAL, mentre Kenshiro blocca `REAL_RUN`.
 - non esiste ancora un owner/runtime contract esplicito per `1m_alignment_ready`.
+
+Implementazione A0 locale verificata con build:
+
+- `hft-common` espone costanti A0, bucket, decision/entry/SELL/replay metadata, classificazioni evidenza e blocker;
+- `InfluxTick` trasporta `syntheticBackfill`;
+- influxer marca `synthetic_backfill=false` sulle scritture normali e `true` sui microbar di backfill sintetico;
+- DocBrown legge indicatori/live-score da `binance` 1m chiuso, con lookback decisionale almeno sufficiente per EMA50 e
+  volume ratio 1m/20m, e pubblica metadata decisionali numerici nel contract advice;
+- ACDC WATCH/BUY legge snapshot decisionali da `binance` 1m chiuso e fallisce chiusa sui blocker A0;
+- ACDC SELL strategica usa lo stesso snapshot decisionale 1m chiuso e fallisce chiusa sui blocker A0; microbar resta
+  replay/forensics/timing;
+- replay ACDC/Kenshiro espone `source_bucket`, `interval_seconds`, `candle_count`, `max_gap_seconds`,
+  `synthetic_backfill`;
+- Kenshiro `/management/state` espone `oneMinuteAlignmentReady`, `a0Blockers`, `a0Diagnostics` e blocca PAPER se A0
+  non e' pronto;
+- hft-fe `/management` mostra readiness/blocker A0, `/trades` mostra replay metadata, e la superficie REAL e' rimossa
+  dal layout/dashboard;
+- script diagnostici ACDC stampano `DIAGNOSTIC_ONLY` e provenance dati.
+
+Stato A0 deployato e verificato il 2026-07-04:
+
+- container aggiornati/verificati: `hft-fe-local`, `kenshiro-local`, `docbrown`, `acdc-vpn`, `influxer`;
+- `/management/state` espone `oneMinuteAlignmentReady=true` e alias JSON `1m_alignment_ready=true`;
+- `a0Blockers=[]` e `blockers=[]`;
+- active advice PAPER_ELIGIBLE promossa da `management-rolling-20260704T010535Z` contiene metadata decisionali:
+  `decision_source_bucket=binance`, `decision_interval_seconds=60`, `decision_candle_state=CLOSED`,
+  `decision_candle_count=89`, `decision_max_gap_seconds=60`, `decision_synthetic_backfill=0`;
+- RUN PAPER 118 e' partita solo dopo readiness A0 vera, tramite `/management`;
+- RUN PAPER 118 e' stata fermata tramite `/management/actions/PAPER_STOP`;
+- RUN PAPER 118: `STOPPED`, `positions=0`, `openPositions=0`, PnL `0`, 100 decisioni `HOLD` con reason
+  `WATCH_WAITING_BUY_CONTRACT`;
+- tutte le 30 WATCH della RUN 118 sono state riconciliate a `ABANDONED` con reason
+  `WATCH_ABANDONED_BY_PAPER_TERMINAL_RECONCILIATION`;
+- `/trades`/detail espone replay metadata e candle metadata: `source_bucket`, `interval_seconds` effettivo,
+  `candle_count`, `max_gap_seconds`, `synthetic_backfill`;
+- campione replay verificato: `source_bucket=binance-microbar`, `synthetic_backfill=false`; l'intervallo effettivo puo'
+  risultare superiore a 5s quando il replay persistito non e' denso, e in quel caso `max_gap_seconds` diventa parte
+  dell'evidenza diagnostica;
+- classificazione RUN 118: `VALID_STRATEGIC_EVIDENCE` per readiness/contratto A0 e avvio PAPER governato;
+  `INCONCLUSIVE` per performance strategico-finanziaria per assenza di BUY/SELL.
 
 ## Stato Live Verificato
 
@@ -150,14 +188,14 @@ Context V1 avrebbe tenuto 2 trade con netto `-0.1464585003`, migliorando il camp
 
 ## Prossimo Step Operativo
 
-1. Eseguire il blocco A0 del charter AS-IS: audit e progetto/implementazione dell'allineamento 1m decisionale.
-2. Non avviare PAPER finche' DocBrown e ACDC non usano la stessa base 1m chiusa per contract/current state/SELL
-   strategica.
-3. Definire ed esporre `1m_alignment_ready` con blocker specifici in `/management/state`.
-4. Definire soglie operative per `decision_max_gap_seconds` e `decision_staleness_seconds`.
-5. Definire metadata obbligatori per replay/decisione/SELL execution e classificazione evidenza PAPER.
-6. Verificare build/test cross-repo dei moduli toccati.
-7. Deployare ogni modulo toccato prima di validazione operativa.
-8. Fare check del Consiglio contro `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md` e
-   `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`.
-9. Avviare PAPER solo dopo `1m_alignment_ready = true`, stato `/management` pulito e contract completo.
+1. Prima di ogni nuova PAPER leggere `/management/state` e richiedere `1m_alignment_ready=true`, `a0Blockers=[]`,
+   `blockers=[]`, `paperRunning=false`, `openPositions=0`.
+2. Avviare PAPER solo tramite `/management`, mai da script.
+3. Dopo ogni PAPER classificare separatamente:
+   - evidenza A0/readiness;
+   - evidenza WATCH/BUY;
+   - evidenza SELL/forensics;
+   - evidenza finanziaria.
+4. Se una RUN non apre BUY/SELL, classificarla `INCONCLUSIVE` per performance anche se valida come evidenza tecnica A0.
+5. Monitorare densita' replay microbar: `interval_seconds` effettivo e `max_gap_seconds` devono essere letti come
+   diagnostica di timing, non come fonte strategica.
