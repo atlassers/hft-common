@@ -169,9 +169,35 @@ Ultima verifica Consiglio: 2026-07-04.
   `WATCH_ABANDONED_BY_PAPER_TERMINAL_RECONCILIATION`.
 - Classificazione RUN 118:
   - `VALID_STRATEGIC_EVIDENCE` per readiness/contratto A0 e governance PAPER;
+  - `NEGATIVE_OPERATIONAL_SIGNAL` per BUY trigger, perche' `TriggerAudit` non passa mai;
   - `INCONCLUSIVE` per performance finanziaria per assenza di BUY/SELL.
 - Replay detail espone `source_bucket`, `interval_seconds` effettivo, `candle_count`, `max_gap_seconds`,
   `synthetic_backfill`; microbar replay resta diagnostica/timing e non fonte strategica.
+
+## Stato A1 Progettato
+
+Documento vincolante:
+
+```text
+hft-common/doc/archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md
+```
+
+Prima di nuove PAPER, implementare e verificare:
+
+- diagnostica fail reason granulare per WATCH/BUY;
+- breach Bollinger calcolati bar-by-bar con bande contemporanee;
+- `PAPER_WATCH_ELIGIBLE` separato da `PAPER_BUY_ELIGIBLE`;
+- reentry `%B < min` trattato come `WATCH_WAITING_REENTRY_RECOVERY`, non hard fail;
+- breakout buy-eligible solo con breakout live coerente;
+- `/management` e `/trades` devono esporre distribuzione blocker BUY.
+
+Evidenza RUN 118 da ricordare:
+
+- MySQL: 2400 decisioni ENTRY, 0 BUY, 0 posizioni;
+- 2370 `WATCH_WAITING_BUY_CONTRACT`;
+- 30 `WATCH_OPENED_WAITING_BUY_CONTRACT`;
+- reentry: 1680 decisioni, 0 full pass;
+- breakout: 720 decisioni, 0 full pass.
 
 ## Build
 

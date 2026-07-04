@@ -80,10 +80,11 @@ Completato e pushato:
 
 In corso:
 
-- osservazione PAPER su base A0 pronta, senza nuove modifiche di codice prima di una nuova RUN approvata da
-  `/management`;
-- analisi dei prossimi campioni PAPER distinguendo evidenza tecnica A0, evidenza strategica BUY/SELL ed evidenza
-  finanziaria.
+- A1 allineamento letteratura BUY dopo regressione certa RUN 118:
+  `archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`;
+- nessuna nuova PAPER prima di diagnostica/correzione A1 dei blocker `WATCH_WAITING_BUY_CONTRACT`;
+- distinzione obbligatoria tra `VALID_STRATEGIC_EVIDENCE` A0, `NEGATIVE_OPERATIONAL_SIGNAL` BUY trigger e
+  `INCONCLUSIVE` finanziario.
 
 Blocco corrente vincolante:
 
@@ -161,7 +162,21 @@ Stato A0 deployato e verificato il 2026-07-04:
   risultare superiore a 5s quando il replay persistito non e' denso, e in quel caso `max_gap_seconds` diventa parte
   dell'evidenza diagnostica;
 - classificazione RUN 118: `VALID_STRATEGIC_EVIDENCE` per readiness/contratto A0 e avvio PAPER governato;
-  `INCONCLUSIVE` per performance strategico-finanziaria per assenza di BUY/SELL.
+  `NEGATIVE_OPERATIONAL_SIGNAL` per BUY trigger perche' `TriggerAudit` non passa mai; `INCONCLUSIVE` per performance
+  finanziaria per assenza di BUY/SELL.
+
+Stato A1 progettato il 2026-07-04:
+
+- documento vincolante:
+  `archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`;
+- evidenza MySQL RUN 118: 2400 decisioni ENTRY, 0 BUY, 0 posizioni;
+- reason dominanti: 2370 `WATCH_WAITING_BUY_CONTRACT`, 30 `WATCH_OPENED_WAITING_BUY_CONTRACT`;
+- reentry: 1680 decisioni, 0 full pass; failure principali `reentry_confirm_fail=1401`,
+  `percent_b_fail=1261`, `lower_breach_fail=1120`;
+- breakout: 720 decisioni, 0 full pass; failure principali `percent_b_fail=720`, `middle_slope_fail=720`,
+  `upper_breach_fail=536`;
+- decisione Consiglio: mantenere A0 1m chiusa, correggere A1 su trigger BUY, breach bar-by-bar, distinction
+  `PAPER_WATCH_ELIGIBLE`/`PAPER_BUY_ELIGIBLE`, reason granulari.
 
 ## Stato Live Verificato
 
@@ -190,12 +205,19 @@ Context V1 avrebbe tenuto 2 trade con netto `-0.1464585003`, migliorando il camp
 
 1. Prima di ogni nuova PAPER leggere `/management/state` e richiedere `1m_alignment_ready=true`, `a0Blockers=[]`,
    `blockers=[]`, `paperRunning=false`, `openPositions=0`.
-2. Avviare PAPER solo tramite `/management`, mai da script.
-3. Dopo ogni PAPER classificare separatamente:
+2. Implementare A1 prima di nuove PAPER:
+   - diagnostica fail reason granulare;
+   - breach Bollinger bar-by-bar con bande contemporanee;
+   - reentry `%B < min` come stato di attesa, non hard fail;
+   - breakout buy-eligible solo con breakout live coerente;
+   - distinzione `PAPER_WATCH_ELIGIBLE`/`PAPER_BUY_ELIGIBLE`.
+3. Avviare PAPER solo tramite `/management`, mai da script.
+4. Dopo ogni PAPER classificare separatamente:
    - evidenza A0/readiness;
    - evidenza WATCH/BUY;
    - evidenza SELL/forensics;
    - evidenza finanziaria.
-4. Se una RUN non apre BUY/SELL, classificarla `INCONCLUSIVE` per performance anche se valida come evidenza tecnica A0.
-5. Monitorare densita' replay microbar: `interval_seconds` effettivo e `max_gap_seconds` devono essere letti come
+5. Se una RUN non apre BUY/SELL, classificarla `INCONCLUSIVE` per performance anche se valida come evidenza tecnica A0;
+   se trigger full-pass = 0, classificarla anche `NEGATIVE_OPERATIONAL_SIGNAL` per BUY trigger.
+6. Monitorare densita' replay microbar: `interval_seconds` effettivo e `max_gap_seconds` devono essere letti come
    diagnostica di timing, non come fonte strategica.

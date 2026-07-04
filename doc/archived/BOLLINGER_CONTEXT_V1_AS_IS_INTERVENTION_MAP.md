@@ -136,6 +136,35 @@ Decision source construction: vietato ricostruire la fonte decisionale aggregand
 
 Fino a chiusura dell'allineamento 1m end-to-end, non avviare nuove RUN PAPER.
 
+## Revisione Del Consiglio 2026-07-04 - A1 Allineamento Letteratura BUY
+
+Dopo implementazione A0 e RUN PAPER `118`, il Consiglio classifica l'esito operativo come regressione BUY certa:
+
+```text
+RUN 118: 0 BUY, 0 SELL, 0 posizioni, blocco dominante WATCH_WAITING_BUY_CONTRACT.
+```
+
+Il piano correttivo vincolante e':
+
+```text
+hft-common/doc/archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md
+```
+
+Sintesi decisionale:
+
+- A0 resta valido come provenance temporale;
+- la regressione non va corretta tornando a microbar/realtime come fonte strategica;
+- il runtime BUY deve essere riallineato alla letteratura Bollinger:
+  - trigger Bollinger setup-specifico minimo;
+  - context gate come conferma di qualita';
+  - breach calcolati bar-by-bar con bande contemporanee;
+  - reentry `%B < min` come stato di attesa, non blocco definitivo;
+  - breakout buy-eligible solo se il live-score mostra breakout coerente;
+  - reason BUY granulari obbligatori.
+
+Fino a implementazione A1, una RUN senza BUY non puo' essere liquidata come semplice `INCONCLUSIVE`: se il trigger
+full-pass e' zero, deve essere classificata anche `NEGATIVE_OPERATIONAL_SIGNAL` per il BUY trigger.
+
 ## Vincoli Da Non Rompere
 
 - REAL vietata.
