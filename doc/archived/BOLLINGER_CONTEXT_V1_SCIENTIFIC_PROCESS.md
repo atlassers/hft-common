@@ -275,6 +275,60 @@ Bollinger primarie. Possono restare nel contratto solo se:
 
 Nel ciclo A2 `bb_middle_slope` e `bb_reentry_age_seconds` non sono hard-blocker se il contratto non li dichiara.
 
+### A2.2 - BUY Economic Feasibility Gate
+
+La letteratura Bollinger definisce setup, trigger, posizione relativa del prezzo nelle bande e warning contro segnali
+meccanici isolati. Non garantisce che un trigger valido sia economicamente eseguibile dopo fee, spread, slippage e
+frizione di ingresso. Nel nostro runtime questa parte non deve essere confusa con una nuova soglia Bollinger: e' il gate
+economico dell'ordine PAPER.
+
+Evidenza operativa RUN `123`:
+
+```text
+bb_target_net_return = 0
+sell_target_zero_take_profit_disabled = 1
+q10_positive_max_net_return < entry_friction_net_return + min_executable_entry_edge
+bb_advice_paper_buy_eligible = 1
+```
+
+Questo stato e' incoerente: WATCH puo' restare aperta per osservare un trigger Bollinger, ma BUY non deve essere
+autorizzata se il contract economico gia' dichiara che il target netto e' nullo e l'edge storico eseguibile non copre
+il costo minimo.
+
+Formula vincolante BUY-only:
+
+```text
+economic_buy_eligible =
+    safe_net_return >= min_executable_entry_edge
+    OR
+    q10_positive_max_net_return >= entry_friction_net_return + min_executable_entry_edge
+
+bb_advice_paper_buy_eligible =
+    bollinger_setup_specific_trigger_pass
+    AND context_gate_pass
+    AND economic_buy_eligible
+```
+
+Valori e chiavi:
+
+```text
+safe_net_return = bb_target_net_return/live_bb_target_net_return/safe_net_return
+q10_positive_max_net_return = q10 storico dei max net return positivi
+entry_friction_net_return = fee/slippage/frizione round-trip dichiarata nel contract
+min_executable_entry_edge = buffer operativo minimo gia' dichiarato dal contract
+bb_advice_economic_safe_pass = 1 se economic_buy_eligible passa
+```
+
+Vincoli:
+
+- non e' un blocker WATCH: WATCH puo' osservare segnali Bollinger anche se l'ordine non e' ancora economicamente
+  eseguibile;
+- non e' una regola SELL: SELL gestisce solo posizioni aperte;
+- non e' una nuova soglia rumorosa su `%B`, RSI, volume o momentum;
+- non puo' essere aggirato da DocBrown o ACDC: DocBrown lo pubblica nel payload advice e ACDC lo ricalcola a runtime
+  prima del BUY;
+- se `safe_net_return` e `q10_positive_max_net_return` mancano, BUY fallisce chiusa.
+
 ## Indicatori
 
 ### Bollinger Bands
@@ -928,7 +982,6 @@ loss-cap e timeout.
   - `EXIT_BB_BREAKOUT_PROTECT`;
   - `SELL_PREVIOUS_PERCENT_B`;
   - `SELL_HAD_PERCENT_B_ABOVE_ONE`;
-  - `SELL_REENTRY_CAPTURE_PERCENT_B`;
   - `SELL_REENTRY_MEAN_CAPTURE_PERCENT_B`;
   - `SELL_REENTRY_UPPER_CAPTURE_PERCENT_B`;
   - `SELL_MIN_REENTRY_CAPTURE_NET_RETURN`;

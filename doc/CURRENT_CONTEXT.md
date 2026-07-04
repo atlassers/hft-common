@@ -278,6 +278,44 @@ Stato SELL post-RUN 122:
 - Nessuna nuova PAPER come evidenza finanziaria prima dell'implementazione/deploy/verifica della SELL setup-specifica
   mancante.
 
+Stato A2.2 BUY economic feasibility + SELL setup-specifica implementato e verificato il 2026-07-04:
+
+- hft-common espone operator/constant condivise per SELL setup-specifica e gate economico BUY.
+- DocBrown `BlankRemCandidateService` pubblica `bb_advice_economic_safe_pass`, `min_executable_entry_edge`,
+  `q10_positive_max_net_return`, `entry_friction_net_return` e calcola `bb_advice_paper_buy_eligible` come:
+  trigger Bollinger setup-specifico AND gate economico.
+- ACDC `OutcomeQualityModelService` e `PreBuyWatchService` ricalcolano il gate a runtime prima del BUY; il path finale
+  non puo' piu' trasformare un trigger Bollinger valido in BUY se `bb_advice_economic_safe_pass=0`.
+- Reason nuovo runtime: `WATCH_ECONOMIC_EDGE_BLOCKED`.
+- ACDC SELL implementa:
+  `EXIT_BB_REENTRY_CAPTURE`, `EXIT_BB_REENTRY_FAILED`, `EXIT_BB_BREAKOUT_FAILED`, `EXIT_BB_BREAKOUT_PROTECT`.
+- MySQL operativo dopo deploy: Flyway ACDC v97 applicata; EXIT guards attivi a priorita' 11-14; no-MFE resta
+  `DISABLED`.
+- Test completati:
+  - `hft-common`: `mvn -q -DskipTests install`;
+  - `docbrown`: `mvn -q test`;
+  - `acdc`: `mvn -q test`.
+- Container redeployati/verificati: `docbrown`, `acdc-vpn`.
+
+RUN 123-126:
+
+- RUN 123: `COMPLETED`, 9 posizioni, PnL `-0.391383616078811400`; SELL setup-specifica operativa ma BUY ancora
+  ammetteva target zero/edge sotto costo.
+- RUN 124: `COMPLETED`, 3 posizioni, PnL `-0.157064235827783000`; conferma diagnostica del problema di ingressi
+  economicamente deboli.
+- RUN 125: `COMPLETED`, 3 posizioni, PnL `-0.171742968719700000`; classificazione
+  `VALID_DIAGNOSTIC_EVIDENCE`: ha dimostrato il bug residuo in `PreBuyWatchService`, dove
+  `bb_advice_paper_buy_eligible` veniva riscritto con il solo `triggerAudit.passed()`.
+- RUN 126: `STOPPED` da `/management` dopo stop-buy e nessuna posizione aperta, 1 BUY/1 SELL, PnL
+  `+0.053202478245000000`, `buy_notified=1`, `sell_notified=1`.
+- RUN 126 entry: `EPICUSDC`, `bb_advice_economic_safe_pass=1`, `bb_advice_paper_buy_eligible=1`,
+  `bb_target_net_return=0.007660251046025105`, `sell_target_zero_take_profit_disabled=0`.
+- RUN 126 exit: `EXIT_BB_REENTRY_CAPTURE`.
+- RUN 126 blocker BUY:
+  `WATCH_ECONOMIC_EDGE_BLOCKED=47`, prova che il gate economico filtra senza azzerare i BUY utili.
+- Classificazione RUN 126: `VALID_STRATEGIC_EVIDENCE` tecnica per A2.2 e SELL setup-specifica; evidenza finanziaria
+  positiva ma su campione minimo, quindi non sufficiente da sola per promozione strategica.
+
 ## Stato Live Verificato
 
 Ultimo stato consolidato prima dell'implementazione Context V1:

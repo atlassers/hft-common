@@ -296,6 +296,65 @@ Ultima verifica Consiglio: 2026-07-04.
 - Queste regole non sono nuovi blocker BUY: agiscono solo su posizioni aperte e devono ridurre loss-cap tardivi,
   preservando la possibilita' di micro-loss compensate da win nette piu' frequenti o piu' grandi.
 
+## Stato A2.2 BUY Economic Feasibility
+
+Ultima verifica Consiglio: 2026-07-04.
+
+Regola runtime vincolante:
+
+```text
+economic_buy_eligible =
+  safe_net_return >= min_executable_entry_edge
+  OR q10_positive_max_net_return >= entry_friction_net_return + min_executable_entry_edge
+
+bb_advice_paper_buy_eligible =
+  trigger Bollinger setup-specifico
+  AND context gate
+  AND economic_buy_eligible
+```
+
+Vincoli:
+
+- WATCH resta osservazione e non deve essere bloccata dal gate economico.
+- BUY deve fallire chiusa con `WATCH_ECONOMIC_EDGE_BLOCKED` se il trigger/context passano ma l'edge economico non passa.
+- SELL non deve compensare ingressi che il contract economico dichiara sotto costo.
+- `bb_advice_economic_safe_pass` deve essere visibile in advice, decision snapshot e policy della posizione.
+
+Verifica operativa:
+
+- RUN 125 ha dimostrato il bug residuo: BTC/EUR sono entrate con `bb_advice_economic_safe_pass=0` perche'
+  `PreBuyWatchService.watchDecision(...)` riscriveva `bb_advice_paper_buy_eligible` con il solo trigger.
+- Fix implementato: `PreBuyWatchService` ora richiede trigger, context e economic gate prima di restituire
+  `DecisionAction.BUY`.
+- RUN 126 dopo redeploy:
+  - `positions=1`, `openPositions=0`, PnL `+0.053202478245000000`;
+  - BUY/SELL notifiche idempotenti: `buy_notified=1`, `sell_notified=1`;
+  - entry `EPICUSDC` con `bb_advice_economic_safe_pass=1`, target positivo e target-zero disabilitato `0`;
+  - exit `EXIT_BB_REENTRY_CAPTURE`;
+  - blocker economico misurato: `WATCH_ECONOMIC_EDGE_BLOCKED=47`.
+
+Query diagnostica approvata:
+
+```bash
+docker exec mysql_container mysql -u hft_user -p'<password>' hft -e "
+select symbol,status,buy_price,sell_price,net_profit_quote,
+       json_extract(policy_json,'$.bb_advice_economic_safe_pass') economic,
+       json_extract(policy_json,'$.bb_advice_paper_buy_eligible') buy_eligible,
+       json_extract(policy_json,'$.bb_target_net_return') target,
+       json_extract(policy_json,'$.q10_positive_max_net_return') q10,
+       json_extract(policy_json,'$.entry_friction_net_return') friction,
+       json_extract(policy_json,'$.min_executable_entry_edge') min_edge,
+       json_extract(policy_json,'$.sell_target_zero_take_profit_disabled') target_zero
+from acdc_paper_position
+where execution_id=<execution_id>
+order by id;
+select phase, accepted, reason, count(*) c
+from acdc_paper_decision
+where execution_id=<execution_id>
+group by phase, accepted, reason
+order by phase, accepted desc, c desc;"
+```
+
 ## Build
 
 Ordine consigliato:

@@ -775,7 +775,15 @@ Interventi in `BlankRemCandidateService`:
    - reentry rows;
    - breakout rows;
    - rejected by context.
-5. Non usare MFE come soglia SELL. Puo' restare metrica forensics.
+5. A2.2 BUY economic feasibility:
+   - calcolare `bb_advice_economic_safe_pass`;
+   - pubblicare `min_executable_entry_edge`, `q10_positive_max_net_return`, `entry_friction_net_return`;
+   - `bb_advice_paper_buy_eligible` deve richiedere trigger Bollinger setup-specifico e:
+     `safe_net_return >= min_executable_entry_edge` oppure
+     `q10_positive_max_net_return >= entry_friction_net_return + min_executable_entry_edge`;
+   - non modificare `bb_advice_paper_watch_eligible`: WATCH resta osservazione, non ordine;
+   - se i campi economici sono mancanti, BUY fallisce chiusa.
+6. Non usare MFE come soglia SELL. Puo' restare metrica forensics.
 
 Test:
 
@@ -784,6 +792,7 @@ Test:
 - breakout senza volume/trend non viene promosso Context V1;
 - candidate senza barre sufficienti non e' promotable;
 - candidate con metadata decisionale mancante non e' promotable;
+- candidate con target netto nullo e q10 positivo inferiore a frizione+edge non e' BUY-eligible;
 - payload non contiene `reversal_*`.
 
 ### 2B. ML / Script Orchestration
@@ -897,7 +906,14 @@ Interventi in `PreBuyWatchService`:
 5. In `watchDecision`:
    - assicurare `entry_*` completo al BUY;
    - aggiungere soglie contratto effettivamente usate, non solo feature osservate.
-6. Non reintrodurre `BB_ADVICE_NO_MFE_DECAY_EXIT`.
+6. A2.2 BUY economic feasibility:
+   - ricalcolare a runtime `bb_advice_economic_safe_pass`;
+   - BUY passa solo se trigger/context e gate economico passano insieme;
+   - la formula e':
+     `safe_net_return >= min_executable_entry_edge` oppure
+     `q10_positive_max_net_return >= entry_friction_net_return + min_executable_entry_edge`;
+   - la regola non deve diventare un filtro WATCH e non deve ridurre la diagnostica dei trigger Bollinger.
+7. Non reintrodurre `BB_ADVICE_NO_MFE_DECAY_EXIT`.
 
 Interventi in `GuardEvaluator` / SELL:
 
