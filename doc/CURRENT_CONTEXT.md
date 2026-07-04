@@ -362,6 +362,23 @@ Verifica Consiglio 2026-07-05:
   `bb.context.breakout.min_rsi`, `bb.context.breakout.max_rsi`,
   `bb.context.breakout.min_volume_ratio`, `bb.context.reentry.max_rsi`,
   `bb.context.reentry.max_percent_b`.
+- Deploy verificato su `docbrown` e `acdc-vpn`; MySQL operativo conferma V99 success.
+- AUTO PAPER post-MS969:
+  - generation fresca: `management-rolling-20260704T222720Z`;
+  - execution PAPER: `128`;
+  - stato finale governato: `paperRunning=false`, `openPositions=0`, `automationStatus=STOPPED`;
+  - posizioni: 3 BUY / 3 SELL, netto `-0.473849438024239200`;
+  - notifiche Telegram: 3 BUY notificate, 3 SELL notificate, una per posizione;
+  - `HMSTRUSDC` breakout: `contract_min_breakout_rsi=50`, `contract_max_breakout_rsi=75`,
+    `contract_min_volume_ratio=1.3`, `economic=1`, uscita `EXIT_BB_LOSS_CAP`, netto
+    `-0.136071223434139200`;
+  - reentry: 2 posizioni, uscite `EXIT_BB_LOSS_CAP` e `EXIT_BB_REENTRY_FAILED`, netto complessivo negativo;
+  - tutti i trade hanno `max_net_return=0`, quindi non c'e' stata finestra positiva persa dal trailing.
+- Classificazione Consiglio:
+  - `VALID_STRATEGIC_EVIDENCE` tecnica per allineamento soglie e ripristino BUY post-MS969;
+  - `NEGATIVE_FINANCIAL_SIGNAL` per execution 128;
+  - punto successivo non deve essere nuova soglia BUY casuale: serve analisi forensics su perche' i BUY economic-safe
+    entrano senza MFE e finiscono a loss/failure.
 
 ## Stato Live Verificato
 
