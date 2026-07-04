@@ -1,5 +1,7 @@
 package it.mbc.hft.common.rem.constants;
 
+import java.math.BigDecimal;
+
 public final class RemConstants {
     private RemConstants() {
     }
@@ -58,6 +60,36 @@ public final class RemConstants {
     public static final String BINANCE_MICROBAR_BUCKET = "binance-microbar";
     public static final String CANDLE_STATE_CLOSED = "CLOSED";
     public static final String TIMESTAMP_SEMANTICS_BINANCE_OPEN_TIME = "BINANCE_OPEN_TIME";
+    public static final int BOLLINGER_DEFAULT_PERIOD = 20;
+    public static final BigDecimal BOLLINGER_DEFAULT_STDDEV_MULTIPLIER = new BigDecimal("2");
+    public static final BigDecimal BOLLINGER_PERCENT_B_LOWER = BigDecimal.ZERO;
+    public static final BigDecimal BOLLINGER_PERCENT_B_ZERO_WIDTH = new BigDecimal("0.50");
+    public static final BigDecimal BOLLINGER_PERCENT_B_MIDDLE = new BigDecimal("0.50");
+    public static final BigDecimal BOLLINGER_REENTRY_MIN_PERCENT_B = new BigDecimal("0.20");
+    public static final BigDecimal BOLLINGER_REENTRY_MAX_PERCENT_B = new BigDecimal("0.80");
+    public static final BigDecimal BOLLINGER_BREAKOUT_MIN_PERCENT_B = BigDecimal.ONE;
+    public static final BigDecimal BOLLINGER_ZONE_BELOW_BAND = BigDecimal.ONE;
+    public static final BigDecimal BOLLINGER_ZONE_INSIDE_BANDS = new BigDecimal("2");
+    public static final BigDecimal BOLLINGER_ZONE_ABOVE_BAND = new BigDecimal("3");
+    public static final BigDecimal BB_REENTRY_SETUP_CODE = BigDecimal.ONE;
+    public static final BigDecimal BB_BREAKOUT_SETUP_CODE = new BigDecimal("2");
+    public static final BigDecimal DECISION_INTERVAL_1M_SECONDS = new BigDecimal("60");
+    public static final BigDecimal DECISION_INTERVAL_MICROBAR_SECONDS = new BigDecimal("5");
+    public static final BigDecimal MIN_DECISION_CANDLES = new BigDecimal("60");
+    public static final BigDecimal MAX_DECISION_GAP_SECONDS = new BigDecimal("90");
+    public static final BigDecimal MAX_DECISION_STALENESS_SECONDS = new BigDecimal("120");
+    public static final int MIN_DECISION_CANDLES_INT = 60;
+    public static final int DEFAULT_MICROBAR_SECONDS = 5;
+    public static final BigDecimal MIN_EXECUTABLE_ENTRY_EDGE_DEFAULT = new BigDecimal("0.0005");
+    public static final BigDecimal SELL_REENTRY_MEAN_CAPTURE_PERCENT_B_DEFAULT = BOLLINGER_PERCENT_B_MIDDLE;
+    public static final BigDecimal SELL_REENTRY_UPPER_CAPTURE_PERCENT_B_DEFAULT = BOLLINGER_REENTRY_MAX_PERCENT_B;
+    public static final BigDecimal SELL_MIN_REENTRY_CAPTURE_NET_RETURN_DEFAULT = BigDecimal.ZERO;
+    public static final BigDecimal SELL_MIN_REENTRY_FAILURE_HOLD_SECONDS_DEFAULT = new BigDecimal("60");
+    public static final BigDecimal SELL_BREAKOUT_MIN_PROTECT_NET_RETURN_DEFAULT = MIN_EXECUTABLE_ENTRY_EDGE_DEFAULT;
+    public static final BigDecimal SELL_ATR_MULTIPLIER_DEFAULT = new BigDecimal("3");
+    public static final BigDecimal MANAGEMENT_STRONG_VALIDATION_PROFIT_RATE = new BigDecimal("0.80");
+    public static final BigDecimal MANAGEMENT_STRONG_VALIDATION_AVG_NET_RETURN = new BigDecimal("0.0030");
+    public static final long MANAGEMENT_LIVE_SIGNAL_LAG_GOOD_SECONDS = 20L;
     public static final String DECISION_SOURCE_BUCKET = "decision_source_bucket";
     public static final String DECISION_SOURCE_BUCKET_BINANCE = "decision_source_bucket_binance";
     public static final String DECISION_SOURCE_BUCKET_MICROBAR = "decision_source_bucket_microbar";

@@ -40,16 +40,16 @@ hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md
   SELL.
 - La finestra WATCH autorizza osservazione, non e' una condizione BUY.
 - BUY e WATCH non hanno cap numerici concorrenti; il limite effettivo e' budget/exchange sizing al momento della BUY.
-- Dal Consiglio 2026-07-04, prima di nuove RUN PAPER e' vincolante il blocco A0:
+- Dal Consiglio 2026-07-04, prima di nuove RUN PAPER e' vincolante il blocco cadence/A2:
   - indicatori, contract, WATCH, BUY e SELL strategica sulla stessa cadence dichiarata;
   - microbar 5s decisionale ammessa solo nel profilo A2 e solo se reale/non synthetic;
   - `binance-realtime` non decisionale;
-  - `binance-microbar` non decisionale;
-  - la 1m decisionale non puo' essere ricostruita aggregando realtime o microbar;
+  - `binance-microbar` decisionale solo se `bb.decision.interval_seconds=5` e `decision_synthetic_backfill=0`;
+  - il profilo 1m, quando dichiarato, non puo' essere ricostruito aggregando realtime o microbar;
   - decision snapshot deve includere candle count, max gap e staleness;
-  - `1m_alignment_ready` e' distinto da `bbReady`;
-  - ogni blocker A0 deve essere visibile da `/management/state`;
-  - no PAPER finche' `1m_alignment_ready` non e' vero.
+  - `1m_alignment_ready` resta alias storico del readiness cadence ed e' distinto da `bbReady`;
+  - ogni blocker cadence/A0 deve essere visibile da `/management/state`;
+  - no PAPER finche' il readiness cadence esposto come `oneMinuteAlignmentReady`/`1m_alignment_ready` non e' vero.
 
 ## Processo
 
@@ -121,20 +121,23 @@ Da introdurre solo quando DocBrown e ACDC sono compatibili:
 
 1. Leggere `/management/state`.
 2. Verificare strategy family, `bbReady`, blocker, advice attive, PAPER running e posizioni aperte.
-3. Verificare blocco A0:
-   - `/management/state` espone `1m_alignment_ready=true`;
-   - `/management/state` espone blocker A0 specifici se `1m_alignment_ready=false`;
-   - DocBrown source bucket decisionale = `binance`;
-   - ACDC source bucket decisionale = `binance`;
-   - interval decisionale = `60`;
+3. Verificare blocco cadence/A2:
+   - `/management/state` espone readiness cadence true tramite `oneMinuteAlignmentReady=true` e alias storico
+     `1m_alignment_ready=true`;
+   - `/management/state` espone blocker A0/cadence specifici se il readiness e' false;
+   - leggere da DB `bb.decision.interval_seconds` e verificare che DocBrown, ACDC WATCH/BUY, SELL strategica e
+     forensics espongano lo stesso interval;
+   - profilo corrente approvato: DocBrown/ACDC decision source bucket = `binance-microbar`,
+     `decision_interval_seconds=5`, `decision_synthetic_backfill=0`;
+   - profilo alternativo ammesso: decision source bucket = `binance`, `decision_interval_seconds=60`;
    - candle state = `CLOSED`;
-   - decision candle count sufficiente per EMA50 e volume ratio 1m/20m;
+   - decision candle count sufficiente per BB20, EMA50 e volume ratio sulla cadence dichiarata;
    - decision max gap entro soglia approvata;
    - decision staleness entro soglia approvata;
    - `binance-realtime` assente dal path BUY;
-   - `binance-microbar` assente dal path indicatori/BUY/SELL strategica;
-   - SELL decision source bucket = `binance`;
-   - SELL decision interval = `60`;
+   - `binance-microbar` assente dal path indicatori/BUY/SELL strategica solo se il profilo dichiarato e' 1m;
+   - SELL decision source bucket = source bucket dichiarato per BUY;
+   - SELL decision interval = interval dichiarato per BUY;
    - SELL decision candle state = `CLOSED`;
    - eventuale SELL execution interval 5s separato dalla reason strategica;
    - replay espone `source_bucket`, `interval_seconds`, `candle_count`, `max_gap_seconds`, `synthetic_backfill`.
@@ -142,8 +145,9 @@ Da introdurre solo quando DocBrown e ACDC sono compatibili:
    - ogni script operativo deve stampare `DIAGNOSTIC_ONLY` se non passa da `/management`;
    - ogni script che legge bucket deve stampare bucket, interval, candle state, max gap e synthetic flag;
    - `acdc/scripts/acdc-run-rem-ml.sh` e alias `run-docbrown-research.sh` sono diagnostici DocBrown-only: stampano
-     `DIAGNOSTIC_ONLY`, endpoint, source bucket atteso `binance`, `interval_seconds=60`, `candle_state=CLOSED`,
-     timestamp semantics e `synthetic_backfill=false`; promotion e PAPER restano solo da `/management`;
+     `DIAGNOSTIC_ONLY`, endpoint, source bucket atteso del profilo corrente (`binance-microbar`/`5s` per A2 corrente,
+     oppure `binance`/`60s` se il profilo 1m e' dichiarato), `candle_state=CLOSED`, timestamp semantics e
+     `synthetic_backfill=false`; promotion e PAPER restano solo da `/management`;
    - nessuno script puo' avviare PAPER direttamente.
 5. Se `/management/state` non espone ancora `1m_alignment_ready`, trattarlo come `false`.
 6. Verificare count per setup/regime e readiness context.

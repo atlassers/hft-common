@@ -111,7 +111,7 @@ Policy A2 corrente:
 - microbar synthetic da backfill 1m espanso a 5s devono essere marcate e non usate come fonte decisionale;
 - nessuna nuova RUN PAPER prima di readiness cadence vera.
 
-AS-IS codice verificato prima dell'intervento A0, memoria storica di regressione:
+AS-IS codice verificato prima dell'intervento A0, memoria storica di regressione superata da A2:
 
 - DocBrown `InfluxSnapshotService` usa ancora `microbarBucketName()` per storico/live feature;
 - ACDC `InfluxSnapshotService` usa ancora `microbarBucketName()` per historical/current snapshot e preferisce microbar
@@ -130,16 +130,17 @@ AS-IS codice verificato prima dell'intervento A0, memoria storica di regressione
 - hft-fe contiene superfici legacy con selettore REAL, mentre Kenshiro blocca `REAL_RUN`.
 - non esiste ancora un owner/runtime contract esplicito per `1m_alignment_ready`.
 
-Implementazione A0 locale verificata con build:
+Implementazione A0 locale verificata con build, memoria storica del profilo 1m:
 
 - `hft-common` espone costanti A0, bucket, decision/entry/SELL/replay metadata, classificazioni evidenza e blocker;
 - `InfluxTick` trasporta `syntheticBackfill`;
 - influxer marca `synthetic_backfill=false` sulle scritture normali e `true` sui microbar di backfill sintetico;
-- DocBrown legge indicatori/live-score da `binance` 1m chiuso, con lookback decisionale almeno sufficiente per EMA50 e
-  volume ratio 1m/20m, e pubblica metadata decisionali numerici nel contract advice;
-- ACDC WATCH/BUY legge snapshot decisionali da `binance` 1m chiuso e fallisce chiusa sui blocker A0;
-- ACDC SELL strategica usa lo stesso snapshot decisionale 1m chiuso e fallisce chiusa sui blocker A0; microbar resta
-  replay/forensics/timing;
+- nel profilo A0 storico DocBrown leggeva indicatori/live-score da `binance` 1m chiuso, con lookback decisionale almeno
+  sufficiente per EMA50 e volume ratio 1m/20m, e pubblicava metadata decisionali numerici nel contract advice;
+- nel profilo A0 storico ACDC WATCH/BUY leggeva snapshot decisionali da `binance` 1m chiuso e falliva chiusa sui blocker
+  A0;
+- nel profilo A0 storico ACDC SELL strategica usava lo stesso snapshot decisionale 1m chiuso e falliva chiusa sui blocker
+  A0; A2 ha poi riammesso microbar 5s reale come cadence strategica dichiarata;
 - replay ACDC/Kenshiro espone `source_bucket`, `interval_seconds`, `candle_count`, `max_gap_seconds`,
   `synthetic_backfill`;
 - Kenshiro `/management/state` espone `oneMinuteAlignmentReady`, `a0Blockers`, `a0Diagnostics` e blocca PAPER se A0
@@ -316,6 +317,30 @@ RUN 123-126:
 - Classificazione RUN 126: `VALID_STRATEGIC_EVIDENCE` tecnica per A2.2 e SELL setup-specifica; evidenza finanziaria
   positiva ma su campione minimo, quindi non sufficiente da sola per promozione strategica.
 
+## Stato Audit Cadence/Costanti MS968
+
+Verifica Consiglio 2026-07-04:
+
+- audit ripetuto due volte su ML/DocBrown, ACDC WATCH/BUY, ACDC SELL/forensics, script diagnostici, Kenshiro,
+  hft-fe e DB runtime;
+- valori Bollinger ufficiali centralizzati in `hft-common`:
+  BB20, deviazione standard 2, `%B` lower/middle/upper, reentry max `0.80`, breakout min `%B >= 1`;
+- default operativi condivisi centralizzati in `hft-common`:
+  cadence 60s/5s, candle count minimo 60, max gap 90s, staleness 120s, min executable entry edge `0.0005`,
+  default SELL setup-specifici;
+- FE mantiene solo soglie visuali/UI nella classe TypeScript locale `ManagementUiConstants`;
+- migration ACDC V98 aggiunta/applicata: `bb.decision.interval_seconds=5` e descrizioni A2 per bucket decisionale;
+- script diagnostici ACDC riallineati ad A2 corrente: `DIAGNOSTIC_ONLY`, `binance-microbar`, `interval_seconds=5`,
+  `synthetic_backfill=false`;
+- `STRATEGIC_REM_HANDOFF.md` riallineato: `1m_alignment_ready` resta alias storico del readiness cadence, non obbligo
+  di profilo 1m;
+- deploy verificato su `docbrown`, `acdc-vpn`, `kenshiro-local`, `hft-fe-local`;
+- MySQL operativo conferma Flyway ACDC V98 success, `bb.decision.interval_seconds=5`, `market.microbar.seconds=5`,
+  `market.influx.microbar_bucket=binance-microbar`;
+- `/management/state` conferma `globalStatus=BB_READY`, `bbReady=true`, `oneMinuteAlignmentReady=true`,
+  `a0Blockers=[]`, `blockers=[]`, `paperRunning=false`, `openPositions=0`, advice corrente con
+  `decision_source_bucket=binance-microbar`, `decision_interval_seconds=5`, `decision_synthetic_backfill=0`.
+
 ## Stato Live Verificato
 
 Ultimo stato consolidato prima dell'implementazione Context V1:
@@ -341,12 +366,14 @@ Context V1 avrebbe tenuto 2 trade con netto `-0.1464585003`, migliorando il camp
 
 ## Prossimo Step Operativo
 
-1. Prima di ogni nuova PAPER leggere `/management/state` e richiedere `1m_alignment_ready=true`, `a0Blockers=[]`,
-   `blockers=[]`, `paperRunning=false`, `openPositions=0`.
-2. A1 e' implementato: ogni nuova PAPER deve essere analizzata tramite `a1BuyDiagnostics` e `/trades` prima di
-   qualunque giudizio finanziario.
-3. Implementare prima la SELL setup-specifica definita nel documento scientifico: capture/invalidation/protect su
-   posizioni gia' aperte, senza trasformare tag upper/middle in signal autonomi e senza aggiungere nuovi blocker BUY.
+1. Prima di ogni nuova PAPER leggere `/management/state` e richiedere readiness cadence true tramite
+   `oneMinuteAlignmentReady=true`/alias storico `1m_alignment_ready=true`, `a0Blockers=[]`, `blockers=[]`,
+   `paperRunning=false`, `openPositions=0`.
+2. Verificare che il profilo decisionale corrente sia coerente end-to-end: per A2 corrente
+   `bb.decision.interval_seconds=5`, `decision_source_bucket=binance-microbar`, `decision_synthetic_backfill=0`;
+   il profilo 1m e' ammesso solo se dichiarato e coerente su DocBrown, WATCH/BUY, SELL e forensics.
+3. A1/A2.2/SELL setup-specifica sono implementati: ogni nuova PAPER deve essere analizzata tramite
+   `a1BuyDiagnostics`, `/trades`, reason SELL e policy economica prima di qualunque giudizio finanziario.
 4. Avviare PAPER solo tramite `/management`, mai da script.
 5. Dopo ogni PAPER classificare separatamente:
    - evidenza A0/readiness;
