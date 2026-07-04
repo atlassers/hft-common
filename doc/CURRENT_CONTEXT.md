@@ -1,6 +1,6 @@
 # Current Context
 
-Ultimo aggiornamento: 2026-06-30 CEST.
+Ultimo aggiornamento: 2026-07-04 CEST.
 
 Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
@@ -74,10 +74,34 @@ Completato e pushato:
 In corso:
 
 - implementazione del charter strategico `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`;
+- allineamento decisionale 1m end-to-end introdotto dal Consiglio il 2026-07-04;
 - implementazione delle costanti/enum condivise;
 - pubblicazione feature context da DocBrown;
 - gate Context V1 in ACDC;
 - diagnostica `/management` e UI.
+
+Blocco corrente vincolante:
+
+```text
+A0 - Allineamento 1m Decisionale
+```
+
+Policy corrente:
+
+- indicatori, contract, WATCH e BUY devono usare candele 1m chiuse;
+- `binance` e' il bucket decisionale target;
+- `binance-realtime` e' diagnostica/UI e non puo' autorizzare BUY;
+- `binance-microbar` e' replay/forensics/gap/timing e non puo' alimentare indicatori strategici;
+- microbar synthetic da backfill 1m espanso a 5s devono essere marcate e non usate come evidenza di micro timing;
+- nessuna nuova RUN PAPER prima di `1m_alignment_ready = true`.
+
+AS-IS codice verificato:
+
+- DocBrown `InfluxSnapshotService` usa ancora `microbarBucketName()` per storico/live feature;
+- ACDC `InfluxSnapshotService` usa ancora `microbarBucketName()` per historical/current snapshot e preferisce microbar
+  nel replay source fallback;
+- `acdc_shared_runtime_config` descrive ancora microbar come condivisa da trading e ML;
+- hft-fe contiene superfici legacy con selettore REAL, mentre Kenshiro blocca `REAL_RUN`.
 
 ## Stato Live Verificato
 
@@ -100,13 +124,14 @@ Context V1 avrebbe tenuto 2 trade con netto `-0.1464585003`, migliorando il camp
 - `acdc`: WATCH, BUY, SELL, forensics PAPER e ContextGateAudit.
 - `kenshiro`: orchestrazione `/management`, strategy family e diagnostica.
 - `hft-fe`: cockpit `/management`.
-- `influxer`: nessun cambio obbligatorio fase 1; garantisce OHLCV/microbar.
+- `influxer`: garantisce OHLCV/microbar; nel blocco A0 deve distinguere ruoli bucket, gap e synthetic backfill.
 
 ## Prossimo Step Operativo
 
-1. Eseguire i blocchi A-D del charter AS-IS.
-2. Verificare build/test cross-repo.
-3. Deployare ogni modulo toccato.
-4. Fare check del Consiglio contro `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md` e
+1. Eseguire il blocco A0 del charter AS-IS: audit e progetto/implementazione dell'allineamento 1m decisionale.
+2. Non avviare PAPER finche' DocBrown e ACDC non usano la stessa base 1m chiusa per contract/current state.
+3. Verificare build/test cross-repo dei moduli toccati.
+4. Deployare ogni modulo toccato prima di validazione operativa.
+5. Fare check del Consiglio contro `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md` e
    `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`.
-5. Avviare PAPER solo dopo stato `/management` pulito e contract completo.
+6. Avviare PAPER solo dopo `1m_alignment_ready = true`, stato `/management` pulito e contract completo.

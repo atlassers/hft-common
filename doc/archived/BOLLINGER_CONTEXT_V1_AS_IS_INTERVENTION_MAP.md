@@ -195,6 +195,9 @@ Gia' presenti:
 - `docbrown/src/main/java/it/mbc/hft/docbrown/rem/service/InfluxSnapshotService.java`
   - calcola Bollinger, EMA9/21/50, RSI14, volume ratio, ATR14, `atr_pct`, regime flags.
   - usa soglie hard-coded per classificazione primaria.
+  - AS-IS codice 2026-07-04: `historicalUsdcSymbols`, `historicalTicks`, `buildSnapshot` e `ticksInWindow` usano
+    `microbarBucketName()` e `aggregateWindow(every: market.microbar.seconds)`. Quindi il runtime DocBrown non e'
+    ancora allineato al nuovo vincolo 1m chiuso.
 - `docbrown/src/main/java/it/mbc/hft/docbrown/rem/service/BlankRemCandidateService.java`
   - separa reentry e breakout in `promotionSelection`.
   - costruisce `BollingerContract`.
@@ -208,6 +211,10 @@ Gap:
 - Reentry e breakout sono separati, ma non abbastanza severi sul significato operativo:
   - reentry deve evitare overextension sopra middle/upper;
   - breakout deve richiedere volume/trend/espansione piu' forti.
+- La base dati decisionale non e' ancora conforme al blocco A0:
+  - la ricerca storica usa `binance-microbar`;
+  - il live-score costruisce feature da microbar;
+  - la configurazione `market.microbar.seconds` puo' cambiare la semantica degli indicatori strategici.
 - La classificazione regime contiene soglie statiche:
   - `ema50_slope <= 0.0015`;
   - bandwidth percentile `<= 0.70`;
@@ -277,6 +284,9 @@ Gia' presenti:
 
 - `acdc/src/main/java/it/mbc/hft/acdc/service/InfluxSnapshotService.java`
   - ricalcola feature live e non usa DocBrown come verita' del BUY.
+  - AS-IS codice 2026-07-04: `historicalBucketName()` ritorna `microbarBucketName()`, `historicalTicks` legge
+    `binance-microbar`, `buildSnapshot` costruisce feature da microbar, e `ticksInWindowWithSource` preferisce
+    microbar prima del bucket `binance`.
 - `acdc/src/main/java/it/mbc/hft/acdc/service/PreBuyWatchService.java`
   - ha `TriggerAudit` setup-specifico.
   - ha `ContextGateAudit`.
@@ -291,6 +301,13 @@ Gia' presenti:
 
 Gap:
 
+- La base decisionale WATCH/BUY non e' ancora conforme al blocco A0: ACDC puo' calcolare current state da microbar 5s.
+- La shared runtime config iniziale `V28__shared_runtime_config.sql` descrive ancora:
+  - `market.influx.bucket` come non usato da REM buy/sell mining;
+  - `market.influx.microbar_bucket` come condiviso da trading e ML;
+  - `market.microbar.seconds` come larghezza usata da trading e ML.
+  Queste descrizioni sono incoerenti col nuovo charter e richiedono una migration correttiva, non una modifica storica
+  della migration gia' applicata.
 - `reentryTriggerAudit` accetta il range `%B` contrattuale corrente, ma il contratto puo' essere troppo largo.
 - `reentryContextAudit` blocca RSI alto, volume spike, ATR e bandwidth, ma non controlla esplicitamente:
   - prezzo sopra middle/upper come overextension reentry;
@@ -331,11 +348,14 @@ Gia' presenti:
 - `/management` mostra family e stato.
 - `/trades` mostra replay e decisioni.
 - Fix recente: PnL non viene piu' confuso con prezzo SELL.
+- AS-IS codice 2026-07-04: esistono ancora superfici legacy con selettore `REAL RUN`. Kenshiro blocca `REAL_RUN`, ma
+  Context V1 non deve presentare REAL come ramo operativo disponibile.
 
 Gap:
 
 - Il grafico/replay puo' ancora essere troppo rado se ACDC riceve punti Influx aggregati a 1 minuto.
 - Il grafico/replay non deve far credere che la base decisionale sia 5s quando il BUY e' 1m.
+- Le superfici FE Context V1 devono rendere REAL vietata, non solo non eseguirla lato backend.
 - Serve rendere visibili i gate context e le soglie del contratto intorno a WATCH/BUY/SELL:
   - `%B`;
   - RSI;
@@ -435,6 +455,18 @@ Regole:
 6. Se il dato replay e' 1m o sintetico, non puo' spiegare decisioni a precisione 5s.
 7. Se il contratto non dichiara la granularita' o se ACDC osserva una granularita' diversa, WATCH deve fallire chiusa.
 
+### Principio 5: Documentare La Non-Conformita' AS-IS
+
+Finche' il blocco A0 non e' implementato, DocBrown e ACDC non devono essere trattati come conformi al vincolo 1m.
+
+Regole:
+
+1. Ogni RUN prima di A0 e' vietata come nuova evidenza strategica.
+2. Le diagnostiche possono leggere il codice AS-IS, ma devono classificare la base dati come `PRE_A0_MIXED_GRANULARITY`.
+3. Le descrizioni runtime config incoerenti devono essere corrette con nuova migration, non editando retroattivamente
+   migration storiche gia' applicate.
+4. Il FE puo' mostrare dati legacy, ma non puo' presentare REAL come percorso operativo Context V1.
+
 ## Mappa Interventi Per Modulo
 
 ### 1. hft-common
@@ -471,6 +503,7 @@ Interventi:
    - `EXIT_BB_CONTEXT_INVALIDATED`, solo se verra' implementata SELL fase 2.
 3. Non aggiungere nuovi setup operativi.
 4. Non rinominare costanti esistenti.
+5. Aggiornare la documentazione root (`CURRENT_CONTEXT.md`, `STRATEGIC_REM_HANDOFF.md`) quando A0 diventa vincolante.
 
 Test:
 
@@ -601,6 +634,11 @@ File:
 - `acdc/src/test/java/it/mbc/hft/acdc/service/InfluxSnapshotServiceTest.java`
 - `acdc/src/test/java/it/mbc/hft/acdc/service/GuardEvaluatorTest.java`
 - nuovo test consigliato: `PreBuyWatchServiceContextGateTest`.
+- nuova migration consigliata per correggere descrizioni `acdc_shared_runtime_config`:
+  - `market.influx.bucket` = fonte decisionale 1m chiusa;
+  - `market.influx.realtime_bucket` = diagnostica/UI non decisionale;
+  - `market.influx.microbar_bucket` = replay/forensics non decisionale;
+  - `market.microbar.seconds` = replay/forensics, non indicatori strategici.
 
 Interventi in `InfluxSnapshotService`:
 
@@ -750,8 +788,11 @@ Interventi:
      - volume ratio;
      - regime;
      - guard/reason.
-3. Non creare nuova pagina.
-4. Nessuna UI descrittiva lunga: pannelli operativi densi e leggibili.
+3. Superfici Context V1:
+   - REAL deve risultare vietata o non selezionabile;
+   - nessun pulsante/label deve suggerire che REAL sia un ramo operativo disponibile.
+4. Non creare nuova pagina.
+5. Nessuna UI descrittiva lunga: pannelli operativi densi e leggibili.
 
 Test:
 
@@ -851,6 +892,8 @@ Deliverable:
 - DocBrown calcola contract e live-score su candele 1m chiuse.
 - ACDC WATCH calcola current state su candele 1m chiuse.
 - ACDC fallisce chiusa su mismatch di granularita'.
+- ACDC migration correttiva aggiorna descrizioni shared runtime config incoerenti.
+- FE Context V1 non presenta REAL come percorso operativo disponibile.
 - `/trades` mostra source bucket, interval seconds, candle count, max gap seconds e synthetic backfill.
 - microbar 5s resta confinata a replay/diagnostica/timing/gap detection.
 

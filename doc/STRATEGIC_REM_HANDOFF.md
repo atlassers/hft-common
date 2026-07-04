@@ -1,6 +1,6 @@
 # Bollinger Context V1 Operational Handoff
 
-Data: 2026-06-30.
+Data: 2026-07-04.
 
 ## Scopo
 
@@ -30,6 +30,12 @@ hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md
 - SELL fase 1 resta quello Bollinger-only, senza nuove logiche fino a evidenza PAPER.
 - La finestra WATCH autorizza osservazione, non e' una condizione BUY.
 - BUY e WATCH non hanno cap numerici concorrenti; il limite effettivo e' budget/exchange sizing al momento della BUY.
+- Dal Consiglio 2026-07-04, prima di nuove RUN PAPER e' vincolante il blocco A0:
+  - indicatori, contract, WATCH e BUY su candele 1m chiuse;
+  - microbar 5s solo replay/diagnostica/timing/gap detection;
+  - `binance-realtime` non decisionale;
+  - `binance-microbar` non decisionale;
+  - no PAPER finche' `1m_alignment_ready` non e' vero.
 
 ## Processo
 
@@ -101,12 +107,21 @@ Da introdurre solo quando DocBrown e ACDC sono compatibili:
 
 1. Leggere `/management/state`.
 2. Verificare strategy family, `bbReady`, blocker, advice attive, PAPER running e posizioni aperte.
-3. Verificare count per setup/regime e readiness context.
-4. Se non ci sono PAPER o posizioni aperte, usare l'action approvata per generare una nuova sequenza PAPER.
-5. Dopo run PAPER, leggere `/management/runs/{executionId}`.
-6. Attribuire ogni BUY/SELL a setup, trigger, regime, gate context, reason e PnL.
-7. Separare sempre le metriche di breakout e reentry.
-8. Per analisi visiva usare `/trades`: selezione data, execution del giorno, simboli per execution, filtri fase
+3. Verificare blocco A0:
+   - DocBrown source bucket decisionale = `binance`;
+   - ACDC source bucket decisionale = `binance`;
+   - interval decisionale = `60`;
+   - candle state = `CLOSED`;
+   - `binance-realtime` assente dal path BUY;
+   - `binance-microbar` assente dal path indicatori/BUY;
+   - replay espone `source_bucket`, `interval_seconds`, `candle_count`, `max_gap_seconds`, `synthetic_backfill`.
+4. Verificare count per setup/regime e readiness context.
+5. Se A0 non e' pronto, fermarsi: nessuna nuova sequenza PAPER.
+6. Se non ci sono PAPER o posizioni aperte e A0 e' pronto, usare l'action approvata per generare una nuova sequenza PAPER.
+7. Dopo run PAPER, leggere `/management/runs/{executionId}`.
+8. Attribuire ogni BUY/SELL a setup, trigger, regime, gate context, reason e PnL.
+9. Separare sempre le metriche di breakout e reentry.
+10. Per analisi visiva usare `/trades`: selezione data, execution del giorno, simboli per execution, filtri fase
    WATCH/BUY/SELL, replay candle persistito e replay live Influx con refresh 1s.
 
 ## Build

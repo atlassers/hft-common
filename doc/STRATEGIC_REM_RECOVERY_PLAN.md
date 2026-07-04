@@ -96,6 +96,16 @@ ritorno a nomi `ml_*` o contratti legacy.
 
 `BOLLINGER_CONTEXT_V1_CHARTER_ACTIVE_IMPLEMENTATION_IN_PROGRESS`.
 
+Aggiornamento Consiglio 2026-07-04:
+
+```text
+A0 - Allineamento 1m Decisionale
+```
+
+Prima di nuove RUN PAPER, DocBrown e ACDC devono usare la stessa base decisionale a candele 1m chiuse per indicatori,
+contract, WATCH e BUY. Microbar 5s resta solo replay/diagnostica/timing/gap detection. Le run prodotte prima della
+chiusura A0 non sono nuova evidenza strategica valida.
+
 Exit criteria tecnici della fase corrente:
 
 - costanti, enum e reason Context V1 condivise;

@@ -698,11 +698,24 @@ entry_* al BUY
 
 Il processo scientifico richiede che i dati usati per decidere e quelli usati per visualizzare siano distinguibili.
 
+Aggiornamento Consiglio 2026-07-04:
+
+```text
+per il ciclo operativo corrente Bollinger Context V1:
+indicatori / contract / WATCH / BUY = 1m chiuso
+microbar 5s = replay, diagnostica, timing, gap detection
+```
+
+La possibilita' teorica di usare una base microbar resta valida solo come esperimento futuro separato. Non e' la base
+strategica corrente e non puo' alimentare nuove RUN PAPER Context V1 prima di un nuovo charter.
+
 Campionamento:
 
 - se gli indicatori sono calcolati su 1m, il contratto deve dichiararlo;
 - se WATCH usa microbar, la finestra e la cadenza devono essere coerenti;
 - se il replay mostra 1m, non puo' spiegare con precisione decisioni prese su 5s.
+- nel ciclo corrente, se WATCH usa microbar per indicatori/BUY, la run e' classificata `PRE_A0_MIXED_GRANULARITY` e
+  non e' evidenza strategica valida.
 
 Metriche obbligatorie per replay:
 
