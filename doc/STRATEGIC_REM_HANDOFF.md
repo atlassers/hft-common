@@ -248,6 +248,26 @@ RUN A1:
   - `NEGATIVE_OPERATIONAL_SIGNAL` per finestra senza BUY ma con blocker granulari;
   - `INCONCLUSIVE` finanziaria.
 
+## Stato A2.1 Middle Slope
+
+Ultima verifica Consiglio: 2026-07-04.
+
+- A2 stabilisce che `middle_slope` non e' hard-blocker Bollinger se non dichiarato da contract validato.
+- Fix implementato in DocBrown: `BlankRemCandidateService` non richiede piu' `bb_middle_slope >= 0` per classificare
+  una candidata `BB_SQUEEZE_BREAKOUT_LONG`.
+- La selection breakout DocBrown usa ora la definizione A2: upper breach, `bb_bandwidth_delta > 0` e
+  `bb_expansion > 0`. La soglia `%B >= 1` resta applicata dal trigger runtime WATCH/BUY.
+- ACDC `PreBuyWatchService` blocca `middle_slope` solo se una soglia `bb_min_middle_slope`/`live_bb_min_middle_slope`
+  e' presente nel contract; sulle advice verificate non e' presente.
+- Batch fallito riesaminato:
+  `management-rolling-20260704T154310Z` aveva `breakout_old=863` e `breakout_a2=1552`.
+- Validazione post-deploy:
+  `management-rolling-20260704T180407Z`, `PASS_CANDIDATE`, `PROMOTED=30`, RUN PAPER `122` avviata da `/management`.
+- RUN 122 ha aperto BUY (`acceptedBuys=2`, `positions=2`, `openPositions=2` al controllo iniziale).
+- Notifiche Telegram BUY idempotenti confermate: RUN 122 `buy_notified=2` su `2` posizioni, nessuna SELL ancora.
+- Punto residuo: analizzare `A0_DECISION_GAP_TOO_WIDE` in `a1BuyDiagnostics` dopo la chiusura o lo stop governato
+  della RUN 122.
+
 ## Build
 
 Ordine consigliato:

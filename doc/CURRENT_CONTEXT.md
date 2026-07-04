@@ -236,6 +236,26 @@ RUN PAPER A1:
   - `NEGATIVE_OPERATIONAL_SIGNAL` per assenza di BUY con trigger fail granulari;
   - `INCONCLUSIVE` per performance finanziaria per assenza di BUY/SELL.
 
+Stato A2.1 implementato e verificato il 2026-07-04:
+
+- DocBrown `BlankRemCandidateService` non usa piu' `bb_middle_slope >= 0` come hard-blocker del setup
+  `BB_SQUEEZE_BREAKOUT_LONG`.
+- La definizione breakout A2 usata dalla selection e' allineata al documento scientifico:
+  upper breach, `%B >= 1` nel trigger runtime, `bb_bandwidth_delta > 0` e `bb_expansion > 0`; `middle_slope` resta
+  feature audit/context, non condizione Bollinger primaria.
+- Verifica regressiva sul batch fallito `management-rolling-20260704T154310Z`:
+  `breakout_old=863`, `breakout_a2=1552`, `reentry=2258`.
+- Test DocBrown mirato `BlankRemCandidateServiceTest`: `12/12` passati.
+- DocBrown buildato e redeployato nel container `docbrown`.
+- Nuovo ciclo `/management` dopo deploy:
+  `management-rolling-20260704T180407Z`, `PASS_CANDIDATE`, selected
+  `feature:bb_setup=squeeze_breakout_long`, `PROMOTED=30`.
+- RUN PAPER 122 avviata da `/management`, stato osservato: `RUNNING`, `positions=2`, `openPositions=2`,
+  `acceptedBuys=2`.
+- Telegram BUY idempotente verificato su RUN 122: `positions=2`, `buy_notified=2`, `sell_notified=0`.
+- Warning residuo da analizzare dopo RUN 122: `A0_DECISION_GAP_TOO_WIDE` compare in `a1BuyDiagnostics`; non blocca il
+  fix A2.1, ma va trattato come prossimo punto di qualita' dati/cadence.
+
 ## Stato Live Verificato
 
 Ultimo stato consolidato prima dell'implementazione Context V1:
