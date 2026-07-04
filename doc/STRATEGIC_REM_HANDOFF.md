@@ -35,8 +35,9 @@ hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md
 - SELL strategica usa la stessa cadence decisionale del BUY per invalidazioni, target, trailing e timeout.
 - Loss cap quote-aware puo' usare prezzo eseguibile intraminuto solo come protezione economica meccanica, dichiarata e
   auditata separatamente.
-- Le notifiche Telegram SELL sono idempotenti per posizione tramite `acdc_paper_position.sell_notified_at`; una SELL
-  chiusa non deve mai generare piu' di una notifica Telegram.
+- Le notifiche Telegram BUY/SELL sono idempotenti per posizione tramite `acdc_paper_position.buy_notified_at` e
+  `acdc_paper_position.sell_notified_at`; una posizione non deve mai generare piu' di una notifica BUY e una notifica
+  SELL.
 - La finestra WATCH autorizza osservazione, non e' una condizione BUY.
 - BUY e WATCH non hanno cap numerici concorrenti; il limite effettivo e' budget/exchange sizing al momento della BUY.
 - Dal Consiglio 2026-07-04, prima di nuove RUN PAPER e' vincolante il blocco A0:
