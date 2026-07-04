@@ -203,6 +203,45 @@ Evidenza RUN 118 da ricordare:
 - reentry: 1680 decisioni, 0 full pass;
 - breakout: 720 decisioni, 0 full pass.
 
+## Stato A1 Implementato
+
+Ultima verifica Consiglio: 2026-07-04.
+
+- A1 implementato, buildato e deployato su `hft-common`, `docbrown`, `acdc`, `kenshiro`, `hft-fe`.
+- ACDC e DocBrown calcolano breach bar-by-bar con bande contemporanee e mantengono A0 1m chiusa.
+- `PAPER_ELIGIBLE` DB resta alias transitorio; il contract espone:
+  - `bb_advice_paper_watch_eligible`;
+  - `bb_advice_paper_buy_eligible`.
+- ACDC separa trigger BUY e context gate:
+  - reentry `%B < min` e' attesa `WATCH_WAITING_REENTRY_RECOVERY`, non hard fail;
+  - reentry over max o sopra upper resta `WATCH_REENTRY_OVEREXTENDED`;
+  - breakout richiede breakout live coerente, non squeeze e breakout simultanei;
+  - `REGIME_RANGE` reentry non e' hard gate se non ci sono chaos/trend_down e gli altri gate passano.
+- `/management/runs/{executionId}` espone `a1BuyDiagnostics`.
+- `/management` mostra tab A1 nel dettaglio run; `/trades` mostra eligible WATCH/BUY, reason code e breach metadata.
+- Script diagnostico:
+
+```bash
+cd /home/mbc/Documenti/ws/java/hft/acdc
+MYSQL_PASSWORD='<password>' scripts/diagnose-a1-buy-blockers.sh <execution_id>
+```
+
+Lo script e' `DIAGNOSTIC_ONLY`; non avvia PAPER.
+
+RUN A1:
+
+- RUN 119: micro-run diagnostica dopo primo deploy A1; ha esposto `bb_advice_freshness_contract_pass=0` come gate
+  comune residuo. Non usarla come evidenza finanziaria.
+- RUN 120: PAPER avviata e fermata solo da `/management`, `STOPPED`, `entryDecisions=720`, `acceptedBuys=0`,
+  `positions=0`, `openPositions=0`.
+- RUN 120 trigger top:
+  `WATCH_REENTRY_OVEREXTENDED=295`, `WATCH_WAITING_BREAKOUT_PERCENT_B=286`,
+  `WATCH_REENTRY_AGE_EXPIRED=24`, `WATCH_WAITING_REENTRY_LOWER_BREACH=24`.
+- RUN 120 classificazione:
+  - `VALID_STRATEGIC_EVIDENCE` per readiness A0 e metadata A1;
+  - `NEGATIVE_OPERATIONAL_SIGNAL` per finestra senza BUY ma con blocker granulari;
+  - `INCONCLUSIVE` finanziaria.
+
 ## Build
 
 Ordine consigliato:

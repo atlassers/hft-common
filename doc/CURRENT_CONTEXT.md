@@ -180,6 +180,58 @@ Stato A1 progettato il 2026-07-04:
 - decisione Consiglio: mantenere A0 1m chiusa, correggere A1 su trigger BUY, breach bar-by-bar, distinction
   `PAPER_WATCH_ELIGIBLE`/`PAPER_BUY_ELIGIBLE`, reason granulari.
 
+Stato A1 implementato e deployato il 2026-07-04:
+
+- container aggiornati/verificati: `docbrown`, `acdc-vpn`, `kenshiro-local`, `hft-fe-local`; `hft-common` installato
+  localmente per le costanti condivise;
+- DocBrown e ACDC calcolano breach Bollinger bar-by-bar con bande contemporanee e pubblicano
+  `latest_lower_breach_at_epoch_seconds`, `latest_upper_breach_at_epoch_seconds`, `reentry_zone_state`,
+  `breakout_zone_state`;
+- DocBrown pubblica `bb_advice_paper_watch_eligible` e `bb_advice_paper_buy_eligible`; la classe DB
+  `PAPER_ELIGIBLE` resta alias transitorio compatibile per advice osservabili;
+- ACDC ricalcola runtime `bb_advice_paper_buy_eligible` dal live snapshot 1m chiuso e separa:
+  - WATCH osservabile: `bb_advice_paper_watch_eligible=1`;
+  - BUY comprabile: trigger setup-specifico passato;
+  - context gate separato da trigger gate;
+- `bb_advice_freshness_contract_pass` ora indica completezza/freshness del contract, non target economico positivo;
+  `bb_advice_economic_safe_pass` resta audit economico separato;
+- `PreBuyWatchService` emette reason granulari A1:
+  `WATCH_WAITING_REENTRY_LOWER_BREACH`, `WATCH_WAITING_REENTRY_RECOVERY`, `WATCH_REENTRY_OVEREXTENDED`,
+  `WATCH_REENTRY_MIDDLE_SLOPE_BLOCKED`, `WATCH_REENTRY_AGE_EXPIRED`,
+  `WATCH_WAITING_BREAKOUT_UPPER_BREACH`, `WATCH_WAITING_BREAKOUT_PERCENT_B`,
+  `WATCH_WAITING_BREAKOUT_EXPANSION`, `WATCH_BREAKOUT_MIDDLE_SLOPE_BLOCKED`,
+  `WATCH_CONTEXT_REGIME_BLOCKED`, `WATCH_CONTEXT_MOMENTUM_BLOCKED`,
+  `WATCH_CONTEXT_VOLUME_BLOCKED`, `WATCH_CONTEXT_RISK_BLOCKED`;
+- Kenshiro `/management/runs/{executionId}` espone `a1BuyDiagnostics` con:
+  `entryDecisions`, `acceptedBuys`, `buyTriggerFailDistribution`, `buyContextFailDistribution`,
+  `triggerReasonCodes`, `setupFailMatrix`;
+- hft-fe `/management` mostra la tab A1 nel dettaglio run; `/trades` mostra eligible WATCH/BUY, reason code,
+  breach timestamp e stati zona;
+- script diagnostico aggiunto: `acdc/scripts/diagnose-a1-buy-blockers.sh`, `DIAGNOSTIC_ONLY`, richiede
+  `MYSQL_PASSWORD` o `MYSQL_HFT_PASSWORD`, non avvia PAPER.
+
+RUN PAPER A1:
+
+- RUN 119, avviata da `/management`, ha esposto un blocker residuo certo:
+  `bb_advice_freshness_contract_pass=0` per target economico `0`, mascherato da
+  `WATCH_OPENED_WAITING_BUY_CONTRACT`; classificazione `VALID_DIAGNOSTIC_A1_EVIDENCE`, non finanziaria;
+- dopo correzione del gate comune, RUN 120 e' partita da `/management` con generation
+  `management-rolling-20260704T054632Z`, fermata da `/management/actions/PAPER_STOP`;
+- RUN 120: `STOPPED`, `entryDecisions=720`, `acceptedBuys=0`, `positions=0`, `openPositions=0`;
+- distribuzione trigger RUN 120:
+  - `WATCH_REENTRY_OVEREXTENDED=295`;
+  - `WATCH_WAITING_BREAKOUT_PERCENT_B=286`;
+  - `WATCH_REENTRY_AGE_EXPIRED=24`;
+  - `WATCH_WAITING_REENTRY_LOWER_BREACH=24`;
+  - `WATCH_REENTRY_MIDDLE_SLOPE_BLOCKED=21`;
+  - `WATCH_WAITING_REENTRY_RECOVERY=20`;
+  - `WATCH_WAITING_BREAKOUT_EXPANSION=4`;
+  - `WATCH_BREAKOUT_MIDDLE_SLOPE_BLOCKED=2`;
+- classificazione RUN 120:
+  - `VALID_STRATEGIC_EVIDENCE` per A0 readiness e metadata A1;
+  - `NEGATIVE_OPERATIONAL_SIGNAL` per assenza di BUY con trigger fail granulari;
+  - `INCONCLUSIVE` per performance finanziaria per assenza di BUY/SELL.
+
 ## Stato Live Verificato
 
 Ultimo stato consolidato prima dell'implementazione Context V1:
@@ -207,12 +259,8 @@ Context V1 avrebbe tenuto 2 trade con netto `-0.1464585003`, migliorando il camp
 
 1. Prima di ogni nuova PAPER leggere `/management/state` e richiedere `1m_alignment_ready=true`, `a0Blockers=[]`,
    `blockers=[]`, `paperRunning=false`, `openPositions=0`.
-2. Implementare A1 prima di nuove PAPER:
-   - diagnostica fail reason granulare;
-   - breach Bollinger bar-by-bar con bande contemporanee;
-   - reentry `%B < min` come stato di attesa, non hard fail;
-   - breakout buy-eligible solo con breakout live coerente;
-   - distinzione `PAPER_WATCH_ELIGIBLE`/`PAPER_BUY_ELIGIBLE`.
+2. A1 e' implementato: ogni nuova PAPER deve essere analizzata tramite `a1BuyDiagnostics` e `/trades` prima di
+   qualunque giudizio finanziario.
 3. Avviare PAPER solo tramite `/management`, mai da script.
 4. Dopo ogni PAPER classificare separatamente:
    - evidenza A0/readiness;

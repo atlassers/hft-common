@@ -742,3 +742,31 @@ trade quando il segnale Bollinger setup-specifico esiste su 1m chiusa;
 nessun trade quando il segnale non esiste;
 diagnostica certa quando non si compra.
 ```
+
+## Esito Implementazione 2026-07-04
+
+A1 e' stato implementato e deployato su `docbrown`, `acdc`, `kenshiro`, `hft-fe` con costanti condivise in
+`hft-common`.
+
+Implementato:
+
+- breach Bollinger bar-by-bar con bande contemporanee;
+- `latest_lower_breach_at_epoch_seconds`, `latest_upper_breach_at_epoch_seconds`, `reentry_zone_state`,
+  `breakout_zone_state`;
+- separazione `bb_advice_paper_watch_eligible` / `bb_advice_paper_buy_eligible`;
+- `bb_advice_freshness_contract_pass` separato da `bb_advice_economic_safe_pass`;
+- reentry `%B < min` come `WATCH_WAITING_REENTRY_RECOVERY`;
+- breakout buy-eligible solo con trigger live coerente;
+- reason granulari WATCH/BUY e codici numerici di audit;
+- `/management/runs/{executionId}.a1BuyDiagnostics`;
+- tab A1 in `/management` e dettagli A1 in `/trades`;
+- script `acdc/scripts/diagnose-a1-buy-blockers.sh` `DIAGNOSTIC_ONLY`.
+
+Verifica PAPER:
+
+- RUN 119 ha individuato un residuo gate comune (`bb_advice_freshness_contract_pass=0`) e ha portato alla correzione
+  della distinzione tra contract fresco e target economico positivo;
+- RUN 120 dopo correzione: `720` ENTRY, `0` BUY, `0` posizioni, blocker granulari dominanti
+  `WATCH_REENTRY_OVEREXTENDED=295` e `WATCH_WAITING_BREAKOUT_PERCENT_B=286`;
+- RUN 120 e' `VALID_STRATEGIC_EVIDENCE` per A0/A1, `NEGATIVE_OPERATIONAL_SIGNAL` per la finestra BUY,
+  `INCONCLUSIVE` finanziaria.
