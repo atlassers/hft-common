@@ -25,18 +25,21 @@ hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md
 - `/management` e' l'interfaccia primaria.
 - La tabella advice runtime resta `hft.acdc_live_bb_advice`.
 - Bollinger resta obbligatorio: ogni advice deve avere `bb_setup`, `bb_trigger` e contratto `bb_*`.
+- A2 corregge il blocco A0/A1: Bollinger non impone 1m. La readiness valida richiede cadence decisionale dichiarata,
+  coerente e non sintetica.
+- Profilo operativo corrente: `bb.decision.interval_seconds=5`, bucket decisionale `binance-microbar`, synthetic
+  backfill vietato.
 - Context V1 richiede feature esplicite di regime, trend, momentum, volume e risk.
 - WATCH apre BUY solo se passano trigger Bollinger e gate Context V1.
 - SELL fase 1 resta quello Bollinger-only, senza nuove logiche fino a evidenza PAPER.
-- SELL strategica usa candele 1m chiuse per invalidazioni, target, trailing e timeout; microbar 5s non crea segnali
-  SELL strategici.
+- SELL strategica usa la stessa cadence decisionale del BUY per invalidazioni, target, trailing e timeout.
 - Loss cap quote-aware puo' usare prezzo eseguibile intraminuto solo come protezione economica meccanica, dichiarata e
   auditata separatamente.
 - La finestra WATCH autorizza osservazione, non e' una condizione BUY.
 - BUY e WATCH non hanno cap numerici concorrenti; il limite effettivo e' budget/exchange sizing al momento della BUY.
 - Dal Consiglio 2026-07-04, prima di nuove RUN PAPER e' vincolante il blocco A0:
-  - indicatori, contract, WATCH, BUY e SELL strategica su candele 1m chiuse;
-  - microbar 5s solo replay/diagnostica/timing/gap detection/execution observation;
+  - indicatori, contract, WATCH, BUY e SELL strategica sulla stessa cadence dichiarata;
+  - microbar 5s decisionale ammessa solo nel profilo A2 e solo se reale/non synthetic;
   - `binance-realtime` non decisionale;
   - `binance-microbar` non decisionale;
   - la 1m decisionale non puo' essere ricostruita aggregando realtime o microbar;
@@ -141,9 +144,9 @@ Da introdurre solo quando DocBrown e ACDC sono compatibili:
    - nessuno script puo' avviare PAPER direttamente.
 5. Se `/management/state` non espone ancora `1m_alignment_ready`, trattarlo come `false`.
 6. Verificare count per setup/regime e readiness context.
-7. Se A0 non e' pronto, fermarsi: nessuna nuova sequenza PAPER.
-8. Se A0 e' pronto ma A1 non e' implementato/verificato, fermarsi: nessuna nuova PAPER come evidenza strategica.
-9. Solo dopo A1 implementato/verificato, se non ci sono PAPER o posizioni aperte, usare l'action approvata per generare
+7. Se la cadence decisionale dichiarata non e' pronta/coerente, fermarsi: nessuna nuova sequenza PAPER.
+8. Se A2 non e' implementato/verificato, fermarsi: nessuna nuova PAPER come evidenza strategica.
+9. Solo dopo A2 implementato/verificato, se non ci sono PAPER o posizioni aperte, usare l'action approvata per generare
    una nuova sequenza PAPER.
 10. Dopo run PAPER, leggere `/management/runs/{executionId}`.
 11. Attribuire ogni BUY/SELL a setup, trigger, regime, gate context, reason e PnL.

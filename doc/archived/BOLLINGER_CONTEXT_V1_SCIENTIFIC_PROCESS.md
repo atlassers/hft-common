@@ -167,6 +167,113 @@ Riferimenti usati:
 - OBV/volume confirmation, StockCharts: https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-indicators/on-balance-volume-obv
 - Chandelier Exit, StockCharts: https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-overlays/chandelier-exit
 
+## A2 - Correzione Ufficiale Cadence E Soglie Bollinger
+
+Decisione del Consiglio 2026-07-04.
+
+La scelta "indicatori/contract/WATCH/BUY/SELL strategica = 1m obbligatorio" non e' una prescrizione della letteratura
+Bollinger. E' stata una decisione architetturale interna del ciclo A0. La fonte ufficiale Bollinger ammette barre di
+qualunque durata, purche' contengano abbastanza attivita' per rappresentare il meccanismo di formazione del prezzo.
+Quindi il vincolo scientifico corretto non e':
+
+```text
+Bollinger = 1m
+```
+
+Il vincolo corretto e':
+
+```text
+Bollinger = stessa cadence dichiarata per indicatori, contract, WATCH, BUY, SELL strategica e test.
+```
+
+### Cadence Operativa A2
+
+Per recuperare la semantica HFT precedente senza tornare a contaminazione temporale:
+
+```text
+bb.decision.interval_seconds = 5
+decision_source_bucket = binance-microbar
+decision_source_bucket_microbar = 1
+decision_interval_seconds = 5
+decision_candle_state = CLOSED
+decision_synthetic_backfill = 0 obbligatorio
+```
+
+La cadence 1m resta ammessa solo come profilo alternativo esplicito:
+
+```text
+bb.decision.interval_seconds = 60
+decision_source_bucket = binance
+decision_source_bucket_binance = 1
+decision_interval_seconds = 60
+decision_candle_state = CLOSED
+```
+
+Una RUN e' evidenza strategica valida solo se DocBrown, ACDC WATCH/BUY, SELL strategica e forensics dichiarano la stessa
+cadence e lo stesso bucket decisionale. Microbar sintetiche da backfill 1m espanso a 5s restano vietate come fonte
+decisionale.
+
+### Soglie Bollinger Ufficiali A2
+
+Le soglie operative non devono piu' essere ristrette da percentile storici che contraddicono la semantica %B
+documentata.
+
+Parametri indicatore:
+
+```text
+period = 20
+multiplier = 2
+price = close della barra decisionale dichiarata
+```
+
+Percent B:
+
+```text
+percent_b = (price - lower) / (upper - lower)
+percent_b < 0  = prezzo sotto lower
+percent_b = 0  = prezzo su lower
+percent_b = 0.5 = prezzo su middle
+percent_b = 1  = prezzo su upper
+percent_b > 1  = prezzo sopra upper
+```
+
+Reentry mean-reversion:
+
+```text
+lower breach precedente o corrente richiesto
+bb_reentry_confirmed richiesto
+0 <= percent_b <= 0.80
+percent_b > 1 blocco obbligatorio
+```
+
+Nota: `0.20` e `0.80` sono livelli %B rilevanti nella documentazione tecnica. `0.20` identifica vicinanza alla lower
+band; non deve diventare un blocco che impedisce il recupero iniziale. `0.80` e' il limite massimo operativo per evitare
+di comprare una reentry gia' estesa verso upper.
+
+Breakout squeeze:
+
+```text
+upper breach corrente o precedente richiesto
+percent_b >= 1
+bandwidth_delta > 0
+conferma context separata
+```
+
+Squeeze/breakout non autorizza un BUY solo per compressione delle bande: la compressione non fornisce direzione. Serve
+rottura della banda nella direzione del trade e conferma esterna coerente.
+
+### Soglie Non Bollinger
+
+`bb_middle_slope`, `bb_reentry_age_seconds`, RSI, EMA, ATR e volume sono context/risk/quality gate, non formule
+Bollinger primarie. Possono restare nel contratto solo se:
+
+- sono dichiarati nel payload;
+- sono calcolati sulla stessa cadence decisionale;
+- non sostituiscono `bb_setup`, `bb_trigger`, breach, `%B` e BandWidth;
+- non producono soglie piu' restrittive della semantica Bollinger ufficiale senza evidenza PAPER separata.
+
+Nel ciclo A2 `bb_middle_slope` e `bb_reentry_age_seconds` non sono hard-blocker se il contratto non li dichiara.
+
 ## Indicatori
 
 ### Bollinger Bands

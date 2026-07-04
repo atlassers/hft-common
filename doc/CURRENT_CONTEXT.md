@@ -30,10 +30,16 @@ contraddicono la gerarchia sopra.
 - PAPER solo da `/management`.
 - La sorgente advice runtime resta `hft.acdc_live_bb_advice`.
 - Bollinger resta il segnale centrale: setup e trigger sono obbligatori.
+- A2 corregge A0/A1: la letteratura Bollinger non impone 1m. La cadence decisionale e' un parametro dichiarato e
+  deve essere identica in DocBrown, WATCH/BUY, SELL strategica e forensics.
+- Profilo operativo A2 corrente: `bb.decision.interval_seconds=5`, `decision_source_bucket=binance-microbar`,
+  `decision_synthetic_backfill=0`.
+- Profilo 1m resta ammesso solo se dichiarato e coerente end-to-end.
 - Context V1 aggiunge regime, trend, momentum, volume e risk come feature contrattuali esplicite.
 - WATCH compra solo se passano trigger Bollinger setup-specifico e gate Context V1.
 - SELL fase 1 resta invariato rispetto a Bollinger-only, per isolare l'effetto dei gate di ingresso.
-- SELL strategica ragiona su candele 1m chiuse; microbar 5s non genera invalidazioni/target/trailing strategici.
+- SELL strategica ragiona sulla stessa cadence decisionale del BUY; microbar 5s e' strategica solo nel profilo A2
+  dichiarato e solo se non sintetica.
 - Il loss cap quote-aware puo' usare prezzo eseguibile intraminuto solo come protezione economica meccanica, separata
   dagli indicatori Bollinger/context.
 - WATCH e BUY non hanno cap numerici concorrenti; l'unico limite ammesso all'acquisto e' budget/exchange sizing.
@@ -82,30 +88,28 @@ Completato e pushato:
 
 In corso:
 
-- A1 allineamento letteratura BUY dopo regressione certa RUN 118:
-  `archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`;
-- nessuna nuova PAPER prima di diagnostica/correzione A1 dei blocker `WATCH_WAITING_BUY_CONTRACT`;
-- distinzione obbligatoria tra `VALID_STRATEGIC_EVIDENCE` A0, `NEGATIVE_OPERATIONAL_SIGNAL` BUY trigger e
+- A2 correzione cadence e soglie ufficiali dopo regressione certa RUN 118-120;
+- nessuna nuova PAPER prima di implementazione/deploy A2;
+- distinzione obbligatoria tra evidenza di provenance, `NEGATIVE_OPERATIONAL_SIGNAL` BUY trigger e
   `INCONCLUSIVE` finanziario.
 
 Blocco corrente vincolante:
 
 ```text
-A1 - Allineamento BUY Alla Letteratura Bollinger
+A2 - Correzione Cadence E Soglie Ufficiali Bollinger
 ```
 
-Policy A0 corrente, da mantenere durante A1:
+Policy A2 corrente:
 
-- indicatori, contract, WATCH, BUY e SELL strategica devono usare candele 1m chiuse;
-- `binance` e' il bucket decisionale target;
-- `binance-realtime` e' diagnostica/UI e non puo' autorizzare BUY;
-- `binance-microbar` e' replay/forensics/gap/timing/execution observation e non puo' alimentare indicatori strategici;
-- SELL deve esporre separatamente metadati di decisione 1m e metadati di esecuzione/replay 5s;
-- la fonte decisionale 1m non puo' essere ricostruita aggregando realtime o microbar;
+- la cadence decisionale e' dichiarata da `bb.decision.interval_seconds`;
+- default operativo: `5s`, bucket `binance-microbar`, `synthetic_backfill=0`;
+- profilo alternativo ammesso: `60s`, bucket `binance`;
+- `binance-realtime` resta diagnostica/UI e non puo' autorizzare BUY;
+- SELL strategica usa la stessa cadence del BUY;
 - il decision snapshot deve esporre bucket, interval, candle state, feature window, candle count, max gap e staleness;
-- il lookback decisionale deve coprire EMA50 e volume ratio 1m/20m; una finestra da 15m e' insufficiente;
-- microbar synthetic da backfill 1m espanso a 5s devono essere marcate e non usate come evidenza di micro timing;
-- nessuna nuova RUN PAPER prima di `1m_alignment_ready = true`.
+- il lookback decisionale deve coprire EMA50 e volume ratio sulla cadence dichiarata;
+- microbar synthetic da backfill 1m espanso a 5s devono essere marcate e non usate come fonte decisionale;
+- nessuna nuova RUN PAPER prima di readiness cadence vera.
 
 AS-IS codice verificato prima dell'intervento A0, memoria storica di regressione:
 

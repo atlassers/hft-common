@@ -60,6 +60,7 @@ public final class RemConstants {
     public static final String TIMESTAMP_SEMANTICS_BINANCE_OPEN_TIME = "BINANCE_OPEN_TIME";
     public static final String DECISION_SOURCE_BUCKET = "decision_source_bucket";
     public static final String DECISION_SOURCE_BUCKET_BINANCE = "decision_source_bucket_binance";
+    public static final String DECISION_SOURCE_BUCKET_MICROBAR = "decision_source_bucket_microbar";
     public static final String DECISION_INTERVAL_SECONDS = "decision_interval_seconds";
     public static final String DECISION_CANDLE_STATE = "decision_candle_state";
     public static final String DECISION_CANDLE_STATE_CLOSED = "decision_candle_state_closed";
@@ -674,6 +675,7 @@ public final class RemConstants {
     public static final String BB_CONTEXT_BREAKOUT_MAX_RSI = "bb.context.breakout.max_rsi";
     public static final String BB_CONTEXT_BREAKOUT_MIN_VOLUME_RATIO = "bb.context.breakout.min_volume_ratio";
     public static final String BB_CONTEXT_REENTRY_MAX_PERCENT_B = "bb.context.reentry.max_percent_b";
+    public static final String BB_DECISION_INTERVAL_SECONDS = "bb.decision.interval_seconds";
     public static final String BB_CONTEXT_REENTRY_MAX_RSI = "bb.context.reentry.max_rsi";
     public static final String BB_LIVE_ADVICE_LOSS_CAP_MAX_ABS = "bb.live_advice.loss_cap.max_abs";
     public static final String BB_LIVE_ADVICE_LOSS_CAP_MAX_QUOTE = "bb.live_advice.loss_cap.max_quote";

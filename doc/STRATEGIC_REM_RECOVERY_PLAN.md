@@ -21,9 +21,9 @@ strategico primario.
 
 1. `STRATEGIC_REM_RECOVERY_PLAN.md`: charter sintetico e gerarchia vincolante.
 2. `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`: charter strategico operativo e mappa degli interventi.
-3. `archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`: piano correttivo BUY post-A0, vincolante fino a
-   implementazione e validazione A1.
-4. `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`: base scientifica del processo e delle formule.
+3. `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`: base scientifica del processo, delle formule e della
+   correzione A2 cadence/soglie ufficiali.
+4. `archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`: piano correttivo BUY post-A0, memoria del ciclo A1.
 5. `archived/BOLLINGER_CONTEXT_V1_PLAN.md`: baseline tecnica Context V1 precedente.
 6. `CURRENT_CONTEXT.md`: snapshot corrente cross-modulo.
 7. `STRATEGIC_REM_HANDOFF.md`: manuale operativo stabile.
@@ -31,8 +31,8 @@ strategico primario.
 
 Se i documenti confliggono, prevale questo charter; poi
 `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`; poi
-`archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`; poi
-`archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`; poi `archived/BOLLINGER_CONTEXT_V1_PLAN.md`.
+`archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`; poi
+`archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`; poi `archived/BOLLINGER_CONTEXT_V1_PLAN.md`.
 
 ## Processo Vincolante
 
@@ -96,7 +96,28 @@ ritorno a nomi `ml_*` o contratti legacy.
 
 ## Stato Strategico
 
-`BOLLINGER_CONTEXT_V1_A1_BUY_LITERATURE_ALIGNMENT_REQUIRED`.
+`BOLLINGER_CONTEXT_V1_A2_CADENCE_AND_OFFICIAL_THRESHOLDS_REQUIRED`.
+
+Aggiornamento Consiglio 2026-07-04:
+
+```text
+A2 - Correzione Cadence E Soglie Ufficiali Bollinger
+```
+
+A0/A1 hanno trattato la base 1m come obbligo strategico. Questa assunzione e' ritirata: la letteratura Bollinger non
+impone 1m, ma richiede barre coerenti e abbastanza liquide. Il vincolo corrente diventa:
+
+- cadence decisionale dichiarata;
+- stessa cadence per DocBrown, WATCH/BUY, SELL strategica e forensics;
+- default operativo A2: microbar 5s reale da `binance-microbar`;
+- profilo 1m ammesso solo se dichiarato e coerente end-to-end;
+- microbar sintetiche da backfill vietate come fonte decisionale;
+- soglie Bollinger primarie basate sul documento scientifico A2:
+  - reentry `0 <= %B <= 0.80`, con lower breach e conferma reentry;
+  - breakout `%B >= 1`, upper breach e `bandwidth_delta > 0`;
+  - `middle_slope` e `reentry_age` non sono hard-blocker Bollinger se non dichiarati da contract validato.
+
+Le sezioni A0/A1 sotto restano memoria storica della regressione e non prevalgono su A2.
 
 Aggiornamento Consiglio 2026-07-04:
 

@@ -168,6 +168,78 @@ Fino a implementazione A1:
 - una RUN senza BUY non puo' essere liquidata come semplice `INCONCLUSIVE`: se il trigger full-pass e' zero, deve
   essere classificata anche `NEGATIVE_OPERATIONAL_SIGNAL` per il BUY trigger.
 
+## Revisione Del Consiglio 2026-07-04 - A2 Correzione Cadence E Soglie Ufficiali
+
+La regressione RUN 118-120 dimostra che A0/A1 hanno introdotto due vincoli non sostenuti dalla letteratura:
+
+- `1m` e' stato trattato come obbligo Bollinger, mentre le regole ufficiali ammettono barre di qualunque durata se
+  abbastanza liquide;
+- soglie `%B` derivate da percentile storici hanno potuto restringere la reentry fino a valori incompatibili con la
+  semantica documentata di `%B`, per esempio `max_reentry_percent_b` inferiore a `0.20`.
+
+Decisione A2:
+
+```text
+La cadence decisionale diventa un parametro dichiarato.
+Profilo operativo corrente: 5s microbar reale.
+Profilo alternativo ammesso: 1m binance chiuso.
+Vietato mescolare profili dentro la stessa RUN.
+```
+
+### Interventi A2 Modulo Per Modulo
+
+hft-common:
+
+- aggiungere metadata numerici per dichiarare `decision_source_bucket_microbar`;
+- aggiungere `bb.decision.interval_seconds` come chiave di profilo;
+- mantenere `decision_synthetic_backfill` come blocker se la fonte e' microbar.
+
+influxer:
+
+- nessuna nuova fonte decisionale sintetica;
+- microbar live scritte da stream restano ammesse;
+- microbar da backfill 1m devono restare `synthetic_backfill=true` e non possono generare BUY/SELL strategici.
+
+DocBrown:
+
+- leggere storico, research e live-score dalla cadence dichiarata;
+- default A2: `bb.decision.interval_seconds=5`, quindi `binance-microbar`;
+- pubblicare nel payload advice `decision_source_bucket`, `decision_source_bucket_microbar`,
+  `decision_interval_seconds`, `decision_candle_state`, `decision_candle_count`, `decision_max_gap_seconds`,
+  `decision_synthetic_backfill`;
+- fissare reentry `max_percent_b=0.80` salvo configurazione piu' prudente ma non sotto `0.20`;
+- fissare breakout `min_percent_b=1.0`;
+- non pubblicare `bb_middle_slope` e `bb_reentry_age_seconds` come hard-blocker Bollinger se non sono parte del
+  contratto validato.
+
+ACDC WATCH/BUY:
+
+- accettare solo profili coerenti:
+  - `binance` + `60s` + closed;
+  - `binance-microbar` + `5s` + non synthetic;
+- reentry BUY richiede lower breach, `bb_reentry_confirmed`, `%B >= 0`, `%B <= 0.80`, `%B <= 1`;
+- breakout BUY richiede upper breach, `%B >= 1`, `bandwidth_delta > 0`;
+- `middle_slope` e `reentry_age` sono opzionali se non dichiarati nel contract;
+- context gate resta separato dal trigger Bollinger e deve esporre reason granulare.
+
+SELL/forensics:
+
+- SELL strategica usa la stessa cadence decisionale del BUY;
+- il loss cap quote-aware puo' restare protezione economica meccanica separata;
+- `entry_*`, `sell_*` e replay devono mostrare cadence/bucket/synthetic flag.
+
+Kenshiro/hft-fe:
+
+- readiness non deve piu' significare solo `1m_alignment_ready`;
+- una RUN e' pronta se la cadence dichiarata e' coerente end-to-end e non sintetica;
+- le superfici `/management` e `/trades` devono esporre bucket, intervallo, candle count, gap e synthetic flag.
+
+Script/diagnostiche:
+
+- restano `DIAGNOSTIC_ONLY` se non passano da `/management`;
+- devono stampare la cadence decisionale effettiva;
+- non possono promuovere advice o avviare PAPER direttamente.
+
 ## Vincoli Da Non Rompere
 
 - REAL vietata.
