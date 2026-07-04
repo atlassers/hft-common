@@ -8,14 +8,16 @@ Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 
 1. `hft-common/doc/STRATEGIC_REM_RECOVERY_PLAN.md`
 2. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`
-3. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`
-4. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_PLAN.md`
-5. `hft-common/doc/CURRENT_CONTEXT.md`
-6. `hft-common/doc/STRATEGIC_REM_HANDOFF.md`
-7. `hft-common/doc/archived/BOLLINGER_ONLY_PLAN.md`
+3. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`
+4. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`
+5. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_PLAN.md`
+6. `hft-common/doc/CURRENT_CONTEXT.md`
+7. `hft-common/doc/STRATEGIC_REM_HANDOFF.md`
+8. `hft-common/doc/archived/BOLLINGER_ONLY_PLAN.md`
 
 Se i documenti confliggono, prevale il charter; poi
 `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`; poi
+`archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`; poi
 `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`; poi `archived/BOLLINGER_CONTEXT_V1_PLAN.md`.
 
 I documenti sotto `doc/acdc`, `doc/docbrown`, `doc/influxer`, `doc/hft-fe` e `doc/kenshiro` sono memoria storica di
@@ -89,10 +91,10 @@ In corso:
 Blocco corrente vincolante:
 
 ```text
-A0 - Allineamento 1m Decisionale
+A1 - Allineamento BUY Alla Letteratura Bollinger
 ```
 
-Policy corrente:
+Policy A0 corrente, da mantenere durante A1:
 
 - indicatori, contract, WATCH, BUY e SELL strategica devono usare candele 1m chiuse;
 - `binance` e' il bucket decisionale target;
@@ -105,7 +107,7 @@ Policy corrente:
 - microbar synthetic da backfill 1m espanso a 5s devono essere marcate e non usate come evidenza di micro timing;
 - nessuna nuova RUN PAPER prima di `1m_alignment_ready = true`.
 
-AS-IS codice verificato prima dell'intervento A0:
+AS-IS codice verificato prima dell'intervento A0, memoria storica di regressione:
 
 - DocBrown `InfluxSnapshotService` usa ancora `microbarBucketName()` per storico/live feature;
 - ACDC `InfluxSnapshotService` usa ancora `microbarBucketName()` per historical/current snapshot e preferisce microbar
@@ -152,8 +154,8 @@ Stato A0 deployato e verificato il 2026-07-04:
   `decision_candle_count=89`, `decision_max_gap_seconds=60`, `decision_synthetic_backfill=0`;
 - RUN PAPER 118 e' partita solo dopo readiness A0 vera, tramite `/management`;
 - RUN PAPER 118 e' stata fermata tramite `/management/actions/PAPER_STOP`;
-- RUN PAPER 118: `STOPPED`, `positions=0`, `openPositions=0`, PnL `0`, 100 decisioni `HOLD` con reason
-  `WATCH_WAITING_BUY_CONTRACT`;
+- RUN PAPER 118: `STOPPED`, `positions=0`, `openPositions=0`, PnL `0`; MySQL operativo mostra 2400 decisioni ENTRY
+  `HOLD`, con 2370 `WATCH_WAITING_BUY_CONTRACT` e 30 `WATCH_OPENED_WAITING_BUY_CONTRACT`;
 - tutte le 30 WATCH della RUN 118 sono state riconciliate a `ABANDONED` con reason
   `WATCH_ABANDONED_BY_PAPER_TERMINAL_RECONCILIATION`;
 - `/trades`/detail espone replay metadata e candle metadata: `source_bucket`, `interval_seconds` effettivo,

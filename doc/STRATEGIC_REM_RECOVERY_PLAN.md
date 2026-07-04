@@ -21,16 +21,18 @@ strategico primario.
 
 1. `STRATEGIC_REM_RECOVERY_PLAN.md`: charter sintetico e gerarchia vincolante.
 2. `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`: charter strategico operativo e mappa degli interventi.
-3. `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`: base scientifica del processo e delle formule.
-4. `archived/BOLLINGER_CONTEXT_V1_PLAN.md`: baseline tecnica Context V1 precedente.
-5. `CURRENT_CONTEXT.md`: snapshot corrente cross-modulo.
-6. `STRATEGIC_REM_HANDOFF.md`: manuale operativo stabile.
-7. `archived/BOLLINGER_ONLY_PLAN.md`: baseline storica e riferimento di regressione.
+3. `archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`: piano correttivo BUY post-A0, vincolante fino a
+   implementazione e validazione A1.
+4. `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`: base scientifica del processo e delle formule.
+5. `archived/BOLLINGER_CONTEXT_V1_PLAN.md`: baseline tecnica Context V1 precedente.
+6. `CURRENT_CONTEXT.md`: snapshot corrente cross-modulo.
+7. `STRATEGIC_REM_HANDOFF.md`: manuale operativo stabile.
+8. `archived/BOLLINGER_ONLY_PLAN.md`: baseline storica e riferimento di regressione.
 
 Se i documenti confliggono, prevale questo charter; poi
 `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`; poi
-`archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`; poi
-`archived/BOLLINGER_CONTEXT_V1_PLAN.md`.
+`archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`; poi
+`archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`; poi `archived/BOLLINGER_CONTEXT_V1_PLAN.md`.
 
 ## Processo Vincolante
 
@@ -94,7 +96,7 @@ ritorno a nomi `ml_*` o contratti legacy.
 
 ## Stato Strategico
 
-`BOLLINGER_CONTEXT_V1_CHARTER_ACTIVE_IMPLEMENTATION_IN_PROGRESS`.
+`BOLLINGER_CONTEXT_V1_A1_BUY_LITERATURE_ALIGNMENT_REQUIRED`.
 
 Aggiornamento Consiglio 2026-07-04:
 
@@ -126,7 +128,7 @@ Aggiornamento Consiglio 2026-07-04, armonizzazione integrale:
 1m_alignment_ready=false finche' ogni componente end-to-end non dichiara la stessa semantica temporale.
 ```
 
-A0 non e' chiuso se manca uno dei seguenti punti:
+A0 non e' dichiarabile pronto, e `1m_alignment_ready` deve restare falso, se manca uno dei seguenti punti:
 
 - DocBrown ML/research/live-score su `binance` 1m chiuso;
 - ACDC WATCH/BUY su `binance` 1m chiuso;
@@ -137,10 +139,10 @@ A0 non e' chiuso se manca uno dei seguenti punti:
 - hft-fe `/management` mostra readiness e blocker A0;
 - hft-fe `/trades` mostra source bucket, interval, candle count, max gap e synthetic backfill;
 - script diagnostici stampano `DIAGNOSTIC_ONLY` e provenance dati;
-- ogni report PAPER classifica l'evidenza come `VALID_STRATEGIC_EVIDENCE`, `DIAGNOSTIC_ONLY`, `INCONCLUSIVE` o
-  `INVALID_STRATEGIC_EVIDENCE`.
+- ogni report PAPER classifica l'evidenza come `VALID_STRATEGIC_EVIDENCE`, `NEGATIVE_OPERATIONAL_SIGNAL`,
+  `DIAGNOSTIC_ONLY`, `INCONCLUSIVE` o `INVALID_STRATEGIC_EVIDENCE`.
 
-Exit criteria tecnici della fase corrente:
+Exit criteria tecnici Context V1 gia' implementati prima di A1:
 
 - costanti, enum e reason Context V1 condivise;
 - DocBrown pubblica advice con setup, trigger, regime e context completo;
@@ -151,4 +153,27 @@ Exit criteria tecnici della fase corrente:
 - build, deploy e PAPER validation completate sui moduli toccati.
 
 La valutazione finanziaria resta PAPER-only e separata per setup/regime. Context V1 prosegue solo se migliora le
-metriche indicate nel piano vincolante.
+metriche indicate nel piano vincolante, ma prima deve superare A1: un runtime che non produce BUY per blocco sistematico
+del TriggerAudit non e' valutabile finanziariamente.
+
+Aggiornamento Consiglio 2026-07-04:
+
+```text
+A1 - Allineamento BUY Alla Letteratura Bollinger
+```
+
+La RUN PAPER `118` ha validato A0 come provenance, ma ha prodotto `0 BUY` e `0 posizioni`. MySQL mostra `2400`
+decisioni ENTRY, tutte `HOLD`, con blocco `WATCH_WAITING_BUY_CONTRACT`/`WATCH_OPENED_WAITING_BUY_CONTRACT`.
+
+Classificazione:
+
+- `VALID_STRATEGIC_EVIDENCE` per A0 provenance/readiness;
+- `NEGATIVE_OPERATIONAL_SIGNAL` per BUY trigger;
+- `INCONCLUSIVE` per PnL, per assenza di BUY/SELL.
+
+Vincolo fino a implementazione A1:
+
+```text
+nessuna nuova RUN PAPER puo' essere usata come evidenza strategica se WATCH/BUY non espone fail reason granulari e
+non applica il piano A1.
+```

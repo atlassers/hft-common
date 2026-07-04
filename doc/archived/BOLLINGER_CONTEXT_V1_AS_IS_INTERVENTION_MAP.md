@@ -162,8 +162,11 @@ Sintesi decisionale:
   - breakout buy-eligible solo se il live-score mostra breakout coerente;
   - reason BUY granulari obbligatori.
 
-Fino a implementazione A1, una RUN senza BUY non puo' essere liquidata come semplice `INCONCLUSIVE`: se il trigger
-full-pass e' zero, deve essere classificata anche `NEGATIVE_OPERATIONAL_SIGNAL` per il BUY trigger.
+Fino a implementazione A1:
+
+- non avviare nuove RUN PAPER come evidenza strategica;
+- una RUN senza BUY non puo' essere liquidata come semplice `INCONCLUSIVE`: se il trigger full-pass e' zero, deve
+  essere classificata anche `NEGATIVE_OPERATIONAL_SIGNAL` per il BUY trigger.
 
 ## Vincoli Da Non Rompere
 

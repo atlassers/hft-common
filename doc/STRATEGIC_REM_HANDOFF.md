@@ -142,13 +142,15 @@ Da introdurre solo quando DocBrown e ACDC sono compatibili:
 5. Se `/management/state` non espone ancora `1m_alignment_ready`, trattarlo come `false`.
 6. Verificare count per setup/regime e readiness context.
 7. Se A0 non e' pronto, fermarsi: nessuna nuova sequenza PAPER.
-8. Se non ci sono PAPER o posizioni aperte e A0 e' pronto, usare l'action approvata per generare una nuova sequenza PAPER.
-9. Dopo run PAPER, leggere `/management/runs/{executionId}`.
-10. Attribuire ogni BUY/SELL a setup, trigger, regime, gate context, reason e PnL.
-11. Classificare ogni report come `VALID_STRATEGIC_EVIDENCE`, `DIAGNOSTIC_ONLY`, `INCONCLUSIVE` o
-   `INVALID_STRATEGIC_EVIDENCE`.
-12. Separare sempre le metriche di breakout e reentry.
-13. Per analisi visiva usare `/trades`: selezione data, execution del giorno, simboli per execution, filtri fase
+8. Se A0 e' pronto ma A1 non e' implementato/verificato, fermarsi: nessuna nuova PAPER come evidenza strategica.
+9. Solo dopo A1 implementato/verificato, se non ci sono PAPER o posizioni aperte, usare l'action approvata per generare
+   una nuova sequenza PAPER.
+10. Dopo run PAPER, leggere `/management/runs/{executionId}`.
+11. Attribuire ogni BUY/SELL a setup, trigger, regime, gate context, reason e PnL.
+12. Classificare ogni report come `VALID_STRATEGIC_EVIDENCE`, `NEGATIVE_OPERATIONAL_SIGNAL`, `DIAGNOSTIC_ONLY`,
+   `INCONCLUSIVE` o `INVALID_STRATEGIC_EVIDENCE`.
+13. Separare sempre le metriche di breakout e reentry.
+14. Per analisi visiva usare `/trades`: selezione data, execution del giorno, simboli per execution, filtri fase
    WATCH/BUY/SELL, replay candle persistito e replay live Influx con refresh 1s.
 
 ## Stato A0 Verificato
@@ -164,7 +166,9 @@ Ultima verifica Consiglio: 2026-07-04.
   `decision_source_bucket=binance`, `decision_interval_seconds=60`, `decision_candle_state=CLOSED`,
   `decision_candle_count=89`, `decision_max_gap_seconds=60`, `decision_synthetic_backfill=0`.
 - RUN PAPER 118 avviata e fermata solo tramite `/management`.
-- RUN PAPER 118: `STOPPED`, 0 posizioni, 0 BUY, 0 SELL, PnL `0`, 100 decisioni `HOLD`.
+- RUN PAPER 118: `STOPPED`, 0 posizioni, 0 BUY, 0 SELL, PnL `0`.
+- Fonte MySQL operativa RUN 118: 2400 decisioni ENTRY `HOLD`, 2370 `WATCH_WAITING_BUY_CONTRACT`, 30
+  `WATCH_OPENED_WAITING_BUY_CONTRACT`.
 - Le WATCH della RUN 118 sono state riconciliate a `ABANDONED` con
   `WATCH_ABANDONED_BY_PAPER_TERMINAL_RECONCILIATION`.
 - Classificazione RUN 118:

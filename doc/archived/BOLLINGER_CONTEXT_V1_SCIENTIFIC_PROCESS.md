@@ -801,6 +801,7 @@ Classificazione scientifica delle prove:
 
 ```text
 VALID_STRATEGIC_EVIDENCE = DocBrown + ACDC + SELL strategica su 1m chiuso con metadata completi
+NEGATIVE_OPERATIONAL_SIGNAL = provenance valida ma nessun BUY/SELL per blocker operativo dominante misurato
 DIAGNOSTIC_ONLY = replay/live microbar 5s con source metadata completi
 INCONCLUSIVE = replay 1m, gap eccessivi, synthetic backfill, metadata mancanti
 INVALID_STRATEGIC_EVIDENCE = indicatori o SELL strategica su microbar/realtime nel ciclo corrente

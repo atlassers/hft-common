@@ -667,7 +667,17 @@ La diagnosi A1 deve essere ripetibile senza query manuali ad hoc.
 
 ## Exit Criteria A1
 
-A1 e' implementabile solo se il documento resta rispettato in ogni modulo.
+A1 e' implementabile solo se il documento resta rispettato in ogni modulo e se i conflitti aperti sono risolti prima
+del codice.
+
+Conflitti aperti da risolvere prima dell'implementazione:
+
+- `REGIME_RANGE` reentry: il documento scientifico iniziale lo elenca come hard gate, A1 lo riclassifica come
+  preferenza/quality gate finche' non e' provato che il hard gate non sterilizzi il BUY. Decisione A1 vincolante:
+  durante la prima implementazione `REGIME_RANGE` non deve essere hard gate se `REGIME_CHAOS=0`,
+  `REGIME_TREND_DOWN=0` e gli altri vincoli di rischio/momentum/volume passano.
+- `PAPER_ELIGIBLE` legacy: resta ammesso solo come alias transitorio per advice osservabili. Il nuovo runtime deve
+  esporre separatamente `PAPER_WATCH_ELIGIBLE` e `PAPER_BUY_ELIGIBLE`; la BUY puo' partire solo dal secondo stato.
 
 A1 e' verificato solo quando:
 
@@ -732,4 +742,3 @@ trade quando il segnale Bollinger setup-specifico esiste su 1m chiusa;
 nessun trade quando il segnale non esiste;
 diagnostica certa quando non si compra.
 ```
-
