@@ -771,6 +771,44 @@ decision_max_gap_seconds
 decision_staleness_seconds
 ```
 
+### Revisione Letteratura E Coerenza Di Campionamento
+
+Fonti di riferimento operative:
+
+- Bollinger Bands official rules: https://www.bollingerbands.com/rules
+- Bollinger Band Squeeze, StockCharts:
+  https://chartschool.stockcharts.com/table-of-contents/trading-strategies-and-models/trading-strategies/bollinger-band-squeeze
+- True Range, StockCharts:
+  https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-indicators/true-range
+- ATR, StockCharts:
+  https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-indicators/average-true-range-atr
+- Chandelier Exit, StockCharts:
+  https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-overlays/chandelier-exit
+
+Conclusione del Consiglio:
+
+- la letteratura non impone che il timeframe sia 1m; impone pero' che indicatori, conferme, contratti e test usino una
+  serie coerente;
+- Bollinger Squeeze non fornisce direzione da sola: il breakout va confermato con elementi aggiuntivi, nel nostro caso
+  trend, RSI, volume, ATR/risk e regime Context V1;
+- ATR/True Range usa high, low e close del periodo corrente e close precedente; Chandelier usa high/low di periodo e
+  ATR dello stesso periodo. Una microbar sintetica interpolata da 1m non contiene vera informazione intraminuto su
+  high/low/close e non puo' validare timing o stop 5s;
+- se il contratto storico e' calcolato su 1m, WATCH, BUY e SELL strategica devono restare su 1m chiuso. Una SELL su 5s
+  sarebbe un esperimento diverso, non una variante di Context V1.
+
+Classificazione scientifica delle prove:
+
+```text
+VALID_STRATEGIC_EVIDENCE = DocBrown + ACDC + SELL strategica su 1m chiuso con metadata completi
+DIAGNOSTIC_ONLY = replay/live microbar 5s con source metadata completi
+INCONCLUSIVE = replay 1m, gap eccessivi, synthetic backfill, metadata mancanti
+INVALID_STRATEGIC_EVIDENCE = indicatori o SELL strategica su microbar/realtime nel ciclo corrente
+```
+
+Ogni report PAPER deve dichiarare la classe di evidenza. Un PnL positivo senza classe `VALID_STRATEGIC_EVIDENCE` non
+puo' promuovere la strategia.
+
 ## Validazione Scientifica
 
 Ogni RUN PAPER deve produrre:

@@ -120,6 +120,26 @@ La chiusura A0 richiede inoltre:
 - lookback sufficiente per EMA50 e volume ratio 1m/20m;
 - divieto di ricostruire la fonte decisionale aggregando realtime o microbar.
 
+Aggiornamento Consiglio 2026-07-04, armonizzazione integrale:
+
+```text
+1m_alignment_ready=false finche' ogni componente end-to-end non dichiara la stessa semantica temporale.
+```
+
+A0 non e' chiuso se manca uno dei seguenti punti:
+
+- DocBrown ML/research/live-score su `binance` 1m chiuso;
+- ACDC WATCH/BUY su `binance` 1m chiuso;
+- ACDC SELL strategica su `binance` 1m chiuso;
+- loss cap quote-aware separato come protezione economica di esecuzione;
+- influxer marca microbar sintetiche da backfill;
+- Kenshiro espone `1m_alignment_ready` e blocker A0 specifici;
+- hft-fe `/management` mostra readiness e blocker A0;
+- hft-fe `/trades` mostra source bucket, interval, candle count, max gap e synthetic backfill;
+- script diagnostici stampano `DIAGNOSTIC_ONLY` e provenance dati;
+- ogni report PAPER classifica l'evidenza come `VALID_STRATEGIC_EVIDENCE`, `DIAGNOSTIC_ONLY`, `INCONCLUSIVE` o
+  `INVALID_STRATEGIC_EVIDENCE`.
+
 Exit criteria tecnici della fase corrente:
 
 - costanti, enum e reason Context V1 condivise;

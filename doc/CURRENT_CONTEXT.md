@@ -18,6 +18,10 @@ Se i documenti confliggono, prevale il charter; poi
 `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`; poi
 `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`; poi `archived/BOLLINGER_CONTEXT_V1_PLAN.md`.
 
+I documenti sotto `doc/acdc`, `doc/docbrown`, `doc/influxer`, `doc/hft-fe` e `doc/kenshiro` sono memoria storica di
+sessione. Possono spiegare perche' esistono microbar, REAL, SHADOW o reversal legacy, ma non sono fonte operativa se
+contraddicono la gerarchia sopra.
+
 ## Vincoli Correnti
 
 - REAL vietata.
@@ -107,6 +111,16 @@ AS-IS codice verificato:
 - DocBrown `InfluxSnapshotService` usa ancora `microbarBucketName()` per storico/live feature;
 - ACDC `InfluxSnapshotService` usa ancora `microbarBucketName()` per historical/current snapshot e preferisce microbar
   nel replay source fallback;
+- ACDC SELL usa `PaperRunService.exitSnapshot(...)` sullo snapshot corrente del paper loop; finche' quello snapshot e'
+  microbar-driven, anche SELL strategica non e' A0-compliant;
+- `GuardEvaluator` contiene gia' loss cap quote-aware tramite `NET_LOSS_QUOTE`, ma non espone ancora metadati separati
+  decisione/esecuzione SELL;
+- influxer `ShortRetentionBucketBackfillJob` espande candele 1m in microbar 5s interpolati; serve flag
+  `synthetic_backfill` prima che il replay possa essere interpretato correttamente;
+- Kenshiro `/management/state` espone `bbReady`, ma non ancora `1m_alignment_ready` e blocker A0 dedicati;
+- hft-fe `/trades` mostra replay Influx/MySQL, ma non ancora `source_bucket`, `interval_seconds`, `candle_count`,
+  `max_gap_seconds`, `synthetic_backfill` in modo vincolante;
+- script diagnostici ACDC sono `DIAGNOSTIC_ONLY`, ma non stampano ancora la provenance dati completa richiesta da A0.1;
 - `acdc_shared_runtime_config` descrive ancora microbar come condivisa da trading e ML;
 - hft-fe contiene superfici legacy con selettore REAL, mentre Kenshiro blocca `REAL_RUN`.
 - non esiste ancora un owner/runtime contract esplicito per `1m_alignment_ready`.
@@ -137,11 +151,13 @@ Context V1 avrebbe tenuto 2 trade con netto `-0.1464585003`, migliorando il camp
 ## Prossimo Step Operativo
 
 1. Eseguire il blocco A0 del charter AS-IS: audit e progetto/implementazione dell'allineamento 1m decisionale.
-2. Non avviare PAPER finche' DocBrown e ACDC non usano la stessa base 1m chiusa per contract/current state.
+2. Non avviare PAPER finche' DocBrown e ACDC non usano la stessa base 1m chiusa per contract/current state/SELL
+   strategica.
 3. Definire ed esporre `1m_alignment_ready` con blocker specifici in `/management/state`.
 4. Definire soglie operative per `decision_max_gap_seconds` e `decision_staleness_seconds`.
-5. Verificare build/test cross-repo dei moduli toccati.
-6. Deployare ogni modulo toccato prima di validazione operativa.
-7. Fare check del Consiglio contro `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md` e
+5. Definire metadata obbligatori per replay/decisione/SELL execution e classificazione evidenza PAPER.
+6. Verificare build/test cross-repo dei moduli toccati.
+7. Deployare ogni modulo toccato prima di validazione operativa.
+8. Fare check del Consiglio contro `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md` e
    `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`.
-8. Avviare PAPER solo dopo `1m_alignment_ready = true`, stato `/management` pulito e contract completo.
+9. Avviare PAPER solo dopo `1m_alignment_ready = true`, stato `/management` pulito e contract completo.

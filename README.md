@@ -2,6 +2,27 @@
 
 Shared Java contracts for the HFT REM workspace.
 
+## Strategic Docs
+
+For the current REM cycle, read the binding documents in this order:
+
+1. `doc/RULES.md`
+2. `doc/STRATEGIC_REM_RECOVERY_PLAN.md`
+3. `doc/archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`
+4. `doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`
+5. `doc/CURRENT_CONTEXT.md`
+6. `doc/STRATEGIC_REM_HANDOFF.md`
+
+Current binding constraint:
+
+```text
+REAL forbidden.
+PAPER only through /management.
+Decision indicators, contract, WATCH, BUY and strategic SELL use closed 1m candles from binance.
+5s microbar is replay/diagnostics/timing/gap/execution observation only.
+No new PAPER RUN before 1m_alignment_ready=true.
+```
+
 ## Artifact
 
 ```text

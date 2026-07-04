@@ -2,6 +2,27 @@
 
 Data: 2026-06-28.
 
+## Avviso Di Precedenza 2026-07-04
+
+Questo documento resta baseline storica e riferimento di regressione. Non e' il charter strategico corrente.
+
+Prevalgono:
+
+1. `../STRATEGIC_REM_RECOVERY_PLAN.md`;
+2. `BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`;
+3. `BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`.
+
+Ogni riferimento a run operative, SELL, MFE, microbar, SHADOW o REAL va letto come storico se non e' compatibile con il
+vincolo corrente:
+
+```text
+REAL vietata
+PAPER solo da /management
+Context V1 attivo
+A0 1m decisionale obbligatorio prima di nuove PAPER RUN
+SELL senza MFE come condizione
+```
+
 ## Scopo
 
 Questo piano migliora l'AS-IS senza cambiare famiglia strategica.

@@ -743,8 +743,8 @@ Interventi in `InfluxSnapshotService`:
    - snapshot decisionale 1m chiuso;
    - replay microbar;
    - diagnostica realtime.
-3. Impedire che `binance-microbar` alimenti WATCH/BUY.
-4. Impedire che `binance-realtime` alimenti WATCH/BUY.
+3. Impedire che `binance-microbar` alimenti WATCH/BUY/SELL strategica.
+4. Impedire che `binance-realtime` alimenti WATCH/BUY/SELL strategica.
 5. Esporre bar count/gap diagnostics per replay e forensics.
 6. Evitare che `putEmptyContext` produca falsi pass. Mancanza feature deve fallire chiusa in WATCH.
 7. Esporre e congelare in entry:
@@ -1025,6 +1025,111 @@ Validazione:
 - test mirati DocBrown/ACDC.
 - build FE/Kenshiro se cambia payload/UI.
 - nessuna PAPER RUN finche' `1m_alignment_ready` non e' vero.
+
+### Blocco A0.1 - Armonizzazione Integrale Del Consiglio
+
+Obiettivo: eliminare ambiguita' tra documenti, codice, script, ML, UI e letteratura prima di implementare o validare A0.
+
+Verdetto Consiglio 2026-07-04:
+
+```text
+RUN evidence status = BLOCKED_UNTIL_A0_HARMONIZED
+strategy clock = 1m closed candle
+execution observation clock = 5s live microbar, never synthetic
+historical evidence clock = same as strategy clock unless a new charter is approved
+```
+
+Regola di armonizzazione:
+
+- un documento storico, script, README, endpoint, payload o UI che parla di microbar come base BUY/SELL strategica e'
+  superato dal charter corrente;
+- il codice AS-IS puo' essere letto per mappare lacune, ma non puo' essere usato come prova che la strategia sia gia'
+  corretta;
+- ogni run prodotta con semantica mista deve essere etichettata `PRE_A0_MIXED_GRANULARITY`, anche se il PnL e'
+  positivo;
+- nessuna nuova evidenza strategica puo' essere accettata senza provenienza dati completa.
+
+Matrice vincolante per componente:
+
+| Componente | Ruolo strategico | Fonte ammessa | AS-IS verificato | Intervento richiesto |
+| --- | --- | --- | --- | --- |
+| `influxer` | produce candele e bucket | `binance` 1m chiuso per decisione; `binance-realtime` UI; `binance-microbar` replay | backfill short-retention espande candele 1m in microbar 5s interpolati | marcare synthetic/backfill e impedire che questi punti siano letti come microbar live |
+| `DocBrown` ML/research/live-score | genera candidate/advice e contract | `binance` 1m chiuso | `InfluxSnapshotService` usa ancora `microbarBucketName()` per storico/live feature | introdurre reader decisionale 1m, metadata decision snapshot e fail-closed su lookback/gap/staleness |
+| script ML/diagnostici | supporto diagnostico | endpoint `/management` o DocBrown solo se `DIAGNOSTIC_ONLY` | `acdc-run-rem-ml.sh` e' diagnostico ma non stampa source bucket/interval/gap/synthetic | ogni script che legge o produce evidenza deve stampare ruolo, bucket, interval, candle state e synthetic flag |
+| `ACDC WATCH/BUY` | decisione ingresso PAPER | stessa 1m chiusa di DocBrown | `InfluxSnapshotService` preferisce microbar e `ticksInWindowWithSource` fallback microbar->binance | separare API decisionale 1m da API replay, validare contract/current metadata prima di trigger/context |
+| `ACDC SELL` | uscita strategica e protezione economica | 1m chiusa per segnali; prezzo eseguibile solo loss cap meccanico | `PaperRunService.exitSnapshot` usa snapshot corrente; `GuardEvaluator` ha loss cap quote-aware ma senza metadati granularita' | separare decision source da execution source e vietare microbar per invalidazioni/target/trailing |
+| `ACDC forensics` | analisi post trade | replay dichiarato, non decisionale | forensics puo' analizzare finestre post-sell a granularita' variabile | classificare inconclusive se gap/synthetic/1m non permettono conclusioni 5s |
+| `Kenshiro /management` | owner operativo readiness | deve esporre `1m_alignment_ready` e blocker | `ManagementState` espone `bbReady`, non A0 readiness dedicata | aggiungere readiness A0 distinta da `bbReady` e bloccare PAPER se falsa |
+| `hft-fe /management` | cockpit operativo | mostra readiness e blocker A0 | mostra `bbReady`, ma non il contratto A0 completo | visualizzare `1m_alignment_ready`, bucket/interval/candle state/gap/staleness e blocco PAPER |
+| `hft-fe /trades` | replay e audit | replay esplicito con source metadata | mostra `Influx live`/`MySQL archive`, non tutti i campi A0 richiesti | mostrare `source_bucket`, `interval_seconds`, `candle_count`, `max_gap_seconds`, `synthetic_backfill` e SELL decision/execution split |
+| documenti `hft-common/doc/*` | memoria storica | root skill + archived charter | esistono sessioni storiche microbar/REAL/reversal superate | trattarle come archivio, non come fonte operativa, salvo citazione esplicita del charter |
+
+Metadata minimi non negoziabili:
+
+```text
+decision_source_bucket
+decision_interval_seconds
+decision_candle_state
+decision_timestamp_semantics
+decision_feature_window_minutes
+decision_candle_count
+decision_max_gap_seconds
+decision_staleness_seconds
+decision_synthetic_backfill
+entry_decision_source_bucket
+entry_decision_interval_seconds
+entry_decision_candle_state
+sell_decision_source_bucket
+sell_decision_interval_seconds
+sell_decision_candle_state
+sell_execution_source_bucket
+sell_execution_interval_seconds
+sell_synthetic_backfill
+replay_source_bucket
+replay_interval_seconds
+replay_candle_count
+replay_max_gap_seconds
+replay_synthetic_backfill
+```
+
+Readiness owner:
+
+- `Kenshiro /management/state` e' owner di `1m_alignment_ready`.
+- `DocBrown` e `ACDC` sono source di dettaglio; non possono dichiararsi pronti se la base dati non e' `binance` 1m
+  chiusa.
+- `hft-fe` consuma e rende visibile la readiness; non la calcola autonomamente.
+
+Blocker A0 obbligatori:
+
+- `A0_DOCBROWN_DECISION_SOURCE_NOT_1M_CLOSED`;
+- `A0_ACDC_WATCH_SOURCE_NOT_1M_CLOSED`;
+- `A0_ACDC_SELL_SOURCE_NOT_1M_CLOSED`;
+- `A0_DECISION_LOOKBACK_INSUFFICIENT`;
+- `A0_DECISION_GAP_TOO_WIDE`;
+- `A0_DECISION_STALE`;
+- `A0_REPLAY_METADATA_MISSING`;
+- `A0_SYNTHETIC_MICROBAR_USED_AS_LIVE`;
+- `A0_FE_REAL_SURFACE_VISIBLE`;
+- `A0_SCRIPT_SOURCE_METADATA_MISSING`.
+
+Regola per la letteratura:
+
+- Bollinger setup, `%B`, BandWidth, EMA, RSI, ATR e Chandelier sono interpretati su barre coerenti; il timeframe puo'
+  essere scelto, ma non mischiato dentro lo stesso esperimento.
+- Nel ciclo corrente il timeframe scelto e' 1m chiuso. Ogni microbar 5s e' una misura di esecuzione/replay, non una
+  nuova base scientifica.
+- La Squeeze non e' direzionale da sola; richiede conferma di breakout/volume/trend. Questo giustifica il gate Context
+  V1 e vieta BUY su sola contrazione di banda.
+- ATR/True Range e Chandelier richiedono high/low/close di periodo e quindi non devono essere ricavati da microbar
+  sintetiche interpolate come se fossero movimento intraminuto reale.
+
+Exit criteria A0.1:
+
+- ogni componente nella matrice ha un owner implementativo e un test o diagnostica associata;
+- `1m_alignment_ready=false` finche' anche un solo blocker A0 e' presente;
+- FE e handoff rendono impossibile confondere replay con fonte decisionale;
+- gli script diagnostici non producono output privo di provenance dati;
+- i documenti storici restano consultabili ma non possono contraddire il charter corrente.
 
 ### Blocco A - Diagnostica Zero-Risk
 

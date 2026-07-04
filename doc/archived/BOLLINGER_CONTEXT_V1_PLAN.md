@@ -2,6 +2,29 @@
 
 Data: 2026-06-30.
 
+## Avviso Di Precedenza 2026-07-04
+
+Questo documento e' baseline tecnica storica del ciclo Context V1. Non e' piu' il charter operativo primario.
+
+Prevalgono:
+
+1. `../STRATEGIC_REM_RECOVERY_PLAN.md`;
+2. `BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`;
+3. `BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`.
+
+Ogni passaggio di questo documento che non dichiara esplicitamente il blocco A0 deve essere letto con il vincolo
+corrente:
+
+```text
+indicatori / contract / WATCH / BUY / SELL strategica = candele 1m chiuse da binance
+microbar 5s = replay, diagnostica, timing, gap detection, osservazione esecuzione
+REAL = vietata
+SHADOW = non operativo
+```
+
+Se questo documento usa il termine "vincolante", il vincolo e' valido solo se compatibile con A0 e con il charter
+AS-IS corrente.
+
 ## Scopo
 
 Questo piano e' il vincolo strategico successivo a `BOLLINGER_ONLY_V2`.
