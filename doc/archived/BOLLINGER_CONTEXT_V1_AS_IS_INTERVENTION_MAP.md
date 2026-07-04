@@ -1399,11 +1399,14 @@ Dopo implementazione:
 2. RSI reentry:
    - proposta: max `62`, eventualmente `min(candidateP90, 62)`.
 3. RSI breakout:
-   - proposta: `50 <= RSI <= 70/75`, evitare `78` salvo evidenza.
+   - vincolo operativo: `contract_min_breakout_rsi` non puo' scendere sotto `50`;
+   - vincolo operativo: `contract_max_breakout_rsi` non puo' superare `75`;
+   - `78` e' vietato nel contratto corrente salvo nuova evidenza PAPER setup-specifica.
 4. Loss cap quote:
    - proposta iniziale: `0.06` USDC soft, `0.08` hard per size 25 USDC.
 5. Volume breakout:
-   - proposta: min `1.3` o `1.5` rispetto a baseline, da calibrare.
+   - vincolo operativo corrente: min `1.30` rispetto a baseline stessa cadence;
+   - `1.5` resta possibile solo come irrigidimento futuro su evidenza false-breakout, non come default implicito.
 6. Uso di ATR:
    - reentry: limite volatilita'/chaos;
    - breakout: limite overextension e trailing/profit-protection Chandelier su posizioni gia' aperte.

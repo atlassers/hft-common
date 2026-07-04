@@ -341,6 +341,28 @@ Verifica Consiglio 2026-07-04:
   `a0Blockers=[]`, `blockers=[]`, `paperRunning=false`, `openPositions=0`, advice corrente con
   `decision_source_bucket=binance-microbar`, `decision_interval_seconds=5`, `decision_synthetic_backfill=0`.
 
+## Stato Context Literature Alignment MS969
+
+Verifica Consiglio 2026-07-05:
+
+- Gli indicatori Context V1 restano parte del contratto: EMA, RSI, volume ratio, ATR/risk e regime non vengono rimossi
+  perche' filtrano falsi positivi del Bollinger puro.
+- Il loro uso e' vincolato come conferma/rischio, non come sostituto del trigger Bollinger.
+- Soglie operative centralizzate in `hft-common`:
+  - breakout RSI: `50 <= RSI <= 75`;
+  - reentry RSI cap: `RSI <= 62`;
+  - breakout volume ratio min: `1.30`;
+  - squeeze: `bb_bandwidth_percentile <= 0.20`, non BandWidth assoluto;
+  - range: `abs(ema50_slope) <= 0.0015`, `bb_bandwidth_percentile <= 0.70`, `atr_pct <= 0.015`;
+  - chaos: `atr_pct > 0.025` oppure `volume_ratio > 3.00`.
+- DocBrown genera `contract_min_breakout_rsi` con floor `50` e cap `75`, mantenendo l'adattivita' storica solo dentro
+  la banda letteratura-allineata.
+- ACDC e DocBrown generano feature live/storiche con gli stessi default condivisi.
+- MySQL Flyway ACDC V99 aggiunge/aggiorna le chiavi runtime:
+  `bb.context.breakout.min_rsi`, `bb.context.breakout.max_rsi`,
+  `bb.context.breakout.min_volume_ratio`, `bb.context.reentry.max_rsi`,
+  `bb.context.reentry.max_percent_b`.
+
 ## Stato Live Verificato
 
 Ultimo stato consolidato prima dell'implementazione Context V1:

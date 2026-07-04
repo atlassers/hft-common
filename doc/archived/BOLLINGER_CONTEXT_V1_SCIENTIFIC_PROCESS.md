@@ -501,6 +501,16 @@ RSI <= 62
 preferibile: 35 <= RSI <= 62
 ```
 
+Regola operativa Context V1:
+
+```text
+contract_max_oversold_recovery_rsi = min(candidate_p90_rsi, bb.context.reentry.max_rsi)
+bb.context.reentry.max_rsi default = 62
+```
+
+Il limite inferiore `35` resta preferenza diagnostica, non hard gate di fase corrente: introdurlo come blocco
+eliminerebbe recuperi mean-reversion senza evidenza PAPER sufficiente.
+
 Proposta breakout:
 
 ```text
@@ -508,6 +518,18 @@ Proposta breakout:
 ```
 
 Nota: RSI `78` puo' essere troppo permissivo per micro-trade con fee alte, salvo evidenza storica per setup/simbolo.
+
+Regola operativa Context V1:
+
+```text
+contract_min_breakout_rsi = min(max(candidate_p10_rsi, bb.context.breakout.min_rsi), bb.context.breakout.max_rsi)
+contract_max_breakout_rsi = max(min(candidate_p90_rsi, bb.context.breakout.max_rsi), contract_min_breakout_rsi)
+bb.context.breakout.min_rsi default = 50
+bb.context.breakout.max_rsi default = 75
+```
+
+Questa e' una banda di conferma momentum, non il trigger primario. Il trigger primario resta Bollinger:
+upper breach, `%B >= 1` e `bandwidth_delta > 0`.
 
 ### ATR
 
@@ -724,6 +746,23 @@ AND volume_ratio >= contract_min_volume_ratio
 AND atr_pct <= contract_max_atr_pct
 AND budget/sizing pass
 ```
+
+Soglie Context V1 operative:
+
+```text
+contract_min_volume_ratio = max(candidate_p25_volume_ratio, bb.context.breakout.min_volume_ratio)
+bb.context.breakout.min_volume_ratio default = 1.30
+REGIME_SQUEEZE = bb_bandwidth_percentile <= 0.20
+REGIME_RANGE = abs(ema50_slope) <= 0.0015
+               AND bb_bandwidth_percentile <= 0.70
+               AND atr_pct <= 0.015
+REGIME_CHAOS = atr_pct > 0.025 OR volume_ratio > 3.00
+```
+
+`REGIME_SQUEEZE` usa il percentile BandWidth, non una soglia assoluta di BandWidth, per rispettare la definizione di
+squeeze come compressione relativa rispetto alla storia recente dello strumento. Le soglie regime/ATR/volume non sono
+formule Bollinger pure: sono filtri di qualita'/rischio Context V1 dichiarati, applicati sulla stessa cadence del
+contratto.
 
 ## SELL Senza MFE
 

@@ -68,6 +68,17 @@ public final class RemConstants {
     public static final BigDecimal BOLLINGER_REENTRY_MIN_PERCENT_B = new BigDecimal("0.20");
     public static final BigDecimal BOLLINGER_REENTRY_MAX_PERCENT_B = new BigDecimal("0.80");
     public static final BigDecimal BOLLINGER_BREAKOUT_MIN_PERCENT_B = BigDecimal.ONE;
+    public static final BigDecimal CONTEXT_BREAKOUT_MIN_RSI_DEFAULT = new BigDecimal("50");
+    public static final BigDecimal CONTEXT_BREAKOUT_MAX_RSI_DEFAULT = new BigDecimal("75");
+    public static final BigDecimal CONTEXT_REENTRY_MAX_RSI_DEFAULT = new BigDecimal("62");
+    public static final BigDecimal CONTEXT_BREAKOUT_MIN_VOLUME_RATIO_DEFAULT = new BigDecimal("1.30");
+    public static final BigDecimal CONTEXT_VOLUME_SPIKE_RISK_RATIO_DEFAULT = new BigDecimal("2.50");
+    public static final BigDecimal CONTEXT_SQUEEZE_MAX_BANDWIDTH_PERCENTILE_DEFAULT = new BigDecimal("0.20");
+    public static final BigDecimal CONTEXT_RANGE_MAX_EMA50_SLOPE_ABS_DEFAULT = new BigDecimal("0.0015");
+    public static final BigDecimal CONTEXT_RANGE_MAX_BANDWIDTH_PERCENTILE_DEFAULT = new BigDecimal("0.70");
+    public static final BigDecimal CONTEXT_RANGE_MAX_ATR_PCT_DEFAULT = new BigDecimal("0.015");
+    public static final BigDecimal CONTEXT_CHAOS_MAX_ATR_PCT_DEFAULT = new BigDecimal("0.025");
+    public static final BigDecimal CONTEXT_CHAOS_MAX_VOLUME_RATIO_DEFAULT = new BigDecimal("3.00");
     public static final BigDecimal BOLLINGER_ZONE_BELOW_BAND = BigDecimal.ONE;
     public static final BigDecimal BOLLINGER_ZONE_INSIDE_BANDS = new BigDecimal("2");
     public static final BigDecimal BOLLINGER_ZONE_ABOVE_BAND = new BigDecimal("3");
@@ -726,6 +737,7 @@ public final class RemConstants {
     public static final String DOCUMENTATION_UPDATED = "documentationUpdated";
     public static final String FORENSIC_REPORT_AVAILABLE = "forensicReportAvailable";
     public static final String BB_CONTEXT_BREAKOUT_MAX_RSI = "bb.context.breakout.max_rsi";
+    public static final String BB_CONTEXT_BREAKOUT_MIN_RSI = "bb.context.breakout.min_rsi";
     public static final String BB_CONTEXT_BREAKOUT_MIN_VOLUME_RATIO = "bb.context.breakout.min_volume_ratio";
     public static final String BB_CONTEXT_REENTRY_MAX_PERCENT_B = "bb.context.reentry.max_percent_b";
     public static final String BB_DECISION_INTERVAL_SECONDS = "bb.decision.interval_seconds";

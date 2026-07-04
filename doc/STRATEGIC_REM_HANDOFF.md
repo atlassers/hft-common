@@ -337,6 +337,40 @@ Verifica operativa:
   - exit `EXIT_BB_REENTRY_CAPTURE`;
   - blocker economico misurato: `WATCH_ECONOMIC_EDGE_BLOCKED=47`.
 
+## Stato Context Literature Alignment
+
+Ultima verifica Consiglio: 2026-07-05.
+
+- Bollinger resta trigger primario: lower/upper breach, `%B`, BandWidth delta e setup dichiarato.
+- EMA, RSI, volume ratio, ATR/risk e regime restano filtri Context V1 hard-gate, ma devono essere soglie dichiarate e
+  centralizzate.
+- Valori runtime attesi:
+  - `bb.context.breakout.min_rsi=50`;
+  - `bb.context.breakout.max_rsi=75`;
+  - `bb.context.breakout.min_volume_ratio=1.30`;
+  - `bb.context.reentry.max_rsi=62`;
+  - `bb.context.reentry.max_percent_b=0.80`.
+- Feature attese in DocBrown e ACDC:
+  - `rsi_breakout_ok = 1` solo se `50 <= rsi14 <= 75`;
+  - `rsi_oversold_recovery = 1` solo se `rsi14 <= 62`;
+  - `volume_confirmation = 1` solo se `volume_ratio >= 1.30`;
+  - `bb_squeeze = 1` solo se `bb_bandwidth_percentile <= 0.20`.
+- Query runtime config:
+
+```bash
+docker exec mysql_container mysql -u hft_user -p'<password>' hft -e "
+select config_key, config_value, value_type, status
+from acdc_shared_runtime_config
+where config_key in (
+  'bb.context.breakout.min_rsi',
+  'bb.context.breakout.max_rsi',
+  'bb.context.breakout.min_volume_ratio',
+  'bb.context.reentry.max_rsi',
+  'bb.context.reentry.max_percent_b'
+)
+order by config_key;"
+```
+
 Query diagnostica approvata:
 
 ```bash
