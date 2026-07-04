@@ -92,6 +92,9 @@ Policy corrente:
 - `binance` e' il bucket decisionale target;
 - `binance-realtime` e' diagnostica/UI e non puo' autorizzare BUY;
 - `binance-microbar` e' replay/forensics/gap/timing e non puo' alimentare indicatori strategici;
+- la fonte decisionale 1m non puo' essere ricostruita aggregando realtime o microbar;
+- il decision snapshot deve esporre bucket, interval, candle state, feature window, candle count, max gap e staleness;
+- il lookback decisionale deve coprire EMA50 e volume ratio 1m/20m; una finestra da 15m e' insufficiente;
 - microbar synthetic da backfill 1m espanso a 5s devono essere marcate e non usate come evidenza di micro timing;
 - nessuna nuova RUN PAPER prima di `1m_alignment_ready = true`.
 
@@ -102,6 +105,7 @@ AS-IS codice verificato:
   nel replay source fallback;
 - `acdc_shared_runtime_config` descrive ancora microbar come condivisa da trading e ML;
 - hft-fe contiene superfici legacy con selettore REAL, mentre Kenshiro blocca `REAL_RUN`.
+- non esiste ancora un owner/runtime contract esplicito per `1m_alignment_ready`.
 
 ## Stato Live Verificato
 
@@ -130,8 +134,10 @@ Context V1 avrebbe tenuto 2 trade con netto `-0.1464585003`, migliorando il camp
 
 1. Eseguire il blocco A0 del charter AS-IS: audit e progetto/implementazione dell'allineamento 1m decisionale.
 2. Non avviare PAPER finche' DocBrown e ACDC non usano la stessa base 1m chiusa per contract/current state.
-3. Verificare build/test cross-repo dei moduli toccati.
-4. Deployare ogni modulo toccato prima di validazione operativa.
-5. Fare check del Consiglio contro `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md` e
+3. Definire ed esporre `1m_alignment_ready` con blocker specifici in `/management/state`.
+4. Definire soglie operative per `decision_max_gap_seconds` e `decision_staleness_seconds`.
+5. Verificare build/test cross-repo dei moduli toccati.
+6. Deployare ogni modulo toccato prima di validazione operativa.
+7. Fare check del Consiglio contro `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md` e
    `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`.
-6. Avviare PAPER solo dopo `1m_alignment_ready = true`, stato `/management` pulito e contract completo.
+8. Avviare PAPER solo dopo `1m_alignment_ready = true`, stato `/management` pulito e contract completo.

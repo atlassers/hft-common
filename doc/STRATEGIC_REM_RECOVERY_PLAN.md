@@ -106,6 +106,13 @@ Prima di nuove RUN PAPER, DocBrown e ACDC devono usare la stessa base decisional
 contract, WATCH e BUY. Microbar 5s resta solo replay/diagnostica/timing/gap detection. Le run prodotte prima della
 chiusura A0 non sono nuova evidenza strategica valida.
 
+La chiusura A0 richiede inoltre:
+
+- `1m_alignment_ready=true` esposto da `/management/state`;
+- decision snapshot con bucket, interval, candle state, feature window, candle count, max gap e staleness;
+- lookback sufficiente per EMA50 e volume ratio 1m/20m;
+- divieto di ricostruire la fonte decisionale aggregando realtime o microbar.
+
 Exit criteria tecnici della fase corrente:
 
 - costanti, enum e reason Context V1 condivise;

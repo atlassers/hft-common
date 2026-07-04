@@ -129,6 +129,8 @@ Decision freshness: l'ultima candela usabile e' l'ultima candela chiusa disponib
 Current 1m realtime bucket: non decisionale per contract/WATCH; ammesso solo per stato UI o diagnostica esplicita.
 Microbar bucket: non decisionale per indicatori strategici; ammesso per replay, gap detection, timing e forensics.
 Synthetic microbar backfill: mai equivalente a microbar live; deve essere marcato come synthetic_backfill.
+Decision source construction: vietato ricostruire la fonte decisionale aggregando `binance-realtime` o
+`binance-microbar`; la fonte decisionale deve leggere punti 1m chiusi dal bucket `binance`.
 ```
 
 Fino a chiusura dell'allineamento 1m end-to-end, non avviare nuove RUN PAPER.
@@ -454,6 +456,10 @@ Regole:
 5. `binance-microbar` puo' essere usato solo per replay, post-sell forensics, gap detection e timing.
 6. Se il dato replay e' 1m o sintetico, non puo' spiegare decisioni a precisione 5s.
 7. Se il contratto non dichiara la granularita' o se ACDC osserva una granularita' diversa, WATCH deve fallire chiusa.
+8. La candela 1m decisionale non puo' essere prodotta con `aggregateWindow` su bucket realtime o microbar.
+9. La feature window decisionale deve coprire il massimo periodo indicatore piu' warmup sufficiente; `15m` non basta
+   per EMA50 su base 1m.
+10. Finche' non sono definite soglie di staleness/gap decisionale, WATCH deve trattare il dato come non pronto.
 
 ### Principio 5: Documentare La Non-Conformita' AS-IS
 
@@ -466,6 +472,33 @@ Regole:
 3. Le descrizioni runtime config incoerenti devono essere corrette con nuova migration, non editando retroattivamente
    migration storiche gia' applicate.
 4. Il FE puo' mostrare dati legacy, ma non puo' presentare REAL come percorso operativo Context V1.
+
+### Lacune A0 Da Specificare Prima Del Codice
+
+Questi punti sono requisiti aperti, non dettagli implementativi opzionali:
+
+1. `1m_alignment_ready` deve avere un proprietario runtime esplicito. Preferenza: Kenshiro `/management/state`, con
+   dettaglio blocker per DocBrown, ACDC, replay e FE.
+2. La readiness deve essere `false` se manca uno dei campi:
+   - `decision_source_bucket`;
+   - `decision_interval_seconds`;
+   - `decision_candle_state`;
+   - `decision_feature_window_minutes`;
+   - `decision_candle_count`;
+   - `decision_max_gap_seconds`;
+   - `decision_staleness_seconds`.
+3. La feature window 1m deve essere separata dalla vecchia `rem.feature.window.minutes` se quella resta a `15`.
+   Indicazione minima: almeno 60 candele chiuse per coprire EMA50, Bollinger20, RSI14, ATR14 e volume ratio 1m/20m
+   con margine.
+4. La soglia max gap decisionale 1m deve essere definita prima del BUY. Proposta da validare: `max_gap_seconds <= 90`.
+5. La soglia staleness deve essere definita prima del BUY. Proposta da validare: ultima candela chiusa non piu' vecchia
+   di `120s` rispetto al tempo decisionale.
+6. Il contratto deve chiarire se `decision_feature_window_minutes` descrive:
+   - numero di minuti richiesti in query;
+   - numero di barre effettivamente usate;
+   - entrambe le cose. Preferenza: esporre anche `decision_candle_count`.
+7. Il replay deve restare separato dal decision snapshot: `source_bucket` replay non deve essere confuso con
+   `decision_source_bucket`.
 
 ## Mappa Interventi Per Modulo
 
@@ -494,10 +527,19 @@ Interventi:
    - `DECISION_INTERVAL_SECONDS`;
    - `DECISION_CANDLE_STATE`;
    - `DECISION_FEATURE_WINDOW_MINUTES`;
+   - `DECISION_CANDLE_COUNT`;
+   - `DECISION_MAX_GAP_SECONDS`;
+   - `DECISION_STALENESS_SECONDS`;
+   - `ONE_MINUTE_ALIGNMENT_READY`;
    - `ENTRY_DECISION_SOURCE_BUCKET`;
    - `ENTRY_DECISION_INTERVAL_SECONDS`;
    - `ENTRY_DECISION_CANDLE_STATE`;
+   - `ENTRY_DECISION_CANDLE_COUNT`;
+   - `ENTRY_DECISION_MAX_GAP_SECONDS`;
+   - `ENTRY_DECISION_STALENESS_SECONDS`;
    - `WATCH_DECISION_GRANULARITY_MISMATCH`;
+   - `WATCH_DECISION_STALE`;
+   - `WATCH_DECISION_GAP_TOO_WIDE`;
    - `WATCH_REENTRY_OVEREXTENDED`;
    - `WATCH_BREAKOUT_WEAK_CONFIRMATION`;
    - `EXIT_BB_CONTEXT_INVALIDATED`, solo se verra' implementata SELL fase 2.
@@ -525,7 +567,7 @@ Interventi in `InfluxSnapshotService`:
    - EMA: 9/21/50;
    - RSI: 14;
    - ATR: 14;
-   - volume ratio: 1m/20m o microbar equivalente dichiarato.
+   - volume ratio: 1m/20m.
 2. Per il percorso operativo Context V1, rimuovere l'equivoco "microbar equivalente": la base ammessa e' 1m chiusa.
 3. Separare i metodi per ruolo:
    - lettura decisionale 1m chiusa;
@@ -535,7 +577,10 @@ Interventi in `InfluxSnapshotService`:
    - `decision_source_bucket`;
    - `decision_interval_seconds`;
    - `decision_candle_state`;
-   - `decision_feature_window_minutes`.
+   - `decision_feature_window_minutes`;
+   - `decision_candle_count`;
+   - `decision_max_gap_seconds`;
+   - `decision_staleness_seconds`.
 5. Estrarre soglie regime hard-coded in costanti private nominate, oppure config condivisa se gia' pattern.
 6. Aggiungere audit feature per granularita':
    - numero barre disponibili;
@@ -547,6 +592,9 @@ Interventi in `InfluxSnapshotService`:
    - `interval_seconds != 60`;
    - il contratto non dichiara la granularita';
    - la sorgente e' `binance-realtime` o `binance-microbar`.
+8. Non riusare `microbarWindowMinutes=15` come lookback decisionale 1m se impedisce EMA50 o volume ratio 1m/20m.
+9. Non ricostruire le candele decisionali con `aggregateWindow(every: 60s)` da microbar/realtime: leggere il bucket
+   `binance` gia' popolato da candele chiuse.
 
 Interventi in `BlankRemCandidateService`:
 
@@ -651,6 +699,15 @@ Interventi in `InfluxSnapshotService`:
 4. Impedire che `binance-realtime` alimenti WATCH/BUY.
 5. Esporre bar count/gap diagnostics per replay e forensics.
 6. Evitare che `putEmptyContext` produca falsi pass. Mancanza feature deve fallire chiusa in WATCH.
+7. Esporre e congelare in entry:
+   - `entry_decision_source_bucket`;
+   - `entry_decision_interval_seconds`;
+   - `entry_decision_candle_state`;
+   - `entry_decision_candle_count`;
+   - `entry_decision_max_gap_seconds`;
+   - `entry_decision_staleness_seconds`.
+8. Non usare `ticksInWindowWithSource` come API generica per WATCH se continua a preferire microbar: il path BUY deve
+   chiamare una API decisionale dedicata.
 
 Interventi in `PreBuyWatchService`:
 
@@ -659,7 +716,9 @@ Interventi in `PreBuyWatchService`:
    - interval seconds = 60;
    - candle state = `CLOSED`;
    - feature window coerente con contract;
-   - max gap decisionale compatibile con 1m.
+   - candle count sufficiente;
+   - max gap decisionale compatibile con 1m;
+   - staleness compatibile con il tempo decisionale.
 2. In `reentryTriggerAudit`:
    - mantenere lower breach e reentry confirmed;
    - aggiungere controllo hard anti-overextension se disponibile:
@@ -889,9 +948,12 @@ Moduli:
 Deliverable:
 
 - contract/advice dichiara source bucket, interval, candle state e feature window.
+- contract/advice dichiara candle count, max gap e staleness decisionale.
 - DocBrown calcola contract e live-score su candele 1m chiuse.
 - ACDC WATCH calcola current state su candele 1m chiuse.
 - ACDC fallisce chiusa su mismatch di granularita'.
+- ACDC fallisce chiusa su dato decisionale stale o con gap troppo largo.
+- Kenshiro espone `1m_alignment_ready` e blocker specifici.
 - ACDC migration correttiva aggiorna descrizioni shared runtime config incoerenti.
 - FE Context V1 non presenta REAL come percorso operativo disponibile.
 - `/trades` mostra source bucket, interval seconds, candle count, max gap seconds e synthetic backfill.
@@ -900,6 +962,7 @@ Deliverable:
 Validazione:
 
 - audit statico dei lettori Influx.
+- audit runtime su almeno un simbolo liquido che dimostri `binance` 1m chiuso, gap e staleness.
 - test mirati DocBrown/ACDC.
 - build FE/Kenshiro se cambia payload/UI.
 - nessuna PAPER RUN finche' `1m_alignment_ready` non e' vero.
@@ -1015,6 +1078,8 @@ Dopo implementazione:
 
 - allineamento 1m dichiarato e verificato end-to-end;
 - DocBrown e WATCH usano la stessa base 1m chiusa;
+- `1m_alignment_ready=true` visibile da `/management/state`;
+- `decision_candle_count`, `decision_max_gap_seconds` e `decision_staleness_seconds` visibili per contract/entry;
 - `binance-realtime` e `binance-microbar` non alimentano BUY;
 - no-MFE SELL resta disabilitato;
 - reentry overextended non compra;

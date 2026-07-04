@@ -716,6 +716,10 @@ Campionamento:
 - se il replay mostra 1m, non puo' spiegare con precisione decisioni prese su 5s.
 - nel ciclo corrente, se WATCH usa microbar per indicatori/BUY, la run e' classificata `PRE_A0_MIXED_GRANULARITY` e
   non e' evidenza strategica valida.
+- nel ciclo corrente, la 1m decisionale deve provenire da candele chiuse nel bucket `binance`, non da aggregazione di
+  microbar o realtime.
+- la finestra decisionale deve contenere abbastanza candele 1m chiuse per il massimo periodo indicatore: EMA50 richiede
+  almeno 50 barre, quindi una finestra operativa da 15 minuti e' insufficiente.
 
 Metriche obbligatorie per replay:
 
@@ -725,6 +729,18 @@ interval_seconds
 candle_count
 max_gap_seconds
 synthetic_backfill = true/false
+```
+
+Metriche obbligatorie per decision snapshot:
+
+```text
+decision_source_bucket
+decision_interval_seconds
+decision_candle_state
+decision_feature_window_minutes
+decision_candle_count
+decision_max_gap_seconds
+decision_staleness_seconds
 ```
 
 ## Validazione Scientifica
