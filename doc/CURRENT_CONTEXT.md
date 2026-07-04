@@ -27,6 +27,9 @@ Se i documenti confliggono, prevale il charter; poi
 - Context V1 aggiunge regime, trend, momentum, volume e risk come feature contrattuali esplicite.
 - WATCH compra solo se passano trigger Bollinger setup-specifico e gate Context V1.
 - SELL fase 1 resta invariato rispetto a Bollinger-only, per isolare l'effetto dei gate di ingresso.
+- SELL strategica ragiona su candele 1m chiuse; microbar 5s non genera invalidazioni/target/trailing strategici.
+- Il loss cap quote-aware puo' usare prezzo eseguibile intraminuto solo come protezione economica meccanica, separata
+  dagli indicatori Bollinger/context.
 - WATCH e BUY non hanno cap numerici concorrenti; l'unico limite ammesso all'acquisto e' budget/exchange sizing.
 - Le stringhe operative devono stare in enum/costanti.
 - MySQL e container deployati sono obbligatori per validazione operativa.
@@ -88,10 +91,11 @@ A0 - Allineamento 1m Decisionale
 
 Policy corrente:
 
-- indicatori, contract, WATCH e BUY devono usare candele 1m chiuse;
+- indicatori, contract, WATCH, BUY e SELL strategica devono usare candele 1m chiuse;
 - `binance` e' il bucket decisionale target;
 - `binance-realtime` e' diagnostica/UI e non puo' autorizzare BUY;
-- `binance-microbar` e' replay/forensics/gap/timing e non puo' alimentare indicatori strategici;
+- `binance-microbar` e' replay/forensics/gap/timing/execution observation e non puo' alimentare indicatori strategici;
+- SELL deve esporre separatamente metadati di decisione 1m e metadati di esecuzione/replay 5s;
 - la fonte decisionale 1m non puo' essere ricostruita aggregando realtime o microbar;
 - il decision snapshot deve esporre bucket, interval, candle state, feature window, candle count, max gap e staleness;
 - il lookback decisionale deve coprire EMA50 e volume ratio 1m/20m; una finestra da 15m e' insufficiente;

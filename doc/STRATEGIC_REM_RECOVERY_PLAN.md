@@ -103,8 +103,15 @@ A0 - Allineamento 1m Decisionale
 ```
 
 Prima di nuove RUN PAPER, DocBrown e ACDC devono usare la stessa base decisionale a candele 1m chiuse per indicatori,
-contract, WATCH e BUY. Microbar 5s resta solo replay/diagnostica/timing/gap detection. Le run prodotte prima della
-chiusura A0 non sono nuova evidenza strategica valida.
+contract, WATCH, BUY e SELL strategica. Microbar 5s resta solo replay/diagnostica/timing/gap detection e osservazione
+di esecuzione. Le run prodotte prima della chiusura A0 non sono nuova evidenza strategica valida.
+
+Decisione SELL del Consiglio:
+
+- invalidazioni Bollinger/context, target, trailing e timeout ragionano su candela 1m chiusa;
+- microbar 5s non puo' generare segnali SELL strategici;
+- il loss cap quote-aware puo' osservare prezzo eseguibile intraminuto solo come protezione economica meccanica,
+  contrattuale e auditata separatamente da indicatori/regime.
 
 La chiusura A0 richiede inoltre:
 

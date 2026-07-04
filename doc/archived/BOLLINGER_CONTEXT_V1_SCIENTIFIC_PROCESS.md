@@ -572,6 +572,27 @@ max_net_return = max(net_return_t during position)
 
 Non deve essere condizione SELL.
 
+Granularita' scientifica SELL:
+
+```text
+SELL strategic evaluation = completed 1m bar
+SELL execution/forensics observation = optional 5s microbar
+```
+
+Razionale scientifico:
+
+- Bollinger Bands, `%B`, RSI, EMA, ATR e Chandelier Exit sono definiti su serie di barre/candele. Nel ciclo Context V1
+  la barra decisionale e' la candela 1m chiusa, quindi anche l'uscita strategica deve usare la stessa barra.
+- Cambiare granularita' tra BUY e SELL trasformerebbe il test in un esperimento misto: ingresso su indicatori 1m,
+  uscita su rumore/oscillazione 5s. Questa evidenza non e' confrontabile con rolling validation e contratto storico.
+- La microbar 5s puo' descrivere quanto bene o male viene eseguita una SELL gia' decisa, ma non puo' creare una
+  invalidazione Bollinger/context autonoma.
+- Un loss cap quote-aware puo' osservare il prezzo eseguibile intraminuto solo come protezione economica meccanica:
+  soglia, fee e formula devono essere contrattuali, congelate e auditabili. Non e' un indicatore di trend, regime,
+  momentum o mean reversion.
+- Microbar sintetiche generate da backfill 1m espanso a 5s non sono dati intraminuto reali e non possono validare
+  timing SELL a 5s.
+
 SELL fase immediata:
 
 ```text
@@ -612,6 +633,8 @@ Motivo:
 - su trade da circa 25 USDC, `bb_loss_cap_net_return = -0.008` consente circa `0.20` USDC di perdita;
 - la tolleranza operativa indicata e' circa `0.05` USDC;
 - una soglia quote-aware rende il rischio economico leggibile.
+- se questa guardia legge prezzo/microbar 5s, la reason deve dichiarare che e' protezione economica di esecuzione e deve
+  esporre `sell_execution_interval_seconds`, senza riclassificarla come segnale strategico 5s.
 
 SELL fase 2, solo dopo evidenza:
 
@@ -636,6 +659,9 @@ Chandelier/ATR opzionale:
 ```text
 long_stop = highest_high_since_entry - k * ATR
 ```
+
+Tutte le invalidazioni e gli stop indicator-based della fase 2 devono essere calcolati su candele 1m chiuse. La
+microbar 5s resta ammessa solo per execution timing, slippage, gap e forensics.
 
 Questa fase non deve essere implementata senza autorizzazione successiva.
 
@@ -702,8 +728,8 @@ Aggiornamento Consiglio 2026-07-04:
 
 ```text
 per il ciclo operativo corrente Bollinger Context V1:
-indicatori / contract / WATCH / BUY = 1m chiuso
-microbar 5s = replay, diagnostica, timing, gap detection
+indicatori / contract / WATCH / BUY / SELL strategica = 1m chiuso
+microbar 5s = replay, diagnostica, timing, gap detection, execution observation
 ```
 
 La possibilita' teorica di usare una base microbar resta valida solo come esperimento futuro separato. Non e' la base
@@ -716,6 +742,8 @@ Campionamento:
 - se il replay mostra 1m, non puo' spiegare con precisione decisioni prese su 5s.
 - nel ciclo corrente, se WATCH usa microbar per indicatori/BUY, la run e' classificata `PRE_A0_MIXED_GRANULARITY` e
   non e' evidenza strategica valida.
+- nel ciclo corrente, se SELL usa microbar per indicatori/invalidation/target/trailing, la run e' classificata
+  `PRE_A0_MIXED_GRANULARITY` e non e' evidenza strategica valida.
 - nel ciclo corrente, la 1m decisionale deve provenire da candele chiuse nel bucket `binance`, non da aggregazione di
   microbar o realtime.
 - la finestra decisionale deve contenere abbastanza candele 1m chiuse per il massimo periodo indicatore: EMA50 richiede

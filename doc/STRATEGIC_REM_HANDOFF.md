@@ -28,11 +28,15 @@ hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md
 - Context V1 richiede feature esplicite di regime, trend, momentum, volume e risk.
 - WATCH apre BUY solo se passano trigger Bollinger e gate Context V1.
 - SELL fase 1 resta quello Bollinger-only, senza nuove logiche fino a evidenza PAPER.
+- SELL strategica usa candele 1m chiuse per invalidazioni, target, trailing e timeout; microbar 5s non crea segnali
+  SELL strategici.
+- Loss cap quote-aware puo' usare prezzo eseguibile intraminuto solo come protezione economica meccanica, dichiarata e
+  auditata separatamente.
 - La finestra WATCH autorizza osservazione, non e' una condizione BUY.
 - BUY e WATCH non hanno cap numerici concorrenti; il limite effettivo e' budget/exchange sizing al momento della BUY.
 - Dal Consiglio 2026-07-04, prima di nuove RUN PAPER e' vincolante il blocco A0:
-  - indicatori, contract, WATCH e BUY su candele 1m chiuse;
-  - microbar 5s solo replay/diagnostica/timing/gap detection;
+  - indicatori, contract, WATCH, BUY e SELL strategica su candele 1m chiuse;
+  - microbar 5s solo replay/diagnostica/timing/gap detection/execution observation;
   - `binance-realtime` non decisionale;
   - `binance-microbar` non decisionale;
   - la 1m decisionale non puo' essere ricostruita aggregando realtime o microbar;
@@ -119,7 +123,11 @@ Da introdurre solo quando DocBrown e ACDC sono compatibili:
    - decision max gap entro soglia approvata;
    - decision staleness entro soglia approvata;
    - `binance-realtime` assente dal path BUY;
-   - `binance-microbar` assente dal path indicatori/BUY;
+   - `binance-microbar` assente dal path indicatori/BUY/SELL strategica;
+   - SELL decision source bucket = `binance`;
+   - SELL decision interval = `60`;
+   - SELL decision candle state = `CLOSED`;
+   - eventuale SELL execution interval 5s separato dalla reason strategica;
    - replay espone `source_bucket`, `interval_seconds`, `candle_count`, `max_gap_seconds`, `synthetic_backfill`.
 4. Se `/management/state` non espone ancora `1m_alignment_ready`, trattarlo come `false`.
 5. Verificare count per setup/regime e readiness context.

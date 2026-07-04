@@ -91,8 +91,8 @@ usiamo 1m o 5s?
 La decisione architetturale e':
 
 ```text
-indicatori / contract / WATCH / BUY = 1m
-microbar 5s = replay, diagnostica, timing, gap detection
+indicatori / contract / WATCH / BUY / SELL strategica = 1m
+microbar 5s = replay, diagnostica, timing, gap detection, osservazione esecuzione
 ```
 
 ### Posizione Del Consiglio
@@ -127,7 +127,8 @@ Decision bucket: binance, candele 1m chiuse.
 Decision timestamp: open time della candela Binance 1m chiusa, persistito in Influx come _time.
 Decision freshness: l'ultima candela usabile e' l'ultima candela chiusa disponibile.
 Current 1m realtime bucket: non decisionale per contract/WATCH; ammesso solo per stato UI o diagnostica esplicita.
-Microbar bucket: non decisionale per indicatori strategici; ammesso per replay, gap detection, timing e forensics.
+Microbar bucket: non decisionale per indicatori strategici; ammesso per replay, gap detection, timing, forensics e
+osservazione esecuzione.
 Synthetic microbar backfill: mai equivalente a microbar live; deve essere marcato come synthetic_backfill.
 Decision source construction: vietato ricostruire la fonte decisionale aggregando `binance-realtime` o
 `binance-microbar`; la fonte decisionale deve leggere punti 1m chiusi dal bucket `binance`.
@@ -148,9 +149,11 @@ Fino a chiusura dell'allineamento 1m end-to-end, non avviare nuove RUN PAPER.
   - `BB_UPPER_BREAKOUT_CONFIRMED`.
 - `WATCH` non puo' usare tempo ML, promotion age, watch timeout o max buy age come condizione BUY.
 - `WATCH` deve fallire chiusa se manca contratto o current state richiesto.
-- `WATCH` e DocBrown devono usare la stessa base dati decisionale 1m chiusa per indicatori, contract e BUY.
+- `WATCH`, SELL strategica e DocBrown devono usare la stessa base dati decisionale 1m chiusa per indicatori, contract,
+  BUY e uscite indicator-based.
 - `binance-realtime` non puo' alimentare BUY: rappresenta la candela corrente non chiusa e resta diagnostico/UI.
-- `binance-microbar` non puo' alimentare indicatori strategici Context V1: resta replay/diagnostica/timing/gap.
+- `binance-microbar` non puo' alimentare indicatori strategici Context V1: resta replay/diagnostica/timing/gap e
+  osservazione esecuzione.
 - microbar sintetiche da backfill 1m espanso a 5s devono essere marcate e non possono diventare evidenza di micro
   timing.
 - Nessun ritorno a nomi o logiche `ml_*` legacy.
@@ -298,12 +301,18 @@ Gia' presenti:
   - porta advice/policy feature in exit features.
 - `acdc/src/main/java/it/mbc/hft/acdc/service/PaperRunService.java`
   - congela `policyJson`, calcola PnL e decisioni.
+  - AS-IS codice 2026-07-04: `exitSnapshot` arricchisce la SELL a partire dallo snapshot corrente passato dal paper
+    loop; finche' `InfluxSnapshotService` preferisce microbar, anche la SELL non puo' essere dichiarata allineata al
+    vincolo strategico 1m.
 - `acdc/src/main/java/it/mbc/hft/acdc/service/GuardEvaluator.java`
   - gestisce SELL guards, incluso `BB_ADVICE_LOSS_CAP_EXIT`.
+  - AS-IS codice 2026-07-04: `BB_ADVICE_LOSS_CAP_EXIT` usa `NET_RETURN` e `BB_LOSS_CAP_NET_RETURN`; la protezione
+    quote-aware e i metadati separati decisione/esecuzione SELL non sono ancora implementati.
 
 Gap:
 
-- La base decisionale WATCH/BUY non e' ancora conforme al blocco A0: ACDC puo' calcolare current state da microbar 5s.
+- La base decisionale WATCH/BUY/SELL non e' ancora conforme al blocco A0: ACDC puo' calcolare current state da microbar
+  5s.
 - La shared runtime config iniziale `V28__shared_runtime_config.sql` descrive ancora:
   - `market.influx.bucket` come non usato da REM buy/sell mining;
   - `market.influx.microbar_bucket` come condiviso da trading e ML;
@@ -383,7 +392,7 @@ Gap:
 
 - Nella RUN `111`, TLMUSDC ha mostrato replay effettivo a passo circa 1 minuto, non 5 secondi.
 - Prima di usare il replay come prova forte di micro timing SELL, serve una diagnostica gap per simbolo/run.
-- Per WATCH/BUY e indicatori, la fonte 1m/microbar deve essere coerente tra DocBrown e ACDC. Non possiamo avere
+- Per WATCH/BUY/SELL e indicatori, la fonte 1m/microbar deve essere coerente tra DocBrown e ACDC. Non possiamo avere
   contratto su un campionamento e decisione live su un altro senza audit.
 - `binance`, `binance-realtime` e `binance-microbar` devono avere ruoli non sovrapponibili:
   - `binance`: candele 1m chiuse decisionale;
@@ -434,6 +443,40 @@ SELL deve usare:
 - target/trailing coerente col setup;
 - timeout solo se contrattuale e non in conflitto col charter.
 
+Granularita' SELL vincolante:
+
+```text
+SELL strategic signal = 1m closed candle
+SELL execution/forensics timing = optional 5s microbar, non-strategic
+```
+
+Decisione del Consiglio:
+
+- La SELL strategica ragiona sulla stessa base di DocBrown, WATCH e BUY: candela 1m chiusa da `binance`.
+- Bollinger, RSI, EMA, ATR e Chandelier sono indicatori bar-based nella letteratura di riferimento; nel ciclo corrente
+  non devono cambiare granularita' tra ingresso e uscita.
+- Le invalidazioni setup-specifiche, target/trailing basati su indicatori, timeout contrattuali e qualunque futura
+  `EXIT_BB_CONTEXT_INVALIDATED` devono essere valutati su barre 1m chiuse.
+- La microbar 5s non puo' generare una nuova reason SELL strategica e non puo' confermare o negare un contesto
+  Bollinger/Context V1.
+- La microbar 5s puo' essere usata solo per:
+  - simulare o misurare il prezzo di esecuzione dopo una SELL gia' autorizzata dal layer 1m;
+  - loss cap quote-aware meccanico su prezzo eseguibile, se soglia e formula sono congelate nel contratto e la reason
+    dichiara esplicitamente `execution_interval_seconds=5`;
+  - post-sell forensics, gap detection, slippage, timing e replay.
+- Il loss cap quote-aware e' una protezione economica di esecuzione, non un segnale di regime/trend/momentum. Se usa
+  prezzo/microbar intraminuto, deve restare auditabile come guardia meccanica e non contaminare le metriche
+  scientifiche degli indicatori 1m.
+- Microbar sintetiche da backfill 1m espanso a 5s non possono attivare loss cap intraminuto ne' essere usate come prova
+  di micro timing SELL.
+- Ogni SELL deve esporre separatamente:
+  - `sell_decision_source_bucket`;
+  - `sell_decision_interval_seconds`;
+  - `sell_decision_candle_state`;
+  - `sell_execution_source_bucket`;
+  - `sell_execution_interval_seconds`;
+  - `sell_synthetic_backfill`.
+
 ### Principio 4: Una Sola Base Temporale Decisionale
 
 La base temporale decisionale del ciclo Context V1 e' 1 minuto.
@@ -452,14 +495,17 @@ Regole:
 1. DocBrown calcola storico, candidate, contract, rolling validation, promotion e live-score su candele 1m chiuse.
 2. ACDC WATCH ricalcola il current state sulla stessa base 1m chiusa.
 3. BUY congela in `policyJson` e negli `entry_*` valori calcolati dalla stessa base 1m.
-4. `binance-realtime` puo' essere usato solo per UI/stato live diagnostico, non per autorizzare BUY.
-5. `binance-microbar` puo' essere usato solo per replay, post-sell forensics, gap detection e timing.
-6. Se il dato replay e' 1m o sintetico, non puo' spiegare decisioni a precisione 5s.
-7. Se il contratto non dichiara la granularita' o se ACDC osserva una granularita' diversa, WATCH deve fallire chiusa.
-8. La candela 1m decisionale non puo' essere prodotta con `aggregateWindow` su bucket realtime o microbar.
-9. La feature window decisionale deve coprire il massimo periodo indicatore piu' warmup sufficiente; `15m` non basta
+4. SELL strategica valuta invalidazioni/target/trailing/timeout su candele 1m chiuse, con la sola eccezione del loss cap
+   quote-aware meccanico su prezzo eseguibile se dichiarato e separato dal segnale strategico.
+5. `binance-realtime` puo' essere usato solo per UI/stato live diagnostico, non per autorizzare BUY o SELL strategiche.
+6. `binance-microbar` puo' essere usato solo per replay, post-sell forensics, gap detection, timing ed eventuale
+   protezione economica meccanica dichiarata.
+7. Se il dato replay e' 1m o sintetico, non puo' spiegare decisioni a precisione 5s.
+8. Se il contratto non dichiara la granularita' o se ACDC osserva una granularita' diversa, WATCH deve fallire chiusa.
+9. La candela 1m decisionale non puo' essere prodotta con `aggregateWindow` su bucket realtime o microbar.
+10. La feature window decisionale deve coprire il massimo periodo indicatore piu' warmup sufficiente; `15m` non basta
    per EMA50 su base 1m.
-10. Finche' non sono definite soglie di staleness/gap decisionale, WATCH deve trattare il dato come non pronto.
+11. Finche' non sono definite soglie di staleness/gap decisionale, WATCH deve trattare il dato come non pronto.
 
 ### Principio 5: Documentare La Non-Conformita' AS-IS
 
@@ -499,6 +545,8 @@ Questi punti sono requisiti aperti, non dettagli implementativi opzionali:
    - entrambe le cose. Preferenza: esporre anche `decision_candle_count`.
 7. Il replay deve restare separato dal decision snapshot: `source_bucket` replay non deve essere confuso con
    `decision_source_bucket`.
+8. La SELL deve separare nel contratto/audit decisione ed esecuzione: una reason strategica senza metadati 1m chiusi e'
+   non conforme; una reason meccanica su prezzo eseguibile senza metadati execution/replay e' non conforme.
 
 ## Mappa Interventi Per Modulo
 
@@ -743,12 +791,21 @@ Interventi in `PreBuyWatchService`:
 Interventi in `GuardEvaluator` / SELL:
 
 1. Lasciare MFE fuori dalla SELL.
-2. Rendere `BB_ADVICE_LOSS_CAP_EXIT` quote-aware:
+2. Allineare le SELL strategiche al blocco A0:
+   - leggere indicatori/current state da candela 1m chiusa;
+   - vietare `binance-microbar` per invalidazione Bollinger/context;
+   - dichiarare bucket, interval e candle state usati dalla decisione SELL;
+   - fallire chiusa se la posizione non ha contratto 1m coerente con l'ingresso.
+3. Rendere `BB_ADVICE_LOSS_CAP_EXIT` quote-aware:
    - trigger se `net_loss_quote >= contract_max_net_loss_quote`;
    - mantenere anche il net return loss cap come guardia secondaria.
-3. Preparare ma non attivare SELL fase 2:
+   - se valutato su prezzo/microbar intraminuto, classificarlo come protezione economica meccanica e non come segnale
+     Bollinger/context;
+   - non attivarlo su microbar sintetiche.
+4. Preparare ma non attivare SELL fase 2:
    - reentry invalidation: price torna sotto lower, `%B < 0`, RSI debole, close < middle;
    - breakout invalidation: rientro sotto upper con volume/expansion decaduti.
+   Tutte queste invalidazioni devono usare candele 1m chiuse.
 
 Interventi in `TradeReplayLiveService`:
 
@@ -951,13 +1008,15 @@ Deliverable:
 - contract/advice dichiara candle count, max gap e staleness decisionale.
 - DocBrown calcola contract e live-score su candele 1m chiuse.
 - ACDC WATCH calcola current state su candele 1m chiuse.
+- ACDC SELL strategica calcola invalidazioni/target/trailing/timeout su candele 1m chiuse.
+- ACDC SELL separa metadati di decisione 1m e metadati di esecuzione/replay 5s.
 - ACDC fallisce chiusa su mismatch di granularita'.
 - ACDC fallisce chiusa su dato decisionale stale o con gap troppo largo.
 - Kenshiro espone `1m_alignment_ready` e blocker specifici.
 - ACDC migration correttiva aggiorna descrizioni shared runtime config incoerenti.
 - FE Context V1 non presenta REAL come percorso operativo disponibile.
 - `/trades` mostra source bucket, interval seconds, candle count, max gap seconds e synthetic backfill.
-- microbar 5s resta confinata a replay/diagnostica/timing/gap detection.
+- microbar 5s resta confinata a replay/diagnostica/timing/gap detection e protezione economica meccanica dichiarata.
 
 Validazione:
 
@@ -1077,10 +1136,11 @@ Prima dell'implementazione:
 Dopo implementazione:
 
 - allineamento 1m dichiarato e verificato end-to-end;
-- DocBrown e WATCH usano la stessa base 1m chiusa;
+- DocBrown, WATCH e SELL strategica usano la stessa base 1m chiusa;
 - `1m_alignment_ready=true` visibile da `/management/state`;
 - `decision_candle_count`, `decision_max_gap_seconds` e `decision_staleness_seconds` visibili per contract/entry;
-- `binance-realtime` e `binance-microbar` non alimentano BUY;
+- `binance-realtime` e `binance-microbar` non alimentano BUY o SELL strategiche;
+- ogni decisione SELL espone metadati separati di decisione 1m ed esecuzione/replay;
 - no-MFE SELL resta disabilitato;
 - reentry overextended non compra;
 - breakout senza volume/trend non compra;
