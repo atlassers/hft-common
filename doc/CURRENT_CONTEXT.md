@@ -29,6 +29,24 @@ Nota 2026-07-05: `REALTIME_BOLLINGER_ADX_NO_ML_PLAN.md` e' il documento candidat
 un path realtime rule-based senza DocBrown/ML nel decision path. Non e' ancora implementato e non autorizza PAPER RT
 finche' gli interventi del piano non sono completati.
 
+Nota 2026-07-05, implementazione RT:
+
+- `REALTIME_BB_ADX_V1` implementato come path PAPER rule-based in ACDC, senza DocBrown/ML/advice nel decision path RT;
+- ACDC calcola Bollinger 20/2, Keltner/TTM squeeze, ADX/DMI, ATR14/ATR22, volume ratio e OBV slope sugli snapshot
+  della cadence decisionale dichiarata;
+- Kenshiro espone `rtReady`, `rtBlockers`, `rtDiagnostics` e action `/management` `PAPER_REALTIME_START`;
+- hft-fe mostra readiness RT e action PAPER RT;
+- config MySQL `rt.*` introdotta da migrazioni ACDC V100/V101;
+- deploy verificato su `acdc-vpn`, `kenshiro-local`, `hft-fe-local`;
+- RUN PAPER RT 130: 7 BUY/7 SELL, net `-0.383745952491981200`; ha esposto falsi positivi range flat con
+  volume/ATR/ADX zero;
+- correzione V101: range reentry richiede contesto vivo e edge minimo verso middle band;
+- RUN PAPER RT 131: 3 BUY breakout-only/3 SELL, net `-0.149999999561200000`; i range flat sono stati eliminati, ma i
+  breakout hanno chiuso a timeout allo stesso prezzo pagando solo fee;
+- classificazione Consiglio: implementazione end-to-end riuscita, evidenza finanziaria iniziale negativa. Prossimo
+  intervento scientifico non deve reintrodurre ML/DocBrown nel path RT; deve concentrarsi su conferma follow-through
+  breakout o su modello economico minimo prima del BUY.
+
 ## Vincoli Correnti
 
 - REAL vietata.

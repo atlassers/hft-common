@@ -30,6 +30,7 @@ public final class RemConstants {
     public static final String BOLLINGER_ONLY = "BOLLINGER_ONLY";
     public static final String BOLLINGER_ONLY_V2 = "BOLLINGER_ONLY_V2";
     public static final String BOLLINGER_CONTEXT_V1 = "BOLLINGER_CONTEXT_V1";
+    public static final String REALTIME_BB_ADX_V1 = "REALTIME_BB_ADX_V1";
     public static final String PAPER_ELIGIBLE = "PAPER_ELIGIBLE";
     public static final String PAPER_WATCH_ELIGIBLE = "PAPER_WATCH_ELIGIBLE";
     public static final String PAPER_BUY_ELIGIBLE = "PAPER_BUY_ELIGIBLE";
@@ -98,6 +99,21 @@ public final class RemConstants {
     public static final BigDecimal SELL_MIN_REENTRY_FAILURE_HOLD_SECONDS_DEFAULT = new BigDecimal("60");
     public static final BigDecimal SELL_BREAKOUT_MIN_PROTECT_NET_RETURN_DEFAULT = MIN_EXECUTABLE_ENTRY_EDGE_DEFAULT;
     public static final BigDecimal SELL_ATR_MULTIPLIER_DEFAULT = new BigDecimal("3");
+    public static final BigDecimal RT_ENTRY_RANGE_ADX_MAX_DEFAULT = new BigDecimal("20");
+    public static final BigDecimal RT_ENTRY_RANGE_ADX_SOFT_MAX_DEFAULT = new BigDecimal("25");
+    public static final BigDecimal RT_ENTRY_RANGE_MIN_MIDDLE_EDGE_DEFAULT = new BigDecimal("0.0025");
+    public static final BigDecimal RT_ENTRY_BREAKOUT_ADX_MIN_DEFAULT = new BigDecimal("25");
+    public static final BigDecimal RT_ENTRY_BREAKOUT_ADX_RISING_SOFT_MIN_DEFAULT = new BigDecimal("20");
+    public static final BigDecimal RT_ENTRY_BREAKOUT_VOLUME_RATIO_MIN_DEFAULT = new BigDecimal("1.30");
+    public static final BigDecimal RT_EXIT_RANGE_MIDDLE_BAND_CAPTURE_PERCENT_B_DEFAULT = new BigDecimal("0.50");
+    public static final BigDecimal RT_EXIT_RANGE_UPPER_BAND_CAPTURE_PERCENT_B_DEFAULT = new BigDecimal("0.80");
+    public static final BigDecimal RT_EXIT_RANGE_FAIL_PERCENT_B_DEFAULT = BigDecimal.ZERO;
+    public static final BigDecimal RT_EXIT_LOSS_CAP_NET_RETURN_DEFAULT = new BigDecimal("-0.0035");
+    public static final BigDecimal RT_EXIT_RANGE_MAX_HOLD_CANDLES_DEFAULT = new BigDecimal("36");
+    public static final BigDecimal RT_EXIT_BREAKOUT_CHANDELIER_PERIOD_DEFAULT = new BigDecimal("22");
+    public static final BigDecimal RT_EXIT_BREAKOUT_CHANDELIER_ATR_MULTIPLIER_DEFAULT = new BigDecimal("3.0");
+    public static final BigDecimal RT_EXIT_BREAKOUT_FALSE_BREAKOUT_PERCENT_B_DEFAULT = new BigDecimal("0.80");
+    public static final BigDecimal RT_EXIT_BREAKOUT_MAX_HOLD_CANDLES_DEFAULT = new BigDecimal("60");
     public static final BigDecimal MANAGEMENT_STRONG_VALIDATION_PROFIT_RATE = new BigDecimal("0.80");
     public static final BigDecimal MANAGEMENT_STRONG_VALIDATION_AVG_NET_RETURN = new BigDecimal("0.0030");
     public static final long MANAGEMENT_LIVE_SIGNAL_LAG_GOOD_SECONDS = 20L;
@@ -541,7 +557,19 @@ public final class RemConstants {
     public static final String VOLUME_SPIKE_RISK = "volume_spike_risk";
     public static final String VOLUME_SCORE = "volume_score";
     public static final String ATR14 = "atr14";
+    public static final String ATR22 = "atr22";
     public static final String ATR_PCT = "atr_pct";
+    public static final String ADX14 = "adx14";
+    public static final String PREVIOUS_ADX14 = "previous_adx14";
+    public static final String PLUS_DI14 = "plus_di14";
+    public static final String MINUS_DI14 = "minus_di14";
+    public static final String KELTNER_MIDDLE = "keltner_middle";
+    public static final String KELTNER_UPPER = "keltner_upper";
+    public static final String KELTNER_LOWER = "keltner_lower";
+    public static final String TTM_SQUEEZE_ON = "ttm_squeeze_on";
+    public static final String TTM_SQUEEZE_FIRED = "ttm_squeeze_fired";
+    public static final String OBV = "obv";
+    public static final String OBV_SLOPE = "obv_slope";
     public static final String SPREAD_PCT = "spread_pct";
     public static final String LIQUIDITY_SCORE = "liquidity_score";
     public static final String RISK_SCORE = "risk_score";
@@ -745,5 +773,73 @@ public final class RemConstants {
     public static final String BB_LIVE_ADVICE_LOSS_CAP_MAX_ABS = "bb.live_advice.loss_cap.max_abs";
     public static final String BB_LIVE_ADVICE_LOSS_CAP_MAX_QUOTE = "bb.live_advice.loss_cap.max_quote";
     public static final String BB_LIVE_ADVICE_LOSS_CAP_MIN_BUFFER = "bb.live_advice.loss_cap.min_buffer";
+    public static final String RT_STRATEGY_ENABLED = "rt.strategy.enabled";
+    public static final String RT_DECISION_INTERVAL_SECONDS = "rt.decision.interval_seconds";
+    public static final String RT_ENTRY_RANGE_ADX_MAX = "rt.entry.range.adx_max";
+    public static final String RT_ENTRY_RANGE_ADX_SOFT_MAX = "rt.entry.range.adx_soft_max";
+    public static final String RT_ENTRY_RANGE_PERCENT_B_RECOVERY_REQUIRED =
+            "rt.entry.range.percent_b_recovery_required";
+    public static final String RT_ENTRY_RANGE_MINUS_DI_DOMINANCE_BLOCK =
+            "rt.entry.range.minus_di_dominance_block";
+    public static final String RT_ENTRY_RANGE_VOLUME_CHAOS_BLOCK = "rt.entry.range.volume_chaos_block";
+    public static final String RT_ENTRY_RANGE_ATR_CHAOS_BLOCK = "rt.entry.range.atr_chaos_block";
+    public static final String RT_ENTRY_RANGE_MIN_MIDDLE_EDGE_PCT = "rt.entry.range.min_middle_edge_pct";
+    public static final String RT_ENTRY_BREAKOUT_ADX_MIN = "rt.entry.breakout.adx_min";
+    public static final String RT_ENTRY_BREAKOUT_ADX_RISING_SOFT_MIN =
+            "rt.entry.breakout.adx_rising_soft_min";
+    public static final String RT_ENTRY_BREAKOUT_VOLUME_RATIO_MIN = "rt.entry.breakout.volume_ratio_min";
+    public static final String RT_ENTRY_BREAKOUT_REQUIRE_PLUS_DI_GT_MINUS_DI =
+            "rt.entry.breakout.require_plus_di_gt_minus_di";
+    public static final String RT_ENTRY_BREAKOUT_REQUIRE_OBV_NON_NEGATIVE =
+            "rt.entry.breakout.require_obv_non_negative";
+    public static final String RT_EXIT_RANGE_MIDDLE_BAND_CAPTURE_PERCENT_B =
+            "rt.exit.range.middle_band_capture_percent_b";
+    public static final String RT_EXIT_RANGE_UPPER_BAND_CAPTURE_PERCENT_B =
+            "rt.exit.range.upper_band_capture_percent_b";
+    public static final String RT_EXIT_RANGE_FAIL_PERCENT_B = "rt.exit.range.fail_percent_b";
+    public static final String RT_EXIT_RANGE_LOSS_CAP_NET_PCT = "rt.exit.range.loss_cap_net_pct";
+    public static final String RT_EXIT_RANGE_MAX_HOLD_CANDLES = "rt.exit.range.max_hold_candles";
+    public static final String RT_EXIT_BREAKOUT_CHANDELIER_PERIOD = "rt.exit.breakout.chandelier_period";
+    public static final String RT_EXIT_BREAKOUT_CHANDELIER_ATR_MULTIPLIER =
+            "rt.exit.breakout.chandelier_atr_multiplier";
+    public static final String RT_EXIT_BREAKOUT_FALSE_BREAKOUT_PERCENT_B =
+            "rt.exit.breakout.false_breakout_percent_b";
+    public static final String RT_EXIT_BREAKOUT_REQUIRE_PLUS_DI_FOR_HOLD =
+            "rt.exit.breakout.require_plus_di_for_hold";
+    public static final String RT_EXIT_BREAKOUT_LOSS_CAP_NET_PCT = "rt.exit.breakout.loss_cap_net_pct";
+    public static final String RT_EXIT_BREAKOUT_MAX_HOLD_CANDLES = "rt.exit.breakout.max_hold_candles";
+    public static final String RT_SETUP_TYPE = "rt_setup_type";
+    public static final String RT_ENTRY_SETUP_TYPE = "rt_entry_setup_type";
+    public static final String RT_RANGE_REENTRY_WATCH = "RT_RANGE_REENTRY_WATCH";
+    public static final String RT_SQUEEZE_BREAKOUT_WATCH = "RT_SQUEEZE_BREAKOUT_WATCH";
+    public static final String RT_NO_SETUP = "RT_NO_SETUP";
+    public static final String RT_ENTRY_RANGE_REENTRY = "RT_ENTRY_RANGE_REENTRY";
+    public static final String RT_ENTRY_SQUEEZE_BREAKOUT_LONG = "RT_ENTRY_SQUEEZE_BREAKOUT_LONG";
+    public static final String RT_ENTRY_BLOCKED_DATA_QUALITY = "RT_ENTRY_BLOCKED_DATA_QUALITY";
+    public static final String RT_ENTRY_BLOCKED_NO_SETUP = "RT_ENTRY_BLOCKED_NO_SETUP";
+    public static final String RT_ENTRY_WATCH_RANGE_REENTRY = "RT_ENTRY_WATCH_RANGE_REENTRY";
+    public static final String RT_ENTRY_WATCH_SQUEEZE_BREAKOUT = "RT_ENTRY_WATCH_SQUEEZE_BREAKOUT";
+    public static final String RT_ENTRY_BLOCKED_RANGE_ADX = "RT_ENTRY_BLOCKED_RANGE_ADX";
+    public static final String RT_ENTRY_BLOCKED_RANGE_DMI = "RT_ENTRY_BLOCKED_RANGE_DMI";
+    public static final String RT_ENTRY_BLOCKED_RANGE_RECOVERY = "RT_ENTRY_BLOCKED_RANGE_RECOVERY";
+    public static final String RT_ENTRY_BLOCKED_RANGE_CHAOS = "RT_ENTRY_BLOCKED_RANGE_CHAOS";
+    public static final String RT_ENTRY_BLOCKED_BREAKOUT_BOLLINGER = "RT_ENTRY_BLOCKED_BREAKOUT_BOLLINGER";
+    public static final String RT_ENTRY_BLOCKED_BREAKOUT_ADX = "RT_ENTRY_BLOCKED_BREAKOUT_ADX";
+    public static final String RT_ENTRY_BLOCKED_BREAKOUT_DMI = "RT_ENTRY_BLOCKED_BREAKOUT_DMI";
+    public static final String RT_ENTRY_BLOCKED_BREAKOUT_VOLUME = "RT_ENTRY_BLOCKED_BREAKOUT_VOLUME";
+    public static final String RT_ENTRY_BLOCKED_BREAKOUT_OBV = "RT_ENTRY_BLOCKED_BREAKOUT_OBV";
+    public static final String RT_EXIT_RANGE_MIDDLE_BAND_PROFIT = "RT_EXIT_RANGE_MIDDLE_BAND_PROFIT";
+    public static final String RT_EXIT_RANGE_UPPER_BAND_PROFIT = "RT_EXIT_RANGE_UPPER_BAND_PROFIT";
+    public static final String RT_EXIT_RANGE_REENTRY_FAILED = "RT_EXIT_RANGE_REENTRY_FAILED";
+    public static final String RT_EXIT_RANGE_TREND_AGAINST = "RT_EXIT_RANGE_TREND_AGAINST";
+    public static final String RT_EXIT_RANGE_LOSS_CAP = "RT_EXIT_RANGE_LOSS_CAP";
+    public static final String RT_EXIT_RANGE_TIMEOUT = "RT_EXIT_RANGE_TIMEOUT";
+    public static final String RT_EXIT_BREAKOUT_CHANDELIER_STOP = "RT_EXIT_BREAKOUT_CHANDELIER_STOP";
+    public static final String RT_EXIT_BREAKOUT_FALSE_BREAKOUT = "RT_EXIT_BREAKOUT_FALSE_BREAKOUT";
+    public static final String RT_EXIT_BREAKOUT_DMI_REVERSAL = "RT_EXIT_BREAKOUT_DMI_REVERSAL";
+    public static final String RT_EXIT_BREAKOUT_MOMENTUM_EXHAUSTED = "RT_EXIT_BREAKOUT_MOMENTUM_EXHAUSTED";
+    public static final String RT_EXIT_BREAKOUT_LOSS_CAP = "RT_EXIT_BREAKOUT_LOSS_CAP";
+    public static final String RT_EXIT_BREAKOUT_TIMEOUT = "RT_EXIT_BREAKOUT_TIMEOUT";
+    public static final String RT_EXIT_HOLD = "RT_EXIT_HOLD";
 
 }

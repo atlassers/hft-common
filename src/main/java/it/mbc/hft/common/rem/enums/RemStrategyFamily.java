@@ -3,7 +3,8 @@ package it.mbc.hft.common.rem.enums;
 public enum RemStrategyFamily {
     BOLLINGER_ONLY("BOLLINGER_ONLY"),
     BOLLINGER_ONLY_V2("BOLLINGER_ONLY_V2"),
-    BOLLINGER_CONTEXT_V1("BOLLINGER_CONTEXT_V1");
+    BOLLINGER_CONTEXT_V1("BOLLINGER_CONTEXT_V1"),
+    REALTIME_BB_ADX_V1("REALTIME_BB_ADX_V1");
 
     private final String value;
 
