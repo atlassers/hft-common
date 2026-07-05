@@ -23,15 +23,17 @@ strategico primario.
 2. `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`: charter strategico operativo e mappa degli interventi.
 3. `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`: base scientifica del processo, delle formule e della
    correzione A2 cadence/soglie ufficiali.
-4. `archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`: piano correttivo BUY post-A0, memoria del ciclo A1.
-5. `archived/BOLLINGER_CONTEXT_V1_PLAN.md`: baseline tecnica Context V1 precedente.
-6. `CURRENT_CONTEXT.md`: snapshot corrente cross-modulo.
-7. `STRATEGIC_REM_HANDOFF.md`: manuale operativo stabile.
-8. `archived/BOLLINGER_ONLY_PLAN.md`: baseline storica e riferimento di regressione.
+4. `archived/REALTIME_BB_ADX_PARAMETER_VERIFICATION_PLAN.md`: piano tecnico per OHLC-Wilder, parametrizzazione delle
+   soglie non ufficiali e matrice di verifica completa.
+5. `archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`: piano correttivo BUY post-A0, memoria del ciclo A1.
+6. `archived/BOLLINGER_CONTEXT_V1_PLAN.md`: baseline tecnica Context V1 precedente.
+7. `CURRENT_CONTEXT.md`: snapshot corrente cross-modulo.
+8. `STRATEGIC_REM_HANDOFF.md`: manuale operativo stabile.
+9. `archived/BOLLINGER_ONLY_PLAN.md`: baseline storica e riferimento di regressione.
 
 Se i documenti confliggono, prevale questo charter; poi
-`archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`; poi
-`archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`; poi
+`archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`; poi `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`;
+poi `archived/REALTIME_BB_ADX_PARAMETER_VERIFICATION_PLAN.md`; poi
 `archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`; poi `archived/BOLLINGER_CONTEXT_V1_PLAN.md`.
 
 ## Processo Vincolante
@@ -114,6 +116,22 @@ Il documento tratta l'AS-IS `BOLLINGER_CONTEXT_V1` come legacy e progetta una st
 Bollinger, Keltner/TTM Squeeze, ADX/DMI, volume/OBV, ATR/Chandelier. DocBrown/ML non viene rimosso dal workspace, ma
 viene escluso dal path decisionale target. Questo aggiornamento e' un piano progettuale: non dichiara ancora
 `REALTIME_BB_ADX_V1` implementato ne' autorizza PAPER fino a completamento degli interventi indicati.
+
+Aggiornamento Consiglio 2026-07-05:
+
+```text
+REALTIME_BB_ADX_PARAMETER_VERIFICATION_PLAN
+```
+
+Nuovo documento tecnico:
+
+```text
+archived/REALTIME_BB_ADX_PARAMETER_VERIFICATION_PLAN.md
+```
+
+Il documento dettaglia il prossimo ciclo tecnico: ADX/DMI/ATR Wilder OHLC, sostituzione delle soglie fisse non ufficiali
+con parametri auditabili, matrice fattoriale completa dei parametri e replay storico causale. Non reintroduce A/B come
+approccio primario e non autorizza ancora implementazione o RUN: serve come piano da verificare prima dello sviluppo.
 
 Aggiornamento Consiglio 2026-07-04:
 
