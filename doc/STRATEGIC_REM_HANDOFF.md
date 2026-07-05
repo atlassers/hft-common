@@ -27,11 +27,14 @@ hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md
 - Bollinger resta obbligatorio: ogni advice deve avere `bb_setup`, `bb_trigger` e contratto `bb_*`.
 - A2 corregge il blocco A0/A1: Bollinger non impone 1m. La readiness valida richiede cadence decisionale dichiarata,
   coerente e non sintetica.
-- Profilo operativo corrente: `bb.decision.interval_seconds=5`, bucket decisionale `binance-microbar`, synthetic
+- Profilo operativo corrente A3: `bb.decision.interval_seconds=20`, bucket decisionale `binance-microbar`, synthetic
   backfill vietato.
 - Context V1 richiede feature esplicite di regime, trend, momentum, volume e risk.
+- Nel profilo A3 range reentry, `rt.entry.range.min_volume_ratio=0.50` blocca barre 20s quasi morte; non e' una
+  conferma breakout e non sostituisce Bollinger.
 - WATCH apre BUY solo se passano trigger Bollinger e gate Context V1.
-- SELL fase 1 resta quello Bollinger-only, senza nuove logiche fino a evidenza PAPER.
+- SELL A3 resta Bollinger setup-specifica: range cattura middle/upper band; breakout protegge profitto quando una
+  posizione gia' aperta ha MFE minimo positivo e rientra sotto la upper band con `net_return > 0`.
 - SELL strategica usa la stessa cadence decisionale del BUY per invalidazioni, target, trailing e timeout.
 - Loss cap quote-aware puo' usare prezzo eseguibile intraminuto solo come protezione economica meccanica, dichiarata e
   auditata separatamente.
@@ -127,8 +130,9 @@ Da introdurre solo quando DocBrown e ACDC sono compatibili:
    - `/management/state` espone blocker A0/cadence specifici se il readiness e' false;
    - leggere da DB `bb.decision.interval_seconds` e verificare che DocBrown, ACDC WATCH/BUY, SELL strategica e
      forensics espongano lo stesso interval;
-   - profilo corrente approvato: DocBrown/ACDC decision source bucket = `binance-microbar`,
-     `decision_interval_seconds=5`, `decision_synthetic_backfill=0`;
+   - profilo corrente approvato A3: ACDC RT decision source bucket = `binance-microbar`,
+     `decision_interval_seconds=20`, `decision_synthetic_backfill=0`;
+   - la barra 20s e' aggregata da microbar reali 5s; non deve cadere su `binance` 1m;
    - profilo alternativo ammesso: decision source bucket = `binance`, `decision_interval_seconds=60`;
    - candle state = `CLOSED`;
    - decision candle count sufficiente per BB20, EMA50 e volume ratio sulla cadence dichiarata;
@@ -355,6 +359,18 @@ Ultima verifica Consiglio: 2026-07-05.
   - `rsi_oversold_recovery = 1` solo se `rsi14 <= 62`;
   - `volume_confirmation = 1` solo se `volume_ratio >= 1.30`;
   - `bb_squeeze = 1` solo se `bb_bandwidth_percentile <= 0.20`.
+
+## Stato A3 20s RT
+
+Ultima verifica Consiglio: 2026-07-05.
+
+- Profilo operativo: `rt.decision.interval_seconds=20`, `bb.decision.interval_seconds=20`,
+  `decision_source_bucket=binance-microbar`, `decision_synthetic_backfill=0`.
+- ACDC V106 applicata su MySQL: `rt.exit.breakout.protect_percent_b=1.0`,
+  `rt.entry.range.min_volume_ratio=0.50`.
+- RUN 137: `COMPLETED`, 2 posizioni chiuse, 0 aperte, netto `+0.170766512778600000`.
+- SELL reason RUN 137: 2/2 `RT_EXIT_BREAKOUT_UPPER_BAND_PROFIT`.
+- Notifiche RUN 137: 2 BUY e 2 SELL, idempotenti.
 - Query runtime config:
 
 ```bash

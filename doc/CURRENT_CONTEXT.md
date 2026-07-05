@@ -68,6 +68,26 @@ Nota 2026-07-05, implementazione RT:
   `REALTIME_BB_ADX_V1` no-ML resta `NEGATIVE_OPERATIONAL_SIGNAL` su evidenza PAPER. Non autorizzare altre PAPER RT
   finche' non esiste una nuova ipotesi documentata e verificabile; evitare ulteriori micro-soglie incrementali senza
   backtest/replay causale sui casi 126/130/131/132/133/134.
+- decisione Consiglio 2026-07-05 A3: nuovo esperimento coerente su barre decisionale `20s` per WATCH/BUY/SELL
+  strategica, calcolate da `binance-microbar` reale 5s via aggregazione 20s chiusa. Il documento scientifico
+  `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md` esplicita i 7 disallineamenti e i valori reali del profilo 20s.
+  Nessuna RUN e' valida se `decision_interval_seconds != 20`, se il source bucket cade su `binance` 1m, o se
+  `decision_synthetic_backfill=1`.
+- RUN PAPER RT 135 post-A3 20s: 1 BUY breakout MIRAUSDC, MFE `0.010974025974025975`, ma SELL a
+  `RT_EXIT_BREAKOUT_FALSE_BREAKOUT` con netto negativo `-0.049999999957600000`. Classificazione:
+  `VALID_STRATEGIC_EVIDENCE` per BUY/provenance 20s, `NEGATIVE_SELL_CAPTURE_SIGNAL` per capture breakout mancante.
+  Correzione A3.1 SELL: `RT_EXIT_BREAKOUT_UPPER_BAND_PROFIT` quando una posizione breakout gia' aperta ha
+  `max_net_return >= min_executable_entry_edge`, `net_return > 0` e `%B < 1.0`.
+- RUN PAPER RT 136 post-V105: 1 BUY range MIRAUSDC, `volume_ratio_1m_20m=0.3091023688218919`,
+  `volume_confirmation=0`, `max_net_return=0`, uscita `RT_EXIT_RANGE_LOSS_CAP`, netto
+  `-0.097301136264000000`. Classificazione: `VALID_STRATEGIC_EVIDENCE` per provenance 20s,
+  `NEGATIVE_RANGE_LIQUIDITY_SIGNAL` per BUY range su barra troppo scarica. Correzione A3.2 range:
+  `rt.entry.range.min_volume_ratio=0.50`, reason `RT_ENTRY_BLOCKED_RANGE_VOLUME`.
+- RUN PAPER RT 137 post-V106: 2 BUY breakout/2 SELL, 2 win, netto `+0.170766512778600000`; entrambe le uscite sono
+  `RT_EXIT_BREAKOUT_UPPER_BAND_PROFIT`. Trade: `2ZUSDC` netto `+0.018237704883600000`,
+  `EIGENUSDC` netto `+0.152528807895000000`. `RT_ENTRY_BLOCKED_RANGE_VOLUME=3619` conferma che il floor range ha
+  bloccato le barre scariche. Notifiche Telegram idempotenti: `buy_notified=2`, `sell_notified=2`. Classificazione:
+  `VALID_STRATEGIC_EVIDENCE`, `POSITIVE_SELL_CAPTURE_SIGNAL`, `POSITIVE_FINANCIAL_SIGNAL_SMALL_SAMPLE`.
 
 ## Vincoli Correnti
 
@@ -77,12 +97,13 @@ Nota 2026-07-05, implementazione RT:
 - Bollinger resta il segnale centrale: setup e trigger sono obbligatori.
 - A2 corregge A0/A1: la letteratura Bollinger non impone 1m. La cadence decisionale e' un parametro dichiarato e
   deve essere identica in DocBrown, WATCH/BUY, SELL strategica e forensics.
-- Profilo operativo A2 corrente: `bb.decision.interval_seconds=5`, `decision_source_bucket=binance-microbar`,
+- Profilo operativo A3 corrente: `bb.decision.interval_seconds=20`, `decision_source_bucket=binance-microbar`,
   `decision_synthetic_backfill=0`.
 - Profilo 1m resta ammesso solo se dichiarato e coerente end-to-end.
 - Context V1 aggiunge regime, trend, momentum, volume e risk come feature contrattuali esplicite.
 - WATCH compra solo se passano trigger Bollinger setup-specifico e gate Context V1.
-- SELL fase 1 resta invariato rispetto a Bollinger-only, per isolare l'effetto dei gate di ingresso.
+- SELL A3 resta setup-specifica Bollinger: range cattura middle/upper band; breakout protegge profitto quando, dopo
+  MFE positivo minimo, il prezzo rientra sotto la upper band con netto ancora positivo.
 - SELL strategica ragiona sulla stessa cadence decisionale del BUY; microbar 5s e' strategica solo nel profilo A2
   dichiarato e solo se non sintetica.
 - Il loss cap quote-aware puo' usare prezzo eseguibile intraminuto solo come protezione economica meccanica, separata

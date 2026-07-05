@@ -87,6 +87,7 @@ public final class RemConstants {
     public static final BigDecimal BB_BREAKOUT_SETUP_CODE = new BigDecimal("2");
     public static final BigDecimal DECISION_INTERVAL_1M_SECONDS = new BigDecimal("60");
     public static final BigDecimal DECISION_INTERVAL_MICROBAR_SECONDS = new BigDecimal("5");
+    public static final BigDecimal DECISION_INTERVAL_20S_SECONDS = new BigDecimal("20");
     public static final BigDecimal MIN_DECISION_CANDLES = new BigDecimal("60");
     public static final BigDecimal MAX_DECISION_GAP_SECONDS = new BigDecimal("90");
     public static final BigDecimal MAX_DECISION_STALENESS_SECONDS = new BigDecimal("120");
@@ -103,6 +104,7 @@ public final class RemConstants {
     public static final BigDecimal RT_ENTRY_RANGE_ADX_SOFT_MAX_DEFAULT = new BigDecimal("25");
     public static final BigDecimal RT_ENTRY_RANGE_MIN_MIDDLE_EDGE_DEFAULT = new BigDecimal("0.0025");
     public static final BigDecimal RT_ENTRY_RANGE_MIN_LAST_CLOSE_RETURN_DEFAULT = BigDecimal.ZERO;
+    public static final BigDecimal RT_ENTRY_RANGE_MIN_VOLUME_RATIO_DEFAULT = new BigDecimal("0.50");
     public static final BigDecimal RT_ENTRY_BREAKOUT_ADX_MIN_DEFAULT = new BigDecimal("25");
     public static final BigDecimal RT_ENTRY_BREAKOUT_ADX_RISING_SOFT_MIN_DEFAULT = new BigDecimal("20");
     public static final BigDecimal RT_ENTRY_BREAKOUT_VOLUME_RATIO_MIN_DEFAULT = new BigDecimal("1.30");
@@ -115,6 +117,7 @@ public final class RemConstants {
     public static final BigDecimal RT_EXIT_RANGE_MAX_HOLD_CANDLES_DEFAULT = new BigDecimal("36");
     public static final BigDecimal RT_EXIT_BREAKOUT_CHANDELIER_PERIOD_DEFAULT = new BigDecimal("22");
     public static final BigDecimal RT_EXIT_BREAKOUT_CHANDELIER_ATR_MULTIPLIER_DEFAULT = new BigDecimal("3.0");
+    public static final BigDecimal RT_EXIT_BREAKOUT_PROTECT_PERCENT_B_DEFAULT = BOLLINGER_BREAKOUT_MIN_PERCENT_B;
     public static final BigDecimal RT_EXIT_BREAKOUT_FALSE_BREAKOUT_PERCENT_B_DEFAULT = new BigDecimal("0.80");
     public static final BigDecimal RT_EXIT_BREAKOUT_MAX_HOLD_CANDLES_DEFAULT = new BigDecimal("60");
     public static final BigDecimal MANAGEMENT_STRONG_VALIDATION_PROFIT_RATE = new BigDecimal("0.80");
@@ -787,6 +790,7 @@ public final class RemConstants {
             "rt.entry.range.percent_b_recovery_required";
     public static final String RT_ENTRY_RANGE_MINUS_DI_DOMINANCE_BLOCK =
             "rt.entry.range.minus_di_dominance_block";
+    public static final String RT_ENTRY_RANGE_MIN_VOLUME_RATIO = "rt.entry.range.min_volume_ratio";
     public static final String RT_ENTRY_RANGE_VOLUME_CHAOS_BLOCK = "rt.entry.range.volume_chaos_block";
     public static final String RT_ENTRY_RANGE_ATR_CHAOS_BLOCK = "rt.entry.range.atr_chaos_block";
     public static final String RT_ENTRY_RANGE_MIN_MIDDLE_EDGE_PCT = "rt.entry.range.min_middle_edge_pct";
@@ -814,6 +818,8 @@ public final class RemConstants {
     public static final String RT_EXIT_BREAKOUT_CHANDELIER_PERIOD = "rt.exit.breakout.chandelier_period";
     public static final String RT_EXIT_BREAKOUT_CHANDELIER_ATR_MULTIPLIER =
             "rt.exit.breakout.chandelier_atr_multiplier";
+    public static final String RT_EXIT_BREAKOUT_PROTECT_PERCENT_B =
+            "rt.exit.breakout.protect_percent_b";
     public static final String RT_EXIT_BREAKOUT_FALSE_BREAKOUT_PERCENT_B =
             "rt.exit.breakout.false_breakout_percent_b";
     public static final String RT_EXIT_BREAKOUT_REQUIRE_PLUS_DI_FOR_HOLD =
@@ -833,6 +839,7 @@ public final class RemConstants {
     public static final String RT_ENTRY_WATCH_SQUEEZE_BREAKOUT = "RT_ENTRY_WATCH_SQUEEZE_BREAKOUT";
     public static final String RT_ENTRY_BLOCKED_RANGE_ADX = "RT_ENTRY_BLOCKED_RANGE_ADX";
     public static final String RT_ENTRY_BLOCKED_RANGE_DMI = "RT_ENTRY_BLOCKED_RANGE_DMI";
+    public static final String RT_ENTRY_BLOCKED_RANGE_VOLUME = "RT_ENTRY_BLOCKED_RANGE_VOLUME";
     public static final String RT_ENTRY_BLOCKED_RANGE_RECOVERY = "RT_ENTRY_BLOCKED_RANGE_RECOVERY";
     public static final String RT_ENTRY_BLOCKED_RANGE_CHAOS = "RT_ENTRY_BLOCKED_RANGE_CHAOS";
     public static final String RT_ENTRY_BLOCKED_BREAKOUT_BOLLINGER = "RT_ENTRY_BLOCKED_BREAKOUT_BOLLINGER";
@@ -852,6 +859,7 @@ public final class RemConstants {
     public static final String RT_EXIT_RANGE_LOSS_CAP = "RT_EXIT_RANGE_LOSS_CAP";
     public static final String RT_EXIT_RANGE_TIMEOUT = "RT_EXIT_RANGE_TIMEOUT";
     public static final String RT_EXIT_BREAKOUT_CHANDELIER_STOP = "RT_EXIT_BREAKOUT_CHANDELIER_STOP";
+    public static final String RT_EXIT_BREAKOUT_UPPER_BAND_PROFIT = "RT_EXIT_BREAKOUT_UPPER_BAND_PROFIT";
     public static final String RT_EXIT_BREAKOUT_FALSE_BREAKOUT = "RT_EXIT_BREAKOUT_FALSE_BREAKOUT";
     public static final String RT_EXIT_BREAKOUT_DMI_REVERSAL = "RT_EXIT_BREAKOUT_DMI_REVERSAL";
     public static final String RT_EXIT_BREAKOUT_MOMENTUM_EXHAUSTED = "RT_EXIT_BREAKOUT_MOMENTUM_EXHAUSTED";

@@ -282,6 +282,235 @@ meccanici isolati. Non garantisce che un trigger valido sia economicamente esegu
 frizione di ingresso. Nel nostro runtime questa parte non deve essere confusa con una nuova soglia Bollinger: e' il gate
 economico dell'ordine PAPER.
 
+## A3 - Profilo Decisionale Unificato 20s E Correzione Dei 7 Disallineamenti
+
+Decisione del Consiglio 2026-07-05.
+
+Le RUN RT `130-134` mostrano che il profilo 5s ha prodotto segnali troppo rumorosi: reentry durante caduta,
+breakout statici o privi di MFE netto, uscita a loss/Chandelier senza che il trade abbia mai superato la frizione.
+La letteratura Bollinger non impone 1m e non vieta timeframe brevi; richiede pero' barre abbastanza robuste e coerenza
+tra setup, conferme, BUY, SELL e test. Il nuovo profilo sperimentale dichiarato e':
+
+```text
+bb.decision.interval_seconds = 20
+rt.decision.interval_seconds = 20
+decision_source_bucket = binance-microbar
+decision_interval_seconds = 20
+decision_candle_state = CLOSED
+decision_synthetic_backfill = 0
+```
+
+La barra 20s e' una barra decisionale aggregata da microbar reali `binance-microbar` da 5s. Non e' un nuovo bucket
+storico indipendente e non puo' usare microbar sintetiche da backfill. WATCH, BUY, SELL strategica, forensics,
+diagnostica e FE devono esporre `decision_interval_seconds=20`; replay puo' continuare a mostrare microbar/timing, ma
+non puo' sostituire la barra decisionale.
+
+### A3.1 - Bollinger / W-bottom / Reentry
+
+Valore reale operativo:
+
+```text
+period = 20 barre
+bar_width = 20s
+lookback effettivo Bollinger = 400s
+multiplier = 2
+price = close della barra 20s chiusa
+reentry BUY = lower breach + recupero dentro banda + 0 <= %B <= 0.80
+```
+
+Allineamento richiesto:
+
+- non basta un singolo tag della lower band;
+- una reentry non deve comprare mentre il movimento direzionale resta ribassista;
+- `rt.entry.range.percent_b_recovery_required=true` deve richiedere recupero su barra 20s chiusa;
+- `rt.entry.range.minus_di_dominance_block=true` deve bloccare `-DI > +DI`;
+- il gate economico verso middle band resta separato dalla formula Bollinger.
+
+### A3.2 - Squeeze / Breakout
+
+Valore reale operativo:
+
+```text
+period = 20 barre
+bar_width = 20s
+lookback effettivo BandWidth = 400s minimo, con percentile su finestra decisionale
+breakout BUY = upper breach + %B >= 1 + bandwidth_delta > 0 + conferme context
+```
+
+Allineamento richiesto:
+
+- squeeze/compressione non fornisce direzione da sola;
+- il breakout deve avere rottura superiore e conferma esterna;
+- `rt.entry.breakout.min_last_close_return=0.0007` resta gate economico/follow-through, non regola Bollinger;
+- `rt.entry.breakout.max_upper_edge_pct=0.0060` blocca inseguimenti gia' estesi sopra upper band.
+
+### A3.3 - ADX/DMI
+
+Valore reale operativo:
+
+```text
+adx_period = 14 barre 20s
+lookback effettivo ADX/DMI = 280s
+breakout: ADX >= 25 oppure ADX >= 20 e rising, +DI > -DI
+range: ADX <= 25 e -DI non dominante
+```
+
+Lacuna tecnica dichiarata: il runtime ACDC calcola DMI/ADX su close-to-close perche' la fonte microbar espone close/price
+e volume, non high/low/close completi in forma OHLC. Questa e' una approssimazione rispetto a Wilder. La RUN 20s e'
+quindi valida come esperimento operativo coerente, ma la piena conformita' Wilder richiede una fase successiva con OHLC
+20s reali o aggregati da tick con high/low.
+
+### A3.4 - Robustezza Delle Barre
+
+Valore reale operativo:
+
+```text
+base_raw = binance-microbar 5s reale
+decision_bar = aggregateWindow(20s, last)
+expected_raw_bars_per_decision_bar = 4
+min_decision_candles = 60
+minimum strategic history = 20 minuti
+synthetic_backfill = vietato
+```
+
+Allineamento richiesto:
+
+- ACDC deve leggere `binance-microbar` quando `decision_interval_seconds=20`;
+- `decision_source_bucket_microbar=1` deve restare vero anche se l'intervallo decisionale e' 20s;
+- il profilo 20s non puo' cadere sul bucket `binance` 1m;
+- `max_gap_seconds` resta blocker di qualita' dati.
+
+### A3.5 - Edge Economico / Fee
+
+Valore reale operativo:
+
+```text
+range min edge to middle = 0.0025
+breakout min last close return = 0.0007
+range min last close return = 0
+range min volume ratio = 0.50
+loss cap net pct = -0.0035
+```
+
+Allineamento richiesto:
+
+- questi valori non sono regole Bollinger pure;
+- sono gate economici necessari per evitare BUY con `max_net_return=0`;
+- `range min volume ratio=0.50` e' una guardia di robustezza/liquidita' su barra 20s: non richiede volume breakout,
+  ma vieta reentry su barre quasi morte rispetto alla baseline;
+- ogni policy JSON deve congelare i valori di ingresso usati.
+
+Evidenza RUN `136`:
+
+```text
+profilo = A3 20s
+symbol = MIRAUSDC
+setup = RT_ENTRY_RANGE_REENTRY
+decision_source_bucket_microbar = 1
+decision_interval_seconds = 20
+decision_synthetic_backfill = 0
+entry volume_ratio_1m_20m = 0.3091023688218919
+entry volume_confirmation = 0
+entry max_net_return = 0
+exit reason = RT_EXIT_RANGE_LOSS_CAP
+net_profit_quote = -0.097301136264000000
+```
+
+Classificazione Consiglio:
+
+- provenance/cadence valida;
+- BUY range troppo permissivo su vitalita' della barra;
+- correzione richiesta: `rt.entry.range.min_volume_ratio=0.50`, reason `RT_ENTRY_BLOCKED_RANGE_VOLUME`.
+
+Evidenza RUN `137` post-correzione:
+
+```text
+profilo = A3 20s
+positions = 2
+wins = 2
+net_profit_quote = +0.170766512778600000
+BUY reason = RT_ENTRY_SQUEEZE_BREAKOUT_LONG
+SELL reason = RT_EXIT_BREAKOUT_UPPER_BAND_PROFIT
+range low-volume blocks = 3619 RT_ENTRY_BLOCKED_RANGE_VOLUME
+buy_notified = 2
+sell_notified = 2
+paper final state = COMPLETED, openPositions=0
+```
+
+Trade:
+
+```text
+2ZUSDC: MFE=0.000729508196721311, net=+0.018237704883600000
+EIGENUSDC: MFE=0.006101152368758003, net=+0.152528807895000000
+```
+
+Classificazione Consiglio:
+
+- `VALID_STRATEGIC_EVIDENCE` tecnica: 20s end-to-end, bucket microbar reale, synthetic false;
+- `POSITIVE_SELL_CAPTURE_SIGNAL`: la nuova uscita breakout ha catturato profitto netto su 2/2 trade;
+- `POSITIVE_FINANCIAL_SIGNAL_SMALL_SAMPLE`: campione minimo, non promozione definitiva.
+
+### A3.6 - SELL Strategica
+
+Valore reale operativo:
+
+```text
+SELL indicator-based = barra 20s chiusa
+range capture = %B >= 0.50 o %B >= 0.80 solo se net_return > 0
+range failure = %B < 0 o trend contro
+breakout protection = Chandelier ATR22 su barre 20s + false breakout + DMI reversal
+breakout profit protection = dopo MFE >= min_executable_entry_edge e net_return > 0,
+  uscita se %B rientra sotto 1.0
+```
+
+Allineamento richiesto:
+
+- una SELL strategica non deve nascere da una microbar 5s diversa dalla cadence decisionale;
+- microbar/replay possono spiegare timing/esecuzione, non cambiare la reason strategica;
+- loss cap meccanico resta ammesso solo come protezione economica auditabile.
+- il tag della upper band non e' una SELL autonoma; il rientro sotto upper band diventa SELL solo per una posizione
+  breakout gia' aperta, gia' passata in MFE positivo, e ancora chiudibile a `net_return > 0`.
+
+Evidenza RUN `135`:
+
+```text
+profilo = A3 20s
+symbol = MIRAUSDC
+setup = BB_SQUEEZE_BREAKOUT_LONG
+decision_source_bucket = binance-microbar
+decision_interval_seconds = 20
+decision_synthetic_backfill = 0
+entry max_net_return = 0.010974025974025975
+exit reason osservata = RT_EXIT_BREAKOUT_FALSE_BREAKOUT
+exit net_return = -0.002
+net_profit_quote = -0.049999999957600000
+```
+
+Classificazione Consiglio:
+
+- BUY A3 valido: la cadence 20s ha prodotto breakout con MFE netto positivo;
+- SELL A3 incompleta: la protezione breakout lasciava scadere un profitto netto fino al false-breakout negativo;
+- correzione richiesta: `RT_EXIT_BREAKOUT_UPPER_BAND_PROFIT` su `%B < 1.0` solo dopo MFE positivo minimo e
+  `net_return > 0`.
+
+### A3.7 - Separazione Segnale Osservabile / Segnale Comprabile
+
+Valore reale operativo:
+
+```text
+WATCH = setup osservabile Bollinger su barra 20s
+BUY = setup + trigger + context + qualita' dati + edge economico
+RUN valida = metadata 20s completi su BUY/SELL/replay
+```
+
+Allineamento richiesto:
+
+- WATCH puo' restare ampio;
+- BUY deve restare raro e spiegabile;
+- FE e report devono mostrare `source_bucket`, `interval_seconds`, `candle_count`, `max_gap_seconds`,
+  `synthetic_backfill`;
+- una RUN con indicatori su 20s ma SELL o replay confusi con 5s deve essere classificata `INVALID_STRATEGIC_EVIDENCE`.
+
 Evidenza operativa RUN `123`:
 
 ```text
