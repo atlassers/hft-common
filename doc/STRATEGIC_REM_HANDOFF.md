@@ -148,6 +148,10 @@ Da introdurre solo quando DocBrown e ACDC sono compatibili:
 4. Verificare script e diagnostiche:
    - ogni script operativo deve stampare `DIAGNOSTIC_ONLY` se non passa da `/management`;
    - ogni script che legge bucket deve stampare bucket, interval, candle state, max gap e synthetic flag;
+   - `acdc/scripts/populate-rt-parameter-verification-matrix.sh` e' `DIAGNOSTIC_ONLY`: non avvia PAPER, genera e
+     materializza su MySQL `acdc_rt_parameter_verification_profile` la matrice fattoriale completa
+     `REALTIME_BB_ADX_V1` da `6,220,800` profili `PENDING_REPLAY`; usa staging table e swap finale per evitare righe
+     parziali visibili;
    - `acdc/scripts/acdc-run-rem-ml.sh` e alias `run-docbrown-research.sh` sono diagnostici DocBrown-only: stampano
      `DIAGNOSTIC_ONLY`, endpoint, source bucket atteso del profilo corrente (`binance-microbar`/`5s` per A2 corrente,
      oppure `binance`/`60s` se il profilo 1m e' dichiarato), `candle_state=CLOSED`, timestamp semantics e

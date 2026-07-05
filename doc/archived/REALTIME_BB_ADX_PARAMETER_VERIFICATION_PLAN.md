@@ -679,7 +679,7 @@ Questa e' la tabella base della matrice fattoriale completa.
 Matrice completa teorica:
 
 ```text
-4 * 5 * 6 * 5 * 6 * 3 * 4 * 3 * 2 * 3 * 4 * 2 = 1,036,800 combinazioni
+4 * 5 * 6 * 5 * 6 * 3 * 4 * 3 * 2 * 3 * 4 * 2 = 6,220,800 combinazioni
 ```
 
 Questa cardinalita' e' intenzionalmente completa. Non significa che tutte le combinazioni siano sensate o che vadano
@@ -693,6 +693,12 @@ testate brute-force in realtime. La fase successiva dovra' decidere come filtrar
 - rete neurale o surrogate model su storico.
 
 Questo documento non sceglie ancora il metodo di filtraggio.
+
+Nota di implementazione 2026-07-05:
+
+- il valore `1,036,800` precedentemente indicato era un errore aritmetico rispetto ai domini P1-P12 dichiarati;
+- la matrice fattoriale completa generata dai domini dichiarati contiene `6,220,800` combinazioni;
+- ogni sottoinsieme `rsi_cap_mode x loss_cap_mode` contiene `1,036,800` combinazioni.
 
 ### Regole Di Coerenza Da Valutare Dopo La Matrice
 
@@ -868,7 +874,7 @@ Verifica:
 Obiettivo:
 
 ```text
-Materializzare tutte le 1,036,800 combinazioni in forma interrogabile.
+Materializzare tutte le 6,220,800 combinazioni in forma interrogabile.
 ```
 
 Azioni:
@@ -936,4 +942,3 @@ Il piano e' implementato solo quando:
 6. Il replay storico causale puo' valutare un profilo senza lookahead.
 7. Il report distingue MFE-zero da MFE-positive.
 8. Nessuna RUN PAPER usa profilo non dichiarato.
-

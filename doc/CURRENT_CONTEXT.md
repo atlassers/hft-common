@@ -32,8 +32,12 @@ un path realtime rule-based senza DocBrown/ML nel decision path. Non e' ancora i
 finche' gli interventi del piano non sono completati.
 
 Nota 2026-07-05: `REALTIME_BB_ADX_PARAMETER_VERIFICATION_PLAN.md` dettaglia lo sviluppo tecnico successivo:
-ADX/DMI/ATR Wilder OHLC, soglie non ufficiali parametrizzate, matrice fattoriale completa da 1,036,800 combinazioni e
+ADX/DMI/ATR Wilder OHLC, soglie non ufficiali parametrizzate, matrice fattoriale completa da 6,220,800 combinazioni e
 replay storico causale. Non autorizza modifiche runtime o nuove RUN: e' il documento da verificare prima degli sviluppi.
+
+Nota 2026-07-05: l'implementazione V107 ha materializzato su MySQL `acdc_rt_parameter_verification_profile` con
+`6,220,800` profili `PENDING_REPLAY` e hash distinti. Il precedente totale `1,036,800` era il conteggio di ogni
+sottoinsieme `rsi_cap_mode x loss_cap_mode`, non della matrice completa P1-P12.
 
 Nota 2026-07-05, implementazione RT:
 

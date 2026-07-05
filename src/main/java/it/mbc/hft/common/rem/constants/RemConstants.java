@@ -109,11 +109,23 @@ public final class RemConstants {
     public static final BigDecimal RT_ENTRY_BREAKOUT_ADX_RISING_SOFT_MIN_DEFAULT = new BigDecimal("20");
     public static final BigDecimal RT_ENTRY_BREAKOUT_VOLUME_RATIO_MIN_DEFAULT = new BigDecimal("1.30");
     public static final BigDecimal RT_ENTRY_BREAKOUT_MIN_LAST_CLOSE_RETURN_DEFAULT = new BigDecimal("0.0007");
+    public static final BigDecimal RT_ENTRY_BREAKOUT_ATR_FOLLOW_THROUGH_MULTIPLIER_DEFAULT = new BigDecimal("0.10");
+    public static final BigDecimal RT_ENTRY_BREAKOUT_MAX_PERCENT_B_DEFAULT = new BigDecimal("1.20");
+    public static final BigDecimal RT_ENTRY_BREAKOUT_HOT_RSI_MIN_VOLUME_RATIO_DEFAULT = new BigDecimal("1.50");
     public static final BigDecimal RT_ENTRY_BREAKOUT_MAX_UPPER_EDGE_PCT_DEFAULT = new BigDecimal("0.0060");
+    public static final String RT_FOLLOW_THROUGH_MODE_ATR_ADAPTIVE = "ATR_ADAPTIVE";
+    public static final String RT_FOLLOW_THROUGH_MODE_STATIC = "STATIC";
+    public static final String RT_RSI_CAP_MODE_HARD = "HARD";
+    public static final String RT_RSI_CAP_MODE_CONDITIONAL_EXTENSION = "CONDITIONAL_EXTENSION";
+    public static final String RT_RSI_CAP_MODE_OFF = "OFF";
+    public static final String RT_LOSS_CAP_MODE_STATIC = "STATIC";
+    public static final String RT_LOSS_CAP_MODE_ATR_ADAPTIVE = "ATR_ADAPTIVE";
     public static final BigDecimal RT_EXIT_RANGE_MIDDLE_BAND_CAPTURE_PERCENT_B_DEFAULT = new BigDecimal("0.50");
     public static final BigDecimal RT_EXIT_RANGE_UPPER_BAND_CAPTURE_PERCENT_B_DEFAULT = new BigDecimal("0.80");
     public static final BigDecimal RT_EXIT_RANGE_FAIL_PERCENT_B_DEFAULT = BigDecimal.ZERO;
     public static final BigDecimal RT_EXIT_LOSS_CAP_NET_RETURN_DEFAULT = new BigDecimal("-0.0035");
+    public static final BigDecimal RT_EXIT_STATIC_LOSS_CAP_ABS_DEFAULT = new BigDecimal("0.0035");
+    public static final BigDecimal RT_EXIT_LOSS_CAP_ATR_MULTIPLIER_DEFAULT = new BigDecimal("0.50");
     public static final BigDecimal RT_EXIT_RANGE_MAX_HOLD_CANDLES_DEFAULT = new BigDecimal("36");
     public static final BigDecimal RT_EXIT_BREAKOUT_CHANDELIER_PERIOD_DEFAULT = new BigDecimal("22");
     public static final BigDecimal RT_EXIT_BREAKOUT_CHANDELIER_ATR_MULTIPLIER_DEFAULT = new BigDecimal("3.0");
@@ -515,6 +527,13 @@ public final class RemConstants {
     public static final String PREVIOUS_CLOSE = "previous_close";
     public static final String LAST_CLOSE_RETURN = "last_close_return";
     public static final String UPPER_BAND_EDGE_PCT = "upper_band_edge_pct";
+    public static final String DECISION_OPEN = "decision_open";
+    public static final String DECISION_HIGH = "decision_high";
+    public static final String DECISION_LOW = "decision_low";
+    public static final String DECISION_CLOSE = "decision_close";
+    public static final String TRUE_RANGE = "true_range";
+    public static final String OHLC_WILDER_INDICATORS = "ohlc_wilder_indicators";
+    public static final String OHLC_HIGH_LOW_AVAILABLE = "ohlc_high_low_available";
     public static final String BB_LOWER_BREACH = "bb_lower_breach";
     public static final String BB_UPPER_BREACH = "bb_upper_breach";
     public static final String BB_REENTRY_CONFIRMED = "bb_reentry_confirmed";
@@ -621,6 +640,17 @@ public final class RemConstants {
     public static final String SELL_BREAKOUT_MIN_PROTECT_NET_RETURN = "sell_breakout_min_protect_net_return";
     public static final String SELL_BREAKOUT_CHANDELIER_LONG_STOP = "sell_breakout_chandelier_long_stop";
     public static final String SELL_HIGHEST_HIGH_SINCE_ENTRY = "sell_highest_high_since_entry";
+    public static final String EFFECTIVE_MIN_LAST_CLOSE_RETURN = "effective_min_last_close_return";
+    public static final String FOLLOW_THROUGH_MODE = "follow_through_mode_code";
+    public static final String BREAKOUT_EXTENSION_B = "breakout_extension_b";
+    public static final String MAX_BREAKOUT_PERCENT_B = "max_breakout_percent_b";
+    public static final String EFFECTIVE_BREAKOUT_MIN_VOLUME_RATIO = "effective_breakout_min_volume_ratio";
+    public static final String RSI_CAP_MODE = "rsi_cap_mode_code";
+    public static final String HOT_RSI_MIN_VOLUME_RATIO = "hot_rsi_min_volume_ratio";
+    public static final String RSI_CAP_BYPASS_CONDITIONAL = "rsi_cap_bypass_conditional";
+    public static final String EFFECTIVE_LOSS_CAP = "effective_loss_cap";
+    public static final String LOSS_CAP_MODE = "loss_cap_mode_code";
+    public static final String LOSS_CAP_ATR_COMPONENT = "loss_cap_atr_component";
     public static final String SELL_ATR_MULTIPLIER = "sell_atr_multiplier";
     public static final String SELL_VOLUME_CONFIRMATION_DECAYS = "sell_volume_confirmation_decays";
     public static final String SELL_TARGET_ZERO_TAKE_PROFIT_DISABLED = "sell_target_zero_take_profit_disabled";
@@ -800,6 +830,16 @@ public final class RemConstants {
     public static final String RT_ENTRY_BREAKOUT_ADX_RISING_SOFT_MIN =
             "rt.entry.breakout.adx_rising_soft_min";
     public static final String RT_ENTRY_BREAKOUT_VOLUME_RATIO_MIN = "rt.entry.breakout.volume_ratio_min";
+    public static final String RT_ENTRY_BREAKOUT_FOLLOW_THROUGH_MODE =
+            "rt.entry.breakout.follow_through_mode";
+    public static final String RT_ENTRY_BREAKOUT_STATIC_MIN_LAST_CLOSE_RETURN =
+            "rt.entry.breakout.static_min_last_close_return";
+    public static final String RT_ENTRY_BREAKOUT_ATR_FOLLOW_THROUGH_MULTIPLIER =
+            "rt.entry.breakout.atr_follow_through_multiplier";
+    public static final String RT_ENTRY_BREAKOUT_MAX_PERCENT_B = "rt.entry.breakout.max_percent_b";
+    public static final String RT_ENTRY_BREAKOUT_RSI_CAP_MODE = "rt.entry.breakout.rsi_cap_mode";
+    public static final String RT_ENTRY_BREAKOUT_HOT_RSI_MIN_VOLUME_RATIO =
+            "rt.entry.breakout.hot_rsi_min_volume_ratio";
     public static final String RT_ENTRY_BREAKOUT_REQUIRE_PLUS_DI_GT_MINUS_DI =
             "rt.entry.breakout.require_plus_di_gt_minus_di";
     public static final String RT_ENTRY_BREAKOUT_REQUIRE_OBV_NON_NEGATIVE =
@@ -814,6 +854,9 @@ public final class RemConstants {
             "rt.exit.range.upper_band_capture_percent_b";
     public static final String RT_EXIT_RANGE_FAIL_PERCENT_B = "rt.exit.range.fail_percent_b";
     public static final String RT_EXIT_RANGE_LOSS_CAP_NET_PCT = "rt.exit.range.loss_cap_net_pct";
+    public static final String RT_EXIT_LOSS_CAP_MODE = "rt.exit.loss_cap_mode";
+    public static final String RT_EXIT_STATIC_LOSS_CAP_ABS = "rt.exit.static_loss_cap_abs";
+    public static final String RT_EXIT_LOSS_CAP_ATR_MULTIPLIER = "rt.exit.loss_cap_atr_multiplier";
     public static final String RT_EXIT_RANGE_MAX_HOLD_CANDLES = "rt.exit.range.max_hold_candles";
     public static final String RT_EXIT_BREAKOUT_CHANDELIER_PERIOD = "rt.exit.breakout.chandelier_period";
     public static final String RT_EXIT_BREAKOUT_CHANDELIER_ATR_MULTIPLIER =
@@ -834,6 +877,7 @@ public final class RemConstants {
     public static final String RT_ENTRY_RANGE_REENTRY = "RT_ENTRY_RANGE_REENTRY";
     public static final String RT_ENTRY_SQUEEZE_BREAKOUT_LONG = "RT_ENTRY_SQUEEZE_BREAKOUT_LONG";
     public static final String RT_ENTRY_BLOCKED_DATA_QUALITY = "RT_ENTRY_BLOCKED_DATA_QUALITY";
+    public static final String RT_WILDER_OHLC_NOT_READY = "RT_WILDER_OHLC_NOT_READY";
     public static final String RT_ENTRY_BLOCKED_NO_SETUP = "RT_ENTRY_BLOCKED_NO_SETUP";
     public static final String RT_ENTRY_WATCH_RANGE_REENTRY = "RT_ENTRY_WATCH_RANGE_REENTRY";
     public static final String RT_ENTRY_WATCH_SQUEEZE_BREAKOUT = "RT_ENTRY_WATCH_SQUEEZE_BREAKOUT";
