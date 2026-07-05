@@ -10,13 +10,15 @@ Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
 2. `hft-common/doc/archived/REALTIME_BOLLINGER_ADX_NO_ML_PLAN.md` come piano candidato non ancora implementato.
 3. `hft-common/doc/archived/REALTIME_BB_ADX_PARAMETER_VERIFICATION_PLAN.md` come piano tecnico per OHLC-Wilder e
    verifica parametrica completa.
-4. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`
-5. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`
-6. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`
-7. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_PLAN.md`
-8. `hft-common/doc/CURRENT_CONTEXT.md`
-9. `hft-common/doc/STRATEGIC_REM_HANDOFF.md`
-10. `hft-common/doc/archived/BOLLINGER_ONLY_PLAN.md`
+4. `hft-common/doc/archived/REALTIME_BB_ADX_OPTUNA_PARAMETER_SEARCH_PLAN.md` come piano offline di ricerca
+   parametrica Optuna/Pareto.
+5. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`
+6. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`
+7. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`
+8. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_PLAN.md`
+9. `hft-common/doc/CURRENT_CONTEXT.md`
+10. `hft-common/doc/STRATEGIC_REM_HANDOFF.md`
+11. `hft-common/doc/archived/BOLLINGER_ONLY_PLAN.md`
 
 Se i documenti confliggono, prevale il charter; poi
 `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`; poi
@@ -38,6 +40,11 @@ replay storico causale. Non autorizza modifiche runtime o nuove RUN: e' il docum
 Nota 2026-07-05: l'implementazione V107 ha materializzato su MySQL `acdc_rt_parameter_verification_profile` con
 `6,220,800` profili `PENDING_REPLAY` e hash distinti. Il precedente totale `1,036,800` era il conteggio di ogni
 sottoinsieme `rsi_cap_mode x loss_cap_mode`, non della matrice completa P1-P12.
+
+Nota 2026-07-05: `REALTIME_BB_ADX_OPTUNA_PARAMETER_SEARCH_PLAN.md` definisce il laboratorio offline Python per
+selezionare profili candidati dalla matrice tramite Optuna constrained multi-objective optimization, TPE/MOTPE,
+cross-check NSGA-II, walk-forward e controlli anti-overfitting. Il laboratorio non e' parte del normale ciclo trading:
+non avvia PAPER, non modifica runtime e non autorizza RUN senza revisione del Consiglio.
 
 Nota 2026-07-05, implementazione RT:
 
