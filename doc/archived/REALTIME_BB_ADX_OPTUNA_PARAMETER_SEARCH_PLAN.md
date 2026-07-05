@@ -110,27 +110,45 @@ Output vietati:
 - modifica diretta dei parametri runtime ACDC;
 - promozione automatica a profilo operativo.
 
-## Package Python Proposto
+## Repository Python Vincolante
 
-Root proposta:
+Root vincolante:
 
 ```text
-acdc/scripts/rt_parameter_search/
+/home/mbc/Documenti/ws/java/hft/melo
 ```
 
-Entry point proposta:
+Repository GitHub vincolante:
 
 ```text
-acdc/scripts/run-rt-parameter-search.sh
+https://github.com/atlassers/melo
 ```
 
-Moduli:
+Motivazione:
 
 ```text
-rt_parameter_search/
+Il laboratorio di ricerca parametrica non deve vivere dentro ACDC, non deve essere confuso con il ciclo runtime e non
+deve poter avviare PAPER/REAL. ACDC resta il runtime; Melo e' il laboratorio offline che riproduce, misura e propone.
+```
+
+Package:
+
+```text
+src/melo/
   __init__.py
-  config.py
   db.py
+  models.py
+  constants.py
+  evaluator.py
+  benchmark.py
+  cli.py
+```
+
+Moduli da aggiungere nelle fasi successive:
+
+```text
+src/melo/
+  config.py
   schema.py
   extraction.py
   feature_parser.py
@@ -146,7 +164,19 @@ rt_parameter_search/
   candidate_selection.py
   persistence.py
   reports.py
-  cli.py
+```
+
+Comando benchmark:
+
+```bash
+python -m melo.cli benchmark-current --executions <execution_id...>
+```
+
+Regola bloccante:
+
+```text
+Nessuna ricerca Optuna, NSGA-II, genetica, ML o rete neurale e' affidabile se Melo non riproduce prima esattamente le
+decisioni BUY/SELL/REJECT/HOLD e le trade salvate nel DB per execution generate dalla stessa configurazione runtime.
 ```
 
 ## Schema Tabelle Di Laboratorio
@@ -223,6 +253,192 @@ CANDIDATE_FOR_CAUSAL_REPLAY
 CANDIDATE_FOR_COUNCIL_REVIEW
 ```
 
+## Fase -1 - Benchmark Di Identita' Runtime
+
+Questa fase precede ogni ricerca parametrica. Non ottimizza nulla: verifica che il mirror Python di Melo sia
+semanticamente equivalente al runtime ACDC per la configurazione corrente applicata alle execution che l'hanno
+effettivamente usata.
+
+### Step -1.1 - Caricamento Config Corrente
+
+Classe:
+
+```text
+MySqlResearchRepository
+```
+
+File:
+
+```text
+src/melo/db.py
+```
+
+Parametri in ingresso attesi:
+
+```text
+MYSQL_HOST
+MYSQL_PORT
+MYSQL_DATABASE
+MYSQL_USER
+MYSQL_PASSWORD
+execution_ids
+```
+
+Output testato:
+
+```text
+RuntimeConfig
+```
+
+Campi obbligatori output:
+
+```text
+rt.strategy.enabled
+bb.decision.interval_seconds
+rt.decision.interval_seconds
+rt.entry.*
+rt.exit.*
+bb.context.*
+```
+
+Logica algoritmo:
+
+1. Leggere solo MySQL operativo.
+2. Caricare `acdc_shared_runtime_config` con `status='ACTIVE'`.
+3. Non scrivere `rt.*`, non abilitare PAPER, non modificare runtime.
+4. Usare la config come input immutabile del replay.
+
+Condizione di validita':
+
+```text
+Le execution selezionate devono essere state prodotte dalla stessa configurazione runtime che si sta riproducendo.
+Se non esistono execution eleggibili, il benchmark non autorizza la ricerca: richiede prima una PAPER evidence set
+coerente da /management.
+```
+
+### Step -1.2 - Mirror Decisionale Realtime
+
+Classe:
+
+```text
+RealtimeDecisionEvaluator
+```
+
+File:
+
+```text
+src/melo/evaluator.py
+```
+
+Parametri in ingresso attesi:
+
+```text
+RuntimeConfig
+PaperDecision.feature_json
+PaperDecision.phase
+PaperDecision.price
+```
+
+Output testato:
+
+```text
+DecisionPrediction
+```
+
+Campi obbligatori output:
+
+```text
+action
+accepted
+reason
+```
+
+Logica algoritmo:
+
+1. Per `ENTRY`, riprodurre data-quality gate, setup WATCH, range entry e breakout entry.
+2. Per `EXIT`, riprodurre range exit e breakout exit.
+3. Usare il prezzo della riga `acdc_paper_decision.price` come prezzo decisionale quando serve calcolare edge,
+   chandelier o condizioni di uscita.
+4. Rispettare le stesse costanti semantiche del runtime:
+   - setup `BB_REENTRY_MEAN_REVERSION_LONG`;
+   - setup `BB_SQUEEZE_BREAKOUT_LONG`;
+   - trigger reentry e breakout;
+   - cadence dichiarata;
+   - divieto synthetic backfill.
+5. Non inferire parametri mancanti con euristiche nuove: i fallback ammessi devono corrispondere ai default runtime
+   gia' documentati.
+
+Output atteso:
+
+```text
+Per ogni riga storica, action/accepted/reason predetti devono coincidere con action/accepted/reason salvati.
+```
+
+### Step -1.3 - Comparatore Trade Salvate
+
+Classe:
+
+```text
+CurrentConfigBenchmark
+```
+
+File:
+
+```text
+src/melo/benchmark.py
+```
+
+Parametri in ingresso attesi:
+
+```text
+RuntimeConfig
+List[PaperDecision]
+List[PaperPosition]
+```
+
+Output testato:
+
+```text
+BenchmarkResult
+```
+
+Campi obbligatori output:
+
+```text
+passed
+execution_ids
+checked_decisions
+current_config_evidence
+decision_mismatch_count
+expected_trade_count
+reproduced_buy_count
+reproduced_sell_count
+mismatches
+```
+
+Logica algoritmo:
+
+1. Ordinare le decisioni per execution/id.
+2. Riprodurre ogni decisione tramite `RealtimeDecisionEvaluator`.
+3. Contare BUY e SELL riprodotte.
+4. Confrontare:
+   - `predicted.action == paper_decision.action`;
+   - `predicted.accepted == paper_decision.accepted`;
+   - `predicted.reason == paper_decision.reason`;
+   - `reproduced_buy_count == count(acdc_paper_position)`;
+   - `reproduced_sell_count == count(acdc_paper_position)`.
+5. Verificare `current_config_evidence=true`: il dataset deve contenere marker/feature introdotte dalla config runtime
+   corrente. Per V107 il marker minimo e' `ohlc_wilder_indicators` nelle feature persistite.
+6. Fallire il benchmark al primo insieme non identico o non eleggibile, riportando mismatch puntuali.
+
+Regola Consiglio:
+
+```text
+Se il benchmark non passa con mismatch zero e `current_config_evidence=true`, Melo non puo' produrre candidati
+affidabili: prima si corregge il mirror o si seleziona un evidence set coerente con la configurazione. Una ricerca
+parametrica su un replay non identico o su execution prodotte da una config diversa e' evidenza contaminata.
+```
+
 ## Fase 0 - Configurazione Riproducibile
 
 ### Step 0.1 - Caricamento Config
@@ -236,7 +452,7 @@ RtParameterSearchConfig
 File:
 
 ```text
-rt_parameter_search/config.py
+src/melo/config.py
 ```
 
 Parametri in ingresso attesi:
@@ -305,7 +521,7 @@ SearchStudyRegistry
 File:
 
 ```text
-rt_parameter_search/persistence.py
+src/melo/persistence.py
 ```
 
 Parametri in ingresso attesi:
@@ -356,7 +572,7 @@ MySqlResearchRepository
 File:
 
 ```text
-rt_parameter_search/db.py
+src/melo/db.py
 ```
 
 Parametri in ingresso attesi:
@@ -407,7 +623,7 @@ PaperDecisionExtractor
 File:
 
 ```text
-rt_parameter_search/extraction.py
+src/melo/extraction.py
 ```
 
 Parametri in ingresso attesi:
@@ -473,7 +689,7 @@ FeatureJsonParser
 File:
 
 ```text
-rt_parameter_search/feature_parser.py
+src/melo/feature_parser.py
 ```
 
 Parametri in ingresso attesi:
@@ -551,7 +767,7 @@ CandleAvailabilityJoiner
 File:
 
 ```text
-rt_parameter_search/candle_join.py
+src/melo/candle_join.py
 ```
 
 Parametri in ingresso attesi:
@@ -610,7 +826,7 @@ TradeEpisodeBuilder
 File:
 
 ```text
-rt_parameter_search/replay.py
+src/melo/replay.py
 ```
 
 Parametri in ingresso attesi:
@@ -680,7 +896,7 @@ ParameterProfileEvaluator
 File:
 
 ```text
-rt_parameter_search/replay.py
+src/melo/replay.py
 ```
 
 Parametri in ingresso attesi:
@@ -762,7 +978,7 @@ MetricBundleCalculator
 File:
 
 ```text
-rt_parameter_search/metrics.py
+src/melo/metrics.py
 ```
 
 Parametri in ingresso attesi:
@@ -828,7 +1044,7 @@ ResearchObjectiveMapper
 File:
 
 ```text
-rt_parameter_search/objective.py
+src/melo/objective.py
 ```
 
 Parametri in ingresso attesi:
@@ -923,7 +1139,7 @@ SemanticProfileFilter
 File:
 
 ```text
-rt_parameter_search/constraints.py
+src/melo/constraints.py
 ```
 
 Parametri in ingresso attesi:
@@ -980,7 +1196,7 @@ HardConstraintEvaluator
 File:
 
 ```text
-rt_parameter_search/constraints.py
+src/melo/constraints.py
 ```
 
 Parametri in ingresso attesi:
@@ -1039,7 +1255,7 @@ OptunaTpeParetoOptimizer
 File:
 
 ```text
-rt_parameter_search/optuna_runner.py
+src/melo/optuna_runner.py
 ```
 
 Parametri in ingresso attesi:
@@ -1103,7 +1319,7 @@ ProgressiveBudgetEvaluator
 File:
 
 ```text
-rt_parameter_search/optuna_runner.py
+src/melo/optuna_runner.py
 ```
 
 Parametri in ingresso attesi:
@@ -1164,7 +1380,7 @@ PromisingRegionBuilder
 File:
 
 ```text
-rt_parameter_search/nsga2_crosscheck.py
+src/melo/nsga2_crosscheck.py
 ```
 
 Parametri in ingresso attesi:
@@ -1214,7 +1430,7 @@ Nsga2CrossCheckOptimizer
 File:
 
 ```text
-rt_parameter_search/nsga2_crosscheck.py
+src/melo/nsga2_crosscheck.py
 ```
 
 Parametri in ingresso attesi:
@@ -1277,7 +1493,7 @@ WalkForwardSplitter
 File:
 
 ```text
-rt_parameter_search/walk_forward.py
+src/melo/walk_forward.py
 ```
 
 Parametri in ingresso attesi:
@@ -1338,7 +1554,7 @@ WalkForwardCandidateValidator
 File:
 
 ```text
-rt_parameter_search/walk_forward.py
+src/melo/walk_forward.py
 ```
 
 Parametri in ingresso attesi:
@@ -1394,7 +1610,7 @@ SelectionBiasRiskAnalyzer
 File:
 
 ```text
-rt_parameter_search/overfit_risk.py
+src/melo/overfit_risk.py
 ```
 
 Parametri in ingresso attesi:
@@ -1451,7 +1667,7 @@ RealityCheckReporter
 File:
 
 ```text
-rt_parameter_search/overfit_risk.py
+src/melo/overfit_risk.py
 ```
 
 Parametri in ingresso attesi:
@@ -1513,7 +1729,7 @@ RobustParetoCandidateSelector
 File:
 
 ```text
-rt_parameter_search/candidate_selection.py
+src/melo/candidate_selection.py
 ```
 
 Parametri in ingresso attesi:
@@ -1580,7 +1796,7 @@ CouncilCandidateExporter
 File:
 
 ```text
-rt_parameter_search/persistence.py
+src/melo/persistence.py
 ```
 
 Parametri in ingresso attesi:
@@ -1631,7 +1847,7 @@ MarkdownSearchReportWriter
 File:
 
 ```text
-rt_parameter_search/reports.py
+src/melo/reports.py
 ```
 
 Parametri in ingresso attesi:
@@ -1690,7 +1906,7 @@ StructuredSearchReportWriter
 File:
 
 ```text
-rt_parameter_search/reports.py
+src/melo/reports.py
 ```
 
 Parametri in ingresso attesi:
@@ -1733,7 +1949,7 @@ CouncilRunGateEvaluator
 File:
 
 ```text
-rt_parameter_search/candidate_selection.py
+src/melo/candidate_selection.py
 ```
 
 Parametri in ingresso attesi:
