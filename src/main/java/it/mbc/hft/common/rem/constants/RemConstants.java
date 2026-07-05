@@ -102,9 +102,12 @@ public final class RemConstants {
     public static final BigDecimal RT_ENTRY_RANGE_ADX_MAX_DEFAULT = new BigDecimal("20");
     public static final BigDecimal RT_ENTRY_RANGE_ADX_SOFT_MAX_DEFAULT = new BigDecimal("25");
     public static final BigDecimal RT_ENTRY_RANGE_MIN_MIDDLE_EDGE_DEFAULT = new BigDecimal("0.0025");
+    public static final BigDecimal RT_ENTRY_RANGE_MIN_LAST_CLOSE_RETURN_DEFAULT = BigDecimal.ZERO;
     public static final BigDecimal RT_ENTRY_BREAKOUT_ADX_MIN_DEFAULT = new BigDecimal("25");
     public static final BigDecimal RT_ENTRY_BREAKOUT_ADX_RISING_SOFT_MIN_DEFAULT = new BigDecimal("20");
     public static final BigDecimal RT_ENTRY_BREAKOUT_VOLUME_RATIO_MIN_DEFAULT = new BigDecimal("1.30");
+    public static final BigDecimal RT_ENTRY_BREAKOUT_MIN_LAST_CLOSE_RETURN_DEFAULT = new BigDecimal("0.0007");
+    public static final BigDecimal RT_ENTRY_BREAKOUT_MAX_UPPER_EDGE_PCT_DEFAULT = new BigDecimal("0.0060");
     public static final BigDecimal RT_EXIT_RANGE_MIDDLE_BAND_CAPTURE_PERCENT_B_DEFAULT = new BigDecimal("0.50");
     public static final BigDecimal RT_EXIT_RANGE_UPPER_BAND_CAPTURE_PERCENT_B_DEFAULT = new BigDecimal("0.80");
     public static final BigDecimal RT_EXIT_RANGE_FAIL_PERCENT_B_DEFAULT = BigDecimal.ZERO;
@@ -506,6 +509,9 @@ public final class RemConstants {
     public static final String BB_MIDDLE_SLOPE = "bb_middle_slope";
     public static final String BB_PERCENT_B = "bb_percent_b";
     public static final String BB_PRICE_POSITION = "bb_price_position";
+    public static final String PREVIOUS_CLOSE = "previous_close";
+    public static final String LAST_CLOSE_RETURN = "last_close_return";
+    public static final String UPPER_BAND_EDGE_PCT = "upper_band_edge_pct";
     public static final String BB_LOWER_BREACH = "bb_lower_breach";
     public static final String BB_UPPER_BREACH = "bb_upper_breach";
     public static final String BB_REENTRY_CONFIRMED = "bb_reentry_confirmed";
@@ -784,6 +790,8 @@ public final class RemConstants {
     public static final String RT_ENTRY_RANGE_VOLUME_CHAOS_BLOCK = "rt.entry.range.volume_chaos_block";
     public static final String RT_ENTRY_RANGE_ATR_CHAOS_BLOCK = "rt.entry.range.atr_chaos_block";
     public static final String RT_ENTRY_RANGE_MIN_MIDDLE_EDGE_PCT = "rt.entry.range.min_middle_edge_pct";
+    public static final String RT_ENTRY_RANGE_MIN_LAST_CLOSE_RETURN =
+            "rt.entry.range.min_last_close_return";
     public static final String RT_ENTRY_BREAKOUT_ADX_MIN = "rt.entry.breakout.adx_min";
     public static final String RT_ENTRY_BREAKOUT_ADX_RISING_SOFT_MIN =
             "rt.entry.breakout.adx_rising_soft_min";
@@ -792,6 +800,10 @@ public final class RemConstants {
             "rt.entry.breakout.require_plus_di_gt_minus_di";
     public static final String RT_ENTRY_BREAKOUT_REQUIRE_OBV_NON_NEGATIVE =
             "rt.entry.breakout.require_obv_non_negative";
+    public static final String RT_ENTRY_BREAKOUT_MIN_LAST_CLOSE_RETURN =
+            "rt.entry.breakout.min_last_close_return";
+    public static final String RT_ENTRY_BREAKOUT_MAX_UPPER_EDGE_PCT =
+            "rt.entry.breakout.max_upper_edge_pct";
     public static final String RT_EXIT_RANGE_MIDDLE_BAND_CAPTURE_PERCENT_B =
             "rt.exit.range.middle_band_capture_percent_b";
     public static final String RT_EXIT_RANGE_UPPER_BAND_CAPTURE_PERCENT_B =
@@ -826,8 +838,13 @@ public final class RemConstants {
     public static final String RT_ENTRY_BLOCKED_BREAKOUT_BOLLINGER = "RT_ENTRY_BLOCKED_BREAKOUT_BOLLINGER";
     public static final String RT_ENTRY_BLOCKED_BREAKOUT_ADX = "RT_ENTRY_BLOCKED_BREAKOUT_ADX";
     public static final String RT_ENTRY_BLOCKED_BREAKOUT_DMI = "RT_ENTRY_BLOCKED_BREAKOUT_DMI";
+    public static final String RT_ENTRY_BLOCKED_BREAKOUT_RSI = "RT_ENTRY_BLOCKED_BREAKOUT_RSI";
     public static final String RT_ENTRY_BLOCKED_BREAKOUT_VOLUME = "RT_ENTRY_BLOCKED_BREAKOUT_VOLUME";
     public static final String RT_ENTRY_BLOCKED_BREAKOUT_OBV = "RT_ENTRY_BLOCKED_BREAKOUT_OBV";
+    public static final String RT_ENTRY_BLOCKED_BREAKOUT_FOLLOW_THROUGH =
+            "RT_ENTRY_BLOCKED_BREAKOUT_FOLLOW_THROUGH";
+    public static final String RT_ENTRY_BLOCKED_BREAKOUT_OVEREXTENDED =
+            "RT_ENTRY_BLOCKED_BREAKOUT_OVEREXTENDED";
     public static final String RT_EXIT_RANGE_MIDDLE_BAND_PROFIT = "RT_EXIT_RANGE_MIDDLE_BAND_PROFIT";
     public static final String RT_EXIT_RANGE_UPPER_BAND_PROFIT = "RT_EXIT_RANGE_UPPER_BAND_PROFIT";
     public static final String RT_EXIT_RANGE_REENTRY_FAILED = "RT_EXIT_RANGE_REENTRY_FAILED";

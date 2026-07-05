@@ -43,9 +43,31 @@ Nota 2026-07-05, implementazione RT:
 - correzione V101: range reentry richiede contesto vivo e edge minimo verso middle band;
 - RUN PAPER RT 131: 3 BUY breakout-only/3 SELL, net `-0.149999999561200000`; i range flat sono stati eliminati, ma i
   breakout hanno chiuso a timeout allo stesso prezzo pagando solo fee;
-- classificazione Consiglio: implementazione end-to-end riuscita, evidenza finanziaria iniziale negativa. Prossimo
-  intervento scientifico non deve reintrodurre ML/DocBrown nel path RT; deve concentrarsi su conferma follow-through
-  breakout o su modello economico minimo prima del BUY.
+- classificazione Consiglio: implementazione end-to-end riuscita, evidenza finanziaria iniziale negativa;
+- contenimento 2026-07-05: `rt.strategy.enabled=false`, nessuna PAPER attiva, nessuna posizione aperta;
+- correzione V102: il breakout RT ora richiede RSI context valido, assenza di chaos/volume spike, follow-through
+  positivo sull'ultima candela (`last_close_return`) e distanza massima dalla upper band (`upper_band_edge_pct`) prima
+  del BUY. Obiettivo: impedire BUY breakout statici/estesi che non hanno edge netto e chiudono a timeout pagando solo
+  fee;
+- nuova PAPER RT non autorizzata finche' build/deploy V102 e readiness MySQL non risultano verificati.
+- RUN PAPER RT 132 post-V102: breakout sporchi bloccati, ma 2 BUY range hanno perso net
+  `-0.097676967607800000`; entrambi avevano `last_close_return < 0` e `-DI > +DI`, quindi non erano veri recuperi;
+- correzione V103: se `rt.entry.range.percent_b_recovery_required=true`, il BUY range richiede
+  `last_close_return > rt.entry.range.min_last_close_return` prima dell'ingresso. Default `0`, cioe' serve una candela
+  decisionale positiva dopo lo stress sotto banda.
+- RUN PAPER RT 133 post-V103: 2 BUY range/2 SELL, net `-0.233721663969951900`; entrambi i BUY avevano
+  `last_close_return > 0`, ma `+DI < -DI`, `max_net_return=0` e uscita `RT_EXIT_RANGE_LOSS_CAP`;
+- correzione V104 codice: `rt.entry.range.minus_di_dominance_block=true` ora blocca ogni BUY range con `-DI > +DI`,
+  non solo quando ADX supera `rt.entry.range.adx_max`. Una reentry range e' autorizzabile solo se il recupero non resta
+  direzionalmente bearish.
+- RUN PAPER RT 134 post-V104: 1 BUY breakout/1 SELL, net `-0.078973317632300000`; il BUY ERAUSDC aveva
+  `last_close_return=0.0011614402`, `upper_band_edge_pct=0.0005803831`, `rsi14=75`, `regime_chaos=0`,
+  `volume_spike_risk=0`, ma `max_net_return=0` e uscita `RT_EXIT_BREAKOUT_CHANDELIER_STOP`;
+- contenimento finale 2026-07-05 00:32 UTC: `rt.strategy.enabled=false`, nessuna PAPER attiva, nessuna posizione aperta;
+- classificazione Consiglio: V102/V103/V104 hanno migliorato il filtraggio dei falsi positivi evidenti, ma
+  `REALTIME_BB_ADX_V1` no-ML resta `NEGATIVE_OPERATIONAL_SIGNAL` su evidenza PAPER. Non autorizzare altre PAPER RT
+  finche' non esiste una nuova ipotesi documentata e verificabile; evitare ulteriori micro-soglie incrementali senza
+  backtest/replay causale sui casi 126/130/131/132/133/134.
 
 ## Vincoli Correnti
 
