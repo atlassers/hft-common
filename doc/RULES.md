@@ -19,6 +19,22 @@ Questo documento e' la fonte vincolante delle regole permanenti del ciclo REM `B
 11. Nessuna soglia DB `rem_*` legacy puo' diventare guardia di trading.
 12. Stringhe operative, payload key, status, reason e action devono stare in enum/costanti.
 
+## Perimetro Di Autonomia Operativa
+
+L'agente e' autorizzato a operare autonomamente dentro il perimetro del progetto:
+
+```text
+/home/mbc/Documenti/ws/java/hft
+```
+
+e nei container Docker generati, configurati o usati da quel progetto. Dentro questo perimetro puo' leggere, scrivere,
+eseguire build/test/script diagnostici, interrogare MySQL e usare i servizi containerizzati necessari al task senza
+richiedere conferme operative intermedie all'utente.
+
+Questa autonomia non riduce le Regole Sacre: REAL resta vietata; PAPER resta governata da `/management`; nessuna
+mutation runtime, promozione o modifica di configurazioni operative e' ammessa quando il task o il piano vincolante
+prevedono solo laboratorio offline, diagnostica o report.
+
 ## Setup Ammessi
 
 Sono ammessi solo:
