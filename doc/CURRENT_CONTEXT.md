@@ -495,9 +495,19 @@ Aggiornamento operativo 2026-07-08:
   `/management/actions/PAPER_STOP`.
 - Esito execution `140`: `STOPPED`, budget `100`, PnL `0`, posizioni `0`.
 - Decisioni entry: `1400` REJECT, tutte `RT_ENTRY_BLOCKED_DATA_QUALITY`.
-- Classificazione Consiglio: `VALID_INTEGRATION_SIGNAL`, `INCONCLUSIVE_PERFORMANCE_SIGNAL`.
-  La strategia nativa e' caricata e raggiungibile, ma non e' stata valutata finanziariamente perche' il quality gate
-  dati ha bloccato tutte le entry prima dei gate Bollinger nativi.
+- Classificazione Consiglio aggiornata dopo audit MS985: `INVALID_STRATEGIC_EVIDENCE`.
+  La run 140 ha esposto un bug semantico: il path nativo usava ancora quality gate del vecchio runtime
+  (`decision_max_gap_seconds`/Wilder readiness) prima dei gate Melo, quindi applicava vecchia implementazione con nuovi
+  parametri.
+- Correzione MS985: `RealtimeDecisionService` usa readiness nativa dedicata, non blocca piu' per gap diagnostico o
+  `ohlc_wilder_indicators`, e in SELL preferisce i valori congelati nel `policyJson` della posizione.
+- PAPER execution `141` post-correzione: `COMPLETED`, nessuna posizione aperta, budget finale
+  `99.843014361840330000`, PnL `-0.156985638159670000`.
+- Execution `141` decisioni native: 5 BUY (`3` `RT_NATIVE_RANGE_REENTRY`, `2` `RT_NATIVE_BREAKOUT`) e 5 SELL
+  (`1` `RT_NATIVE_RANGE_MIDDLE_CAPTURE`, `1` `RT_NATIVE_BREAKOUT_FALSE_BREAKOUT`, `3` `RT_NATIVE_TIMEOUT`).
+  Nessuna entry e' stata respinta da `RT_ENTRY_BLOCKED_DATA_QUALITY`.
+- Classificazione Consiglio execution `141`: `VALID_NATIVE_PATH_EVIDENCE`, `NEGATIVE_FINANCIAL_SIGNAL_SMALL_SAMPLE`.
+  La strategia dedicata ora viene realmente esercitata; l'esito economico forward iniziale e' negativo.
 
 ## Moduli
 
