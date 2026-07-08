@@ -31,6 +31,7 @@ public final class RemConstants {
     public static final String BOLLINGER_ONLY_V2 = "BOLLINGER_ONLY_V2";
     public static final String BOLLINGER_CONTEXT_V1 = "BOLLINGER_CONTEXT_V1";
     public static final String REALTIME_BB_ADX_V1 = "REALTIME_BB_ADX_V1";
+    public static final String REALTIME_BB_ADX_NATIVE_F4E954 = "REALTIME_BB_ADX_NATIVE_F4E954";
     public static final String PAPER_ELIGIBLE = "PAPER_ELIGIBLE";
     public static final String PAPER_WATCH_ELIGIBLE = "PAPER_WATCH_ELIGIBLE";
     public static final String PAPER_BUY_ELIGIBLE = "PAPER_BUY_ELIGIBLE";
@@ -63,6 +64,20 @@ public final class RemConstants {
     public static final String TIMESTAMP_SEMANTICS_BINANCE_OPEN_TIME = "BINANCE_OPEN_TIME";
     public static final int BOLLINGER_DEFAULT_PERIOD = 20;
     public static final BigDecimal BOLLINGER_DEFAULT_STDDEV_MULTIPLIER = new BigDecimal("2");
+    public static final String RT_NATIVE_F4E954_PROFILE_HASH = "f4e954f0b552ce864535fc2b";
+    public static final int RT_NATIVE_F4E954_BB_PERIOD = 20;
+    public static final BigDecimal RT_NATIVE_F4E954_BB_STDDEV_MULTIPLIER = new BigDecimal("2.00");
+    public static final BigDecimal RT_NATIVE_F4E954_RANGE_MIN_DISCOUNT_TO_MIDDLE_PCT = new BigDecimal("0.0010");
+    public static final BigDecimal RT_NATIVE_F4E954_RANGE_MIN_VOLUME_RATIO = new BigDecimal("0.30");
+    public static final String RT_NATIVE_F4E954_RANGE_DMI_MODE = "OFF";
+    public static final BigDecimal RT_NATIVE_F4E954_BREAKOUT_MIN_PREMIUM_TO_MIDDLE_PCT = new BigDecimal("0.0010");
+    public static final BigDecimal RT_NATIVE_F4E954_BREAKOUT_MAX_PREMIUM_TO_MIDDLE_PCT = new BigDecimal("0.0200");
+    public static final BigDecimal RT_NATIVE_F4E954_BREAKOUT_MIN_VOLUME_RATIO = new BigDecimal("1.00");
+    public static final BigDecimal RT_NATIVE_F4E954_BREAKOUT_MIN_RSI = new BigDecimal("45");
+    public static final BigDecimal RT_NATIVE_F4E954_LOSS_CAP_ABS = new BigDecimal("0.0050");
+    public static final BigDecimal RT_NATIVE_F4E954_BREAKOUT_MIN_PROTECT_NET_RETURN = new BigDecimal("0.0005");
+    public static final BigDecimal RT_NATIVE_F4E954_RANGE_MAX_HOLD_CANDLES = new BigDecimal("36");
+    public static final BigDecimal RT_NATIVE_F4E954_BREAKOUT_MAX_HOLD_CANDLES = new BigDecimal("60");
     public static final BigDecimal BOLLINGER_PERCENT_B_LOWER = BigDecimal.ZERO;
     public static final BigDecimal BOLLINGER_PERCENT_B_ZERO_WIDTH = new BigDecimal("0.50");
     public static final BigDecimal BOLLINGER_PERCENT_B_MIDDLE = new BigDecimal("0.50");
@@ -813,7 +828,14 @@ public final class RemConstants {
     public static final String BB_LIVE_ADVICE_LOSS_CAP_MAX_QUOTE = "bb.live_advice.loss_cap.max_quote";
     public static final String BB_LIVE_ADVICE_LOSS_CAP_MIN_BUFFER = "bb.live_advice.loss_cap.min_buffer";
     public static final String RT_STRATEGY_ENABLED = "rt.strategy.enabled";
+    public static final String RT_STRATEGY_FAMILY = "rt.strategy.family";
+    public static final String RT_NATIVE_PROFILE_HASH = "rt.native.profile_hash";
+    public static final String RT_BB_PERIOD = "rt.bb.period";
+    public static final String RT_BB_STDDEV_MULTIPLIER = "rt.bb.stddev_multiplier";
     public static final String RT_DECISION_INTERVAL_SECONDS = "rt.decision.interval_seconds";
+    public static final String RT_ENTRY_RANGE_MIN_DISCOUNT_TO_MIDDLE_PCT =
+            "rt.entry.range.min_discount_to_middle_pct";
+    public static final String RT_ENTRY_RANGE_DMI_MODE = "rt.entry.range.dmi_mode";
     public static final String RT_ENTRY_RANGE_ADX_MAX = "rt.entry.range.adx_max";
     public static final String RT_ENTRY_RANGE_ADX_SOFT_MAX = "rt.entry.range.adx_soft_max";
     public static final String RT_ENTRY_RANGE_PERCENT_B_RECOVERY_REQUIRED =
@@ -830,6 +852,11 @@ public final class RemConstants {
     public static final String RT_ENTRY_BREAKOUT_ADX_RISING_SOFT_MIN =
             "rt.entry.breakout.adx_rising_soft_min";
     public static final String RT_ENTRY_BREAKOUT_VOLUME_RATIO_MIN = "rt.entry.breakout.volume_ratio_min";
+    public static final String RT_ENTRY_BREAKOUT_MIN_PREMIUM_TO_MIDDLE_PCT =
+            "rt.entry.breakout.min_premium_to_middle_pct";
+    public static final String RT_ENTRY_BREAKOUT_MAX_PREMIUM_TO_MIDDLE_PCT =
+            "rt.entry.breakout.max_premium_to_middle_pct";
+    public static final String RT_ENTRY_BREAKOUT_MIN_RSI = "rt.entry.breakout.min_rsi";
     public static final String RT_ENTRY_BREAKOUT_FOLLOW_THROUGH_MODE =
             "rt.entry.breakout.follow_through_mode";
     public static final String RT_ENTRY_BREAKOUT_STATIC_MIN_LAST_CLOSE_RETURN =
@@ -868,7 +895,19 @@ public final class RemConstants {
     public static final String RT_EXIT_BREAKOUT_REQUIRE_PLUS_DI_FOR_HOLD =
             "rt.exit.breakout.require_plus_di_for_hold";
     public static final String RT_EXIT_BREAKOUT_LOSS_CAP_NET_PCT = "rt.exit.breakout.loss_cap_net_pct";
+    public static final String RT_EXIT_BREAKOUT_MIN_PROTECT_NET_RETURN =
+            "rt.exit.breakout.min_protect_net_return";
     public static final String RT_EXIT_BREAKOUT_MAX_HOLD_CANDLES = "rt.exit.breakout.max_hold_candles";
+    public static final String NATIVE_PROFILE_HASH = "native_profile_hash";
+    public static final String NATIVE_CONFIG_VERSION = "native_config_version";
+    public static final String NATIVE_LOWER_BAND = "native_lower_band";
+    public static final String NATIVE_UPPER_BAND = "native_upper_band";
+    public static final String DISCOUNT_TO_MIDDLE_PCT = "discount_to_middle_pct";
+    public static final String PREMIUM_TO_MIDDLE_PCT = "premium_to_middle_pct";
+    public static final String ENTRY_NATIVE_LOWER_BAND = "entry_native_lower_band";
+    public static final String ENTRY_NATIVE_UPPER_BAND = "entry_native_upper_band";
+    public static final String ENTRY_DISCOUNT_TO_MIDDLE_PCT = "entry_discount_to_middle_pct";
+    public static final String ENTRY_PREMIUM_TO_MIDDLE_PCT = "entry_premium_to_middle_pct";
     public static final String RT_SETUP_TYPE = "rt_setup_type";
     public static final String RT_ENTRY_SETUP_TYPE = "rt_entry_setup_type";
     public static final String RT_RANGE_REENTRY_WATCH = "RT_RANGE_REENTRY_WATCH";
@@ -876,6 +915,8 @@ public final class RemConstants {
     public static final String RT_NO_SETUP = "RT_NO_SETUP";
     public static final String RT_ENTRY_RANGE_REENTRY = "RT_ENTRY_RANGE_REENTRY";
     public static final String RT_ENTRY_SQUEEZE_BREAKOUT_LONG = "RT_ENTRY_SQUEEZE_BREAKOUT_LONG";
+    public static final String RT_NATIVE_RANGE_REENTRY = "RT_NATIVE_RANGE_REENTRY";
+    public static final String RT_NATIVE_BREAKOUT = "RT_NATIVE_BREAKOUT";
     public static final String RT_ENTRY_BLOCKED_DATA_QUALITY = "RT_ENTRY_BLOCKED_DATA_QUALITY";
     public static final String RT_WILDER_OHLC_NOT_READY = "RT_WILDER_OHLC_NOT_READY";
     public static final String RT_ENTRY_BLOCKED_NO_SETUP = "RT_ENTRY_BLOCKED_NO_SETUP";
@@ -902,6 +943,12 @@ public final class RemConstants {
     public static final String RT_EXIT_RANGE_TREND_AGAINST = "RT_EXIT_RANGE_TREND_AGAINST";
     public static final String RT_EXIT_RANGE_LOSS_CAP = "RT_EXIT_RANGE_LOSS_CAP";
     public static final String RT_EXIT_RANGE_TIMEOUT = "RT_EXIT_RANGE_TIMEOUT";
+    public static final String RT_NATIVE_RANGE_MIDDLE_CAPTURE = "RT_NATIVE_RANGE_MIDDLE_CAPTURE";
+    public static final String RT_NATIVE_RANGE_UPPER_CAPTURE = "RT_NATIVE_RANGE_UPPER_CAPTURE";
+    public static final String RT_NATIVE_BREAKOUT_UPPER_PROTECT = "RT_NATIVE_BREAKOUT_UPPER_PROTECT";
+    public static final String RT_NATIVE_BREAKOUT_FALSE_BREAKOUT = "RT_NATIVE_BREAKOUT_FALSE_BREAKOUT";
+    public static final String RT_NATIVE_LOSS_CAP = "RT_NATIVE_LOSS_CAP";
+    public static final String RT_NATIVE_TIMEOUT = "RT_NATIVE_TIMEOUT";
     public static final String RT_EXIT_BREAKOUT_CHANDELIER_STOP = "RT_EXIT_BREAKOUT_CHANDELIER_STOP";
     public static final String RT_EXIT_BREAKOUT_UPPER_BAND_PROFIT = "RT_EXIT_BREAKOUT_UPPER_BAND_PROFIT";
     public static final String RT_EXIT_BREAKOUT_FALSE_BREAKOUT = "RT_EXIT_BREAKOUT_FALSE_BREAKOUT";

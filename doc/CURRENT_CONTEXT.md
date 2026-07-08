@@ -485,6 +485,20 @@ REAL = vietata
 Le RUN PAPER 82-91 hanno prodotto 9 trade reali: 3 WIN, 6 LOSS, netto `-0.5464600973`. Il filtro diagnostico
 Context V1 avrebbe tenuto 2 trade con netto `-0.1464585003`, migliorando il campione ma restando negativo.
 
+Aggiornamento operativo 2026-07-08:
+
+- Implementata e deployata la strategia `REALTIME_BB_ADX_NATIVE_F4E954` derivata da Melo/Optuna.
+- Profilo nativo centralizzato in `hft-common`: hash `f4e954f0b552ce864535fc2b`, `bb_period=20`,
+  `bb_stddev_multiplier=2.00`, soglie Bollinger relative e loss cap statico `0.0050`.
+- ACDC Flyway operativo migrato a V108; MySQL conferma `rt.strategy.family=REALTIME_BB_ADX_NATIVE_F4E954`.
+- PAPER execution `140` avviata da `/management/actions/PAPER_REALTIME_START` e fermata da
+  `/management/actions/PAPER_STOP`.
+- Esito execution `140`: `STOPPED`, budget `100`, PnL `0`, posizioni `0`.
+- Decisioni entry: `1400` REJECT, tutte `RT_ENTRY_BLOCKED_DATA_QUALITY`.
+- Classificazione Consiglio: `VALID_INTEGRATION_SIGNAL`, `INCONCLUSIVE_PERFORMANCE_SIGNAL`.
+  La strategia nativa e' caricata e raggiungibile, ma non e' stata valutata finanziariamente perche' il quality gate
+  dati ha bloccato tutte le entry prima dei gate Bollinger nativi.
+
 ## Moduli
 
 - `hft-common`: charter, contratti, enum, costanti e reason Context V1.
