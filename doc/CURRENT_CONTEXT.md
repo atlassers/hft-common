@@ -94,7 +94,8 @@ Nota 2026-07-05, implementazione RT:
   finche' non esiste una nuova ipotesi documentata e verificabile; evitare ulteriori micro-soglie incrementali senza
   backtest/replay causale sui casi 126/130/131/132/133/134.
 - decisione Consiglio 2026-07-05 A3: nuovo esperimento coerente su barre decisionale `20s` per WATCH/BUY/SELL
-  strategica, calcolate da `binance-microbar` reale 5s via aggregazione 20s chiusa. Il documento scientifico
+  strategica, calcolate su `binance-microbar` come barre 20s chiuse. Dal 2026-07-08 Influxer produce queste barre
+  aggregando klines Binance native `1s`, non interpolando candele `1m`. Il documento scientifico
   `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md` esplicita i 7 disallineamenti e i valori reali del profilo 20s.
   Nessuna RUN e' valida se `decision_interval_seconds != 20`, se il source bucket cade su `binance` 1m, o se
   `decision_synthetic_backfill=1`.
@@ -113,6 +114,10 @@ Nota 2026-07-05, implementazione RT:
   `EIGENUSDC` netto `+0.152528807895000000`. `RT_ENTRY_BLOCKED_RANGE_VOLUME=3619` conferma che il floor range ha
   bloccato le barre scariche. Notifiche Telegram idempotenti: `buy_notified=2`, `sell_notified=2`. Classificazione:
   `VALID_STRATEGIC_EVIDENCE`, `POSITIVE_SELL_CAPTURE_SIGNAL`, `POSITIVE_FINANCIAL_SIGNAL_SMALL_SAMPLE`.
+- RUN PAPER RT 142 post-Influxer 1s->20s: 15 BUY/15 SELL, 9 win/6 loss, netto `-0.172399854368725040`; tutte le
+  posizioni chiuse e nessuna PAPER rimasta attiva. Classificazione Consiglio: pipeline dati 20s tecnicamente valida
+  (`binance-microbar`, interval `20`, synthetic `false`), ma evidenza finanziaria negativa e caveat operativo su
+  reconnect websocket `Pong timeout` con retry automatico.
 
 ## Vincoli Correnti
 

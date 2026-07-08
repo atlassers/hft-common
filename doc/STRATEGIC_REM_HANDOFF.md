@@ -35,6 +35,9 @@ hft-common/doc/archived/REALTIME_BB_ADX_NATIVE_F4E954_STRATEGY_INTEGRATION_PLAN.
   coerente e non sintetica.
 - Profilo operativo corrente A3: `bb.decision.interval_seconds=20`, bucket decisionale `binance-microbar`, synthetic
   backfill vietato.
+- Dal 2026-07-08 Influxer deve leggere la cadence decisionale da MySQL (`bb.decision.interval_seconds`, fallback
+  `rt.decision.interval_seconds`). Per cadence sub-minute usa klines Binance native `1s` e aggrega OHLCV in barre
+  decisionali chiuse sul bucket `binance-microbar`; non deve interpolare candele `1m` in microbar decisionali.
 - Context V1 richiede feature esplicite di regime, trend, momentum, volume e risk.
 - Nel profilo A3 range reentry, `rt.entry.range.min_volume_ratio=0.50` blocca barre 20s quasi morte; non e' una
   conferma breakout e non sostituisce Bollinger.
@@ -141,7 +144,8 @@ Da introdurre solo quando DocBrown e ACDC sono compatibili:
      forensics espongano lo stesso interval;
    - profilo corrente approvato A3: ACDC RT decision source bucket = `binance-microbar`,
      `decision_interval_seconds=20`, `decision_synthetic_backfill=0`;
-   - la barra 20s e' aggregata da microbar reali 5s; non deve cadere su `binance` 1m;
+  - la barra 20s e' aggregata da klines Binance native `1s`; non deve cadere su `binance` 1m e non deve derivare da
+    interpolazione di una candela piu' larga;
    - profilo alternativo ammesso: decision source bucket = `binance`, `decision_interval_seconds=60`;
    - candle state = `CLOSED`;
    - decision candle count sufficiente per BB20, EMA50 e volume ratio sulla cadence dichiarata;
@@ -153,7 +157,9 @@ Da introdurre solo quando DocBrown e ACDC sono compatibili:
    - SELL decision interval = interval dichiarato per BUY;
    - SELL decision candle state = `CLOSED`;
    - eventuale SELL execution interval 5s separato dalla reason strategica;
-   - replay espone `source_bucket`, `interval_seconds`, `candle_count`, `max_gap_seconds`, `synthetic_backfill`.
+  - replay espone `source_bucket`, `interval_seconds`, `candle_count`, `max_gap_seconds`, `synthetic_backfill`.
+  - Influxer deve loggare avanzamento refill short-retention ogni 25 simboli e loggare source interval/cadence nella
+    sottoscrizione websocket, per esempio `Subscribed ... Binance 1s kline streams ... for 20s decision bars`.
 4. Verificare script e diagnostiche:
    - ogni script operativo deve stampare `DIAGNOSTIC_ONLY` se non passa da `/management`;
    - ogni script che legge bucket deve stampare bucket, interval, candle state, max gap e synthetic flag;
