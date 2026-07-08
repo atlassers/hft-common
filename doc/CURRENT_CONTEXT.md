@@ -508,6 +508,12 @@ Aggiornamento operativo 2026-07-08:
   Nessuna entry e' stata respinta da `RT_ENTRY_BLOCKED_DATA_QUALITY`.
 - Classificazione Consiglio execution `141`: `VALID_NATIVE_PATH_EVIDENCE`, `NEGATIVE_FINANCIAL_SIGNAL_SMALL_SAMPLE`.
   La strategia dedicata ora viene realmente esercitata; l'esito economico forward iniziale e' negativo.
+- Report cadence 2026-07-08:
+  `archived/REALTIME_BB_ADX_NATIVE_F4E954_CADENCE_SENSITIVITY_REPORT.md`.
+  Classificazione: `CADENCE_DIAGNOSTIC_ONLY`, `MIXED_INCONCLUSIVE_ON_1M_FILTER`, `DO_NOT_PROMOTE`, `DO_NOT_DISCARD`.
+  La run 141 non basta a provare che 1m filtri rumore: per range il profilo resta interessante, per breakout il rischio
+  dominante e' ritardo/assenza di MFE sufficiente ad armare protect. Prossimo step tecnico: replay diagnostico causale
+  20s vs 60s sugli stessi raw candles/simboli della execution 141.
 
 ## Moduli
 
