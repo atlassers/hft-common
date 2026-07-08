@@ -25,15 +25,18 @@ strategico primario.
    correzione A2 cadence/soglie ufficiali.
 4. `archived/REALTIME_BB_ADX_PARAMETER_VERIFICATION_PLAN.md`: piano tecnico per OHLC-Wilder, parametrizzazione delle
    soglie non ufficiali e matrice di verifica completa.
-5. `archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`: piano correttivo BUY post-A0, memoria del ciclo A1.
-6. `archived/BOLLINGER_CONTEXT_V1_PLAN.md`: baseline tecnica Context V1 precedente.
-7. `CURRENT_CONTEXT.md`: snapshot corrente cross-modulo.
-8. `STRATEGIC_REM_HANDOFF.md`: manuale operativo stabile.
-9. `archived/BOLLINGER_ONLY_PLAN.md`: baseline storica e riferimento di regressione.
+5. `archived/REALTIME_BB_ADX_NATIVE_F4E954_STRATEGY_INTEGRATION_PLAN.md`: piano di integrazione della strategia
+   target selezionata da Melo.
+6. `archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`: piano correttivo BUY post-A0, memoria del ciclo A1.
+7. `archived/BOLLINGER_CONTEXT_V1_PLAN.md`: baseline tecnica Context V1 precedente.
+8. `CURRENT_CONTEXT.md`: snapshot corrente cross-modulo.
+9. `STRATEGIC_REM_HANDOFF.md`: manuale operativo stabile.
+10. `archived/BOLLINGER_ONLY_PLAN.md`: baseline storica e riferimento di regressione.
 
 Se i documenti confliggono, prevale questo charter; poi
 `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`; poi `archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`;
 poi `archived/REALTIME_BB_ADX_PARAMETER_VERIFICATION_PLAN.md`; poi
+`archived/REALTIME_BB_ADX_NATIVE_F4E954_STRATEGY_INTEGRATION_PLAN.md`; poi
 `archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`; poi `archived/BOLLINGER_CONTEXT_V1_PLAN.md`.
 
 ## Processo Vincolante
@@ -132,6 +135,24 @@ archived/REALTIME_BB_ADX_PARAMETER_VERIFICATION_PLAN.md
 Il documento dettaglia il prossimo ciclo tecnico: ADX/DMI/ATR Wilder OHLC, sostituzione delle soglie fisse non ufficiali
 con parametri auditabili, matrice fattoriale completa dei parametri e replay storico causale. Non reintroduce A/B come
 approccio primario e non autorizza ancora implementazione o RUN: serve come piano da verificare prima dello sviluppo.
+
+Aggiornamento Consiglio 2026-07-08:
+
+```text
+REALTIME_BB_ADX_NATIVE_F4E954_STRATEGY_INTEGRATION_PLAN
+```
+
+Nuovo documento target:
+
+```text
+archived/REALTIME_BB_ADX_NATIVE_F4E954_STRATEGY_INTEGRATION_PLAN.md
+```
+
+Il documento adotta il miglior profilo Melo nativo `f4e954f0b552ce864535fc2b` come strategia target
+`REALTIME_BB_ADX_NATIVE_F4E954` per WATCH, BUY e SELL. Il profilo non era promuovibile nel laboratorio esaustivo per
+trade aperti e assenza di chiusure validation/holdout; la sua integrazione e' quindi una nuova ipotesi strategica
+PAPER-only, non evidenza finanziaria gia' validata. Tutti i valori devono essere centralizzati in `hft-common` e i gate
+legacy non inclusi nel profilo Melo devono essere rimossi dal path strategico.
 
 Aggiornamento Consiglio 2026-07-04:
 

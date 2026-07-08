@@ -18,6 +18,12 @@ La base scientifica di riferimento e':
 hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md
 ```
 
+Il piano strategia target corrente da implementare e':
+
+```text
+hft-common/doc/archived/REALTIME_BB_ADX_NATIVE_F4E954_STRATEGY_INTEGRATION_PLAN.md
+```
+
 ## Vincoli
 
 - REAL vietata.
@@ -32,6 +38,9 @@ hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md
 - Context V1 richiede feature esplicite di regime, trend, momentum, volume e risk.
 - Nel profilo A3 range reentry, `rt.entry.range.min_volume_ratio=0.50` blocca barre 20s quasi morte; non e' una
   conferma breakout e non sostituisce Bollinger.
+- Il prossimo profilo target e' `REALTIME_BB_ADX_NATIVE_F4E954`, hash Melo `f4e954f0b552ce864535fc2b`: i suoi valori
+  devono essere centralizzati in `hft-common`, e i gate legacy non inclusi nel profilo non devono agire nel path
+  strategico.
 - WATCH apre BUY solo se passano trigger Bollinger e gate Context V1.
 - SELL A3 resta Bollinger setup-specifica: range cattura middle/upper band; breakout protegge profitto quando una
   posizione gia' aperta ha MFE minimo positivo e rientra sotto la upper band con `net_return > 0`.

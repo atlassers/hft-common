@@ -12,13 +12,15 @@ Snapshot operativo corrente del workspace `/home/mbc/Documenti/ws/java/hft`.
    verifica parametrica completa.
 4. `hft-common/doc/archived/REALTIME_BB_ADX_OPTUNA_PARAMETER_SEARCH_PLAN.md` come piano offline di ricerca
    parametrica Optuna/Pareto.
-5. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`
-6. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`
-7. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`
-8. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_PLAN.md`
-9. `hft-common/doc/CURRENT_CONTEXT.md`
-10. `hft-common/doc/STRATEGIC_REM_HANDOFF.md`
-11. `hft-common/doc/archived/BOLLINGER_ONLY_PLAN.md`
+5. `hft-common/doc/archived/REALTIME_BB_ADX_NATIVE_F4E954_STRATEGY_INTEGRATION_PLAN.md` come piano di integrazione
+   della strategia target selezionata da Melo.
+6. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`
+7. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_A1_LITERATURE_ALIGNMENT_PLAN.md`
+8. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_SCIENTIFIC_PROCESS.md`
+9. `hft-common/doc/archived/BOLLINGER_CONTEXT_V1_PLAN.md`
+10. `hft-common/doc/CURRENT_CONTEXT.md`
+11. `hft-common/doc/STRATEGIC_REM_HANDOFF.md`
+12. `hft-common/doc/archived/BOLLINGER_ONLY_PLAN.md`
 
 Se i documenti confliggono, prevale il charter; poi
 `archived/BOLLINGER_CONTEXT_V1_AS_IS_INTERVENTION_MAP.md`; poi
@@ -45,6 +47,12 @@ Nota 2026-07-05: `REALTIME_BB_ADX_OPTUNA_PARAMETER_SEARCH_PLAN.md` definisce il 
 selezionare profili candidati dalla matrice tramite Optuna constrained multi-objective optimization, TPE/MOTPE,
 cross-check NSGA-II, walk-forward e controlli anti-overfitting. Il laboratorio non e' parte del normale ciclo trading:
 non avvia PAPER, non modifica runtime e non autorizza RUN senza revisione del Consiglio.
+
+Nota 2026-07-08: `REALTIME_BB_ADX_NATIVE_F4E954_STRATEGY_INTEGRATION_PLAN.md` adotta il profilo Melo nativo
+`f4e954f0b552ce864535fc2b` come strategia target `REALTIME_BB_ADX_NATIVE_F4E954`. Il profilo e' il migliore tra
+`51.840` configurazioni native Bollinger verificate esaustivamente, ma non era promuovibile per trade aperti e assenza
+di chiusure validation/holdout. L'integrazione e' quindi PAPER-only e richiede valori centralizzati in `hft-common`,
+parita' Melo/ACDC e rimozione dei gate legacy non inclusi nel profilo.
 
 Nota 2026-07-05, implementazione RT:
 
